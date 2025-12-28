@@ -6,6 +6,7 @@ import "core:mem"
 import "core:strings"
 
 import "../ast"
+import "../nbt"
 import "../lexer"
 import "../checker"
 import "../../assets"
@@ -447,6 +448,23 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 				result_value = GameValue{game_value="player_count", selection="null"}
 				break
 			}
+			if call_name == "item" {
+				if len(args_handled) > 1 && len(args_handled) == 0 {
+					fmt.printfln("[DEBUG] Can't extract item id, too much or none arguments: %s", call_name)
+					break
+				}
+				original_name := args_handled[0].(TextValue).text
+				if !strings.starts_with(original_name, "minecraft:") {
+					original_name = strings.concatenate([]string{"minecraft:", original_name}, irb.alloc)
+				}
+				nbt_result, success := nbt.generate_item(original_name, 1, irb.alloc)
+				if !success {
+					fmt.printfln("[DEBUG] Can't compress item from raw to nbt format for some reason. Contact compiler devs pls")
+					break
+				}
+				result_value = ItemValue{item=nbt_result}
+				break
+			}
 			fmt.printfln("[DEBUG] Unknown action: %s", call_name)
 		case:
 			fmt.printfln("[DEBUG] Unhandled and possibly shouldn't be allowed?")
@@ -686,7 +704,9 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		} else {
 			json_begin_object(&irb.jb)
 		}
-		json_write_string(&irb.jb, "TODO!", "TODO!", false)
+		item_value := value.(ItemValue)
+		json_write_string(&irb.jb, "type", "item", true)
+		json_write_string(&irb.jb, "item", item_value.item, false)
 		json_end_object(&irb.jb, comma)
 	case GameValue:
 		if is_named {

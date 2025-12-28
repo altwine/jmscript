@@ -12,6 +12,7 @@ unfiltered thoughts. I will clean it up later.
 - Implement `switch` statements with pattern matching stuff;
 - Implement array/dictionary literals;
 - Implement slices;
+- Put nbt stuff in separate lib;
 - Fix assets-related stuff!!! (use hashmap instead of costly switch lookups!);
 - Merge integer and float because separation is useless;
 - Rework the memory management.
