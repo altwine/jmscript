@@ -35,6 +35,9 @@ ir_builder_init :: proc(irb: ^IR_Builder, minify: bool, unique_id: string, symbo
 
 ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 	ops := make([dynamic]Operation, irb.alloc)
+	if stmt == nil {
+		return ops
+	}
 	#partial switch v in stmt.derived {
 	case ^ast.Block_Stmt:
 		block_stmt := cast(^ast.Block_Stmt)stmt
@@ -49,6 +52,54 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 		ops2, _ := ir_parse_expression(irb, expr_stmt.expr)
 		for op in ops2 {
 			append(&ops, op)
+		}
+	case ^ast.If_Stmt:
+		if_stmt := cast(^ast.If_Stmt)stmt
+		cond := if_stmt.cond
+		body := if_stmt.body
+		body_ops := ir_parse_stmt(irb, body)
+		else_body_ops := ir_parse_stmt(irb, if_stmt.else_stmt)
+		#partial switch v in cond.derived {
+		case ^ast.Binary_Expr:
+			cond_binary_expr := cast(^ast.Binary_Expr)cond
+			cond_binary_expr_op_kind := cond_binary_expr.op.kind
+			left_ops, left_value := ir_parse_expression(irb, cond_binary_expr.left)
+			right_ops, right_value := ir_parse_expression(irb, cond_binary_expr.right)
+			for op in left_ops {
+				append(&ops, op)
+			}
+			for op in right_ops {
+				append(&ops, op)
+			}
+			values := make([dynamic]NamedValue, irb.alloc)
+			append(&values, NamedValue{name="value", value=left_value})
+			append(&values, NamedValue{name="compare", value=right_value})
+			action_name: string
+			#partial switch cond_binary_expr_op_kind {
+			case .Cmp_Eq:
+				action_name = "if_variable_equals"
+			case .Not_Eq:
+				action_name = "if_variable_not_equals"
+			case .Lt:
+				action_name = "if_variable_less"
+			case .Lt_Eq:
+				action_name = "if_variable_less_or_equals"
+			case .Gt:
+				action_name = "if_variable_greater"
+			case .Gt_Eq:
+				action_name = "if_variable_greater_or_equals"
+			case:
+				fmt.printfln("Unhandled operation type in if_stmt: %v", lexer.to_string(cond_binary_expr.op.kind))
+				break
+			}
+			append(&ops, Operation{action=action_name, values=values, operations=body_ops })
+		case:
+			fmt.printfln("Unhandled expression type in if_stmt: %v", v)
+			break
+		}
+		if len(else_body_ops) > 0 {
+			empty_values := make([dynamic]NamedValue, irb.alloc)
+			append(&ops, Operation{action="else", values=empty_values, operations=else_body_ops })
 		}
 	case ^ast.For_Stmt:
 		for_stmt := cast(^ast.For_Stmt)stmt

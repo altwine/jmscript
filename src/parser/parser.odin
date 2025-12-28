@@ -201,11 +201,18 @@ parse_if_stmt :: proc(p: ^Parser) -> ^ast.If_Stmt {
 	advance(p)
 	expr := parse_expression(p)
 	body := parse_block_stmt(p)
+	else_stmt: ^ast.Block_Stmt
+
+	if match(p, .Else) {
+		advance(p)
+		else_stmt = parse_block_stmt(p)
+	}
 
 	if_stmt := ast.new(ast.If_Stmt, if_tok.pos, current(p).pos, p.alloc)
 	if_stmt.if_pos = if_tok.pos
 	if_stmt.cond = expr
 	if_stmt.body = body
+	if_stmt.else_stmt = else_stmt
 	return if_stmt
 }
 

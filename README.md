@@ -8,7 +8,7 @@ unfiltered thoughts. I will clean it up later.
 # TODO
 - Actually FIX checker!!!
 - Move checker logic from codegen to checker;
-- Proper if-else chains handling (there's no else handling right now);
+- Proper if-else chains handling;
 - Implement `switch` statements with pattern matching stuff;
 - Implement array/dictionary literals;
 - Implement slices;
