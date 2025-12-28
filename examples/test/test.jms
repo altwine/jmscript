@@ -1,7 +1,11 @@
 package test
 
 event player_join() {
-	`strange identifier 🥀` := 1000
+    test_var := "TestTestTest"
 
-	player_send_message("all_players", `strange identifier 🥀`)
+    if if_variable_text_contains(test_var, "Test") {
+        player_send_message("default_player", "Success")
+    } else {
+        player_send_message("default_player", "Failure")
+    }
 }

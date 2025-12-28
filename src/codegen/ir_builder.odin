@@ -93,6 +93,45 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 				break
 			}
 			append(&ops, Operation{action=action_name, values=values, operations=body_ops })
+		case ^ast.Call_Expr:
+			cond_call_expr := cast(^ast.Call_Expr)cond
+			call_expr := cond_call_expr.expr
+			call_args := cond_call_expr.args
+
+			call_args_values := make([dynamic]Value, irb.alloc)
+			for call_arg in call_args {
+				call_arg_ops, call_arg_value := ir_parse_expression(irb, call_arg)
+				for call_arg_op in call_arg_ops {
+					append(&ops, call_arg_op)
+				}
+				append(&call_args_values, call_arg_value)
+			}
+			#partial switch v in call_expr.derived {
+			case ^ast.Ident:
+				ident := cast(^ast.Ident)call_expr
+				ident_name := ident.name
+				action, is_exist := assets.action_native_from_mapped(ident_name, irb.alloc)
+				if !is_exist {
+					fmt.printfln("Unknown conditional action")
+					break
+				}
+				values := make([dynamic]NamedValue, irb.alloc)
+				if action.type != .CONTAINER {
+					fmt.printfln("(user error) Unhandled if stmt, container action expected: %v ", if_stmt)
+					break
+				}
+				if len(call_args_values) > len(action.slots) {
+					fmt.printfln("(user error) Unhandled if stmt, too much input variables, expected %d or less but got %d: %v", len(call_args_values), len(action.slots), if_stmt)
+					break
+				}
+				for call_arg_value, call_arg_value_index in call_args_values {
+					append(&values, NamedValue{name=action.slots[call_arg_value_index].name, value=call_arg_value})
+				}
+				append(&ops, Operation{action=action.name, values=values, operations=body_ops })
+			case:
+				fmt.printfln("Unhandled if_stmt: %v", v)
+				break
+			}
 		case:
 			fmt.printfln("Unhandled expression type in if_stmt: %v", v)
 			break
