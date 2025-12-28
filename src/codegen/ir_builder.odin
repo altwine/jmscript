@@ -124,7 +124,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 	case ^ast.Value_Decl:
 		value_decl := cast(^ast.Value_Decl)stmt
 		values := make([dynamic]NamedValue, irb.alloc)
-		append(&values, NamedValue{name="variable", value=VariableValue{variable=value_decl.name, scope=SCOPE_GAME}})
+		append(&values, NamedValue{name="variable", value=VariableValue{variable=value_decl.name, scope=SCOPE_LOCAL}})
 		ops2, var := ir_parse_expression(irb, value_decl.value)
 		for op in ops2 {
 			append(&ops, op)
@@ -134,7 +134,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 	case ^ast.Assign_Stmt:
 		assign_stmt := cast(^ast.Assign_Stmt)stmt
 		values := make([dynamic]NamedValue, irb.alloc)
-		result_var := VariableValue{variable=assign_stmt.name, scope=SCOPE_GAME}
+		result_var := VariableValue{variable=assign_stmt.name, scope=SCOPE_LOCAL}
 		append(&values, NamedValue{name="variable", value=result_var})
 		ops2, var := ir_parse_expression(irb, assign_stmt.expr)
 		for op in ops2 {
