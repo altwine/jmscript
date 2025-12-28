@@ -20,7 +20,7 @@ Token_Kind :: enum {
 	File_Tag, // #+filetag
 
 	B_Literal_Begin,
-		Ident,   // identifier
+		Ident,   // identifier, `strange identifier 🥀`
 		Integer, // 12345
 		Float,   // 123.45
 		Text,    // "some text"

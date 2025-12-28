@@ -58,6 +58,7 @@ scan :: proc(l: ^Lexer) -> Token {
 	kind: Token_Kind
 
 	offset := l.offset
+	content: string
 	pos := Pos{ file=l.path, offset=offset, line=l.line, column=l.column }
 
 	switch l.ch {
@@ -93,6 +94,18 @@ scan :: proc(l: ^Lexer) -> Token {
 		} else {
 			kind = .Integer
 		}
+	case '`':
+		kind = .Ident
+		advance(l)
+		for l.ch != '`' {
+			if l.ch == -1 || l.ch == '\n' {
+				ct := l.src[offset:l.offset]
+				return Token{.Invalid, ct, pos}
+			}
+			advance(l)
+		}
+		advance(l)
+		content = l.src[offset+1:l.offset-1]
 	case '"', '\'':
 		kind = .Text
 		quote := l.ch
@@ -280,7 +293,9 @@ scan :: proc(l: ^Lexer) -> Token {
 		kind = .Invalid
 		advance(l)
 	}
-	content := l.src[offset:l.offset]
+	if content == "" {
+		content = l.src[offset:l.offset]
+	}
 	return { kind, content, pos }
 }
 
