@@ -1,5 +1,6 @@
 package codegen
 
+import "core:unicode/utf16"
 import "core:strings"
 import "core:mem"
 
@@ -125,13 +126,18 @@ json_write_boolean :: proc(jb: ^Json_Builder, key: string, value: bool, comma: b
 	json_write_newline(jb)
 }
 
-json_write_number :: proc(jb: ^Json_Builder, key: string, value: int, comma: bool) {
+json_write_number :: proc(jb: ^Json_Builder, key: string, value: union{ int, f64 }, comma: bool) {
 	json_write_indent(jb)
 	json_write_quote(jb)
 	strings.write_string(&jb.builder, key)
 	json_write_quote(jb)
 	json_write_colon(jb)
-	strings.write_int(&jb.builder, value)
+	switch v in value {
+	case int:
+		strings.write_int(&jb.builder, value.(int))
+	case f64:
+		strings.write_f64(&jb.builder, value.(f64), 'g')
+	}
 	if comma {
 		strings.write_string(&jb.builder, ",")
 	}

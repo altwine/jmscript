@@ -664,7 +664,9 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		} else {
 			json_begin_object(&irb.jb)
 		}
-		json_write_string(&irb.jb, "TODO!", "TODO!", false)
+		enum_value := value.(EnumValue)
+		json_write_string(&irb.jb, "type", "enum", true)
+		json_write_string(&irb.jb, "enum", enum_value._enum, false)
 		json_end_object(&irb.jb, comma)
 	case LocationValue:
 		if is_named {
@@ -672,7 +674,13 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		} else {
 			json_begin_object(&irb.jb)
 		}
-		json_write_string(&irb.jb, "TODO!", "TODO!", false)
+		location_value := value.(LocationValue)
+		json_write_string(&irb.jb, "type", "location", true)
+		json_write_number(&irb.jb, "x", location_value.yaw, true)
+		json_write_number(&irb.jb, "x", location_value.pitch, true)
+		json_write_number(&irb.jb, "x", location_value.x, true)
+		json_write_number(&irb.jb, "y", location_value.y, true)
+		json_write_number(&irb.jb, "z", location_value.z, false)
 		json_end_object(&irb.jb, comma)
 	case VectorValue:
 		if is_named {
@@ -680,7 +688,11 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		} else {
 			json_begin_object(&irb.jb)
 		}
-		json_write_string(&irb.jb, "TODO!", "TODO!", false)
+		vector_value := value.(VectorValue)
+		json_write_string(&irb.jb, "type", "vector", true)
+		json_write_number(&irb.jb, "x", vector_value.x, true)
+		json_write_number(&irb.jb, "y", vector_value.y, true)
+		json_write_number(&irb.jb, "z", vector_value.z, false)
 		json_end_object(&irb.jb, comma)
 	case SoundValue:
 		if is_named {
@@ -688,7 +700,13 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		} else {
 			json_begin_object(&irb.jb)
 		}
-		json_write_string(&irb.jb, "TODO!", "TODO!", false)
+		sound_value := value.(SoundValue)
+		json_write_string(&irb.jb, "type", "sound", true)
+		json_write_string(&irb.jb, "sound", sound_value.sound, true)
+		json_write_string(&irb.jb, "source", sound_value.source, true)
+		json_write_string(&irb.jb, "variation", sound_value.variation, true)
+		json_write_number(&irb.jb, "volume", sound_value.volume, true)
+		json_write_number(&irb.jb, "pitch", sound_value.pitch, false)
 		json_end_object(&irb.jb, comma)
 	case ParticleValue:
 		if is_named {
@@ -696,7 +714,16 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		} else {
 			json_begin_object(&irb.jb)
 		}
-		json_write_string(&irb.jb, "TODO!", "TODO!", false)
+		particle_value := value.(ParticleValue)
+		json_write_string(&irb.jb, "particle_type", particle_value.particle_type, true)
+		json_write_number(&irb.jb, "count", particle_value.count, true)
+		json_write_number(&irb.jb, "size", particle_value.size, true)
+		json_write_number(&irb.jb, "color", particle_value.color, true)
+		json_write_number(&irb.jb, "first_spread", particle_value.first_spread, true)
+		json_write_number(&irb.jb, "second_spread", particle_value.second_spread, true)
+		json_write_number(&irb.jb, "x_motion", particle_value.x_motion, true)
+		json_write_number(&irb.jb, "y_motion", particle_value.y_motion, true)
+		json_write_number(&irb.jb, "z_motion", particle_value.z_motion, false)
 		json_end_object(&irb.jb, comma)
 	case ItemValue:
 		if is_named {
@@ -725,7 +752,11 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		} else {
 			json_begin_object(&irb.jb)
 		}
-		json_write_string(&irb.jb, "TODO!", "TODO!", false)
+		potion_value := value.(PotionValue)
+		json_write_string(&irb.jb, "type", "potion", true)
+		json_write_string(&irb.jb, "potion", potion_value.potion, true)
+		json_write_number(&irb.jb, "amplifier", potion_value.amplifier, true)
+		json_write_number(&irb.jb, "duration", potion_value.duration, false)
 		json_end_object(&irb.jb, comma)
 	case BlockValue:
 		if is_named {
@@ -733,7 +764,9 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		} else {
 			json_begin_object(&irb.jb)
 		}
-		json_write_string(&irb.jb, "TODO!", "TODO!", false)
+		block_value := value.(BlockValue)
+		json_write_string(&irb.jb, "type", "block", true)
+		json_write_string(&irb.jb, "block", block_value.block, false)
 		json_end_object(&irb.jb, comma)
 	}
 }

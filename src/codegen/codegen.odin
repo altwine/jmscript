@@ -1,5 +1,6 @@
 package codegen
 
+import "core:fmt"
 import "core:mem"
 
 import "../ast"
@@ -11,15 +12,16 @@ FLOORS :: 15
 
 Codegen :: struct {
 	alloc: mem.Allocator,
-	errs: [dynamic]^Codegen_Error,
+	errs: [dynamic]Codegen_Error,
 }
 
 Codegen_Error :: struct {
-
+	message: string,
 }
 
 codegen_init :: proc(c: ^Codegen, allocator := context.allocator) {
 	c.alloc = allocator
+	c.errs = make([dynamic]Codegen_Error, allocator)
 }
 
 codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table, minify: bool, unique_id: string) -> string {
@@ -30,4 +32,9 @@ codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Sy
 	}
 	result := ir_build(&irb)
 	return result
+}
+
+add_error :: proc(c: ^Codegen, message: string) {
+	err := Codegen_Error{message=message}
+	append(&c.errs, err)
 }
