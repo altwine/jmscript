@@ -6,7 +6,6 @@ import "core:mem"
 import "core:strings"
 
 import "../ast"
-import "../nbt"
 import "../lexer"
 import "../checker"
 import "../../assets"
@@ -457,7 +456,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 				if !strings.starts_with(original_name, "minecraft:") {
 					original_name = strings.concatenate([]string{"minecraft:", original_name}, irb.alloc)
 				}
-				nbt_result, success := nbt.generate_item(original_name, 1, irb.alloc)
+				nbt_result, success := generate_item(original_name, 1, irb.alloc)
 				if !success {
 					fmt.printfln("[DEBUG] Can't compress item from raw to nbt format for some reason. Contact compiler devs pls")
 					break

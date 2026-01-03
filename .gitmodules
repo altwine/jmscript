@@ -1,0 +1,3 @@
+[submodule "odin-nbt"]
+	path = odin-nbt
+	url = https://github.com/altwine/odin-nbt
