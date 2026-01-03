@@ -1,6 +1,5 @@
 package codegen
 
-import "core:unicode/utf16"
 import "core:strings"
 import "core:mem"
 

@@ -100,7 +100,7 @@ ParticleValue :: struct {
 
 ItemValue :: struct {
 	using base: BaseValue,
-	item: string,  // base64 gzip idk
+	item: string,
 }
 
 GameValue :: struct {

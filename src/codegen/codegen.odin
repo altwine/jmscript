@@ -1,6 +1,5 @@
 package codegen
 
-import "core:fmt"
 import "core:mem"
 
 import "../ast"
