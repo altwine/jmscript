@@ -72,14 +72,15 @@ parse_package :: proc(p: ^Parser) -> string {
 	} else {
 		add_error(p, "Package not declared, fallback to '_'", current(p), peek(p))
 	}
+	skip_optional_semicolon(p)
 	return pkg_name
 }
 
-// skip_optional_semicolon :: proc(p: ^Parser) {
-// 	if match(p, .Semicolon) {
-// 		advance(p)
-// 	}
-// }
+skip_optional_semicolon :: proc(p: ^Parser) {
+	if match(p, .Semicolon) {
+		advance(p)
+	}
+}
 
 add_error :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
 	offset_from := token_from.pos.offset
@@ -137,28 +138,31 @@ parse_stmt_list :: proc(p: ^Parser) -> [dynamic]^ast.Stmt {
 }
 
 parse_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
+	stmt: ^ast.Stmt
 	switch {
 	case match(p, .For):
-		return parse_for_stmt(p)
+		stmt =  parse_for_stmt(p)
 	case match(p, .If):
-		return parse_if_stmt(p)
+		stmt =  parse_if_stmt(p)
 	case match(p, .Defer):
-		return parse_defer_stmt(p)
+		stmt =  parse_defer_stmt(p)
 	case match(p, .Return):
-		return parse_return_stmt(p)
+		stmt =  parse_return_stmt(p)
 	case match(p, .Func):
-		return parse_func_stmt(p)
+		stmt =  parse_func_stmt(p)
 	case match(p, .Event):
-		return parse_event_stmt(p)
+		stmt =  parse_event_stmt(p)
 	case match(p, .Ident) && (peek(p).kind == .Eq || lexer.is_assignment(peek(p).kind)):
-		return parse_assignment_stmt(p)
+		stmt =  parse_assignment_stmt(p)
 	case match(p, .Ident) && peek(p).kind == .Colon && (peek(p, 2).kind == .Eq || (peek(p, 2).kind == .Ident && peek(p, 3).kind == .Eq)):
-		return parse_variable_declaration(p, false)
+		stmt =  parse_variable_declaration(p, false)
 	case match(p, .Ident) && peek(p).kind == .Colon && (peek(p, 2).kind == .Colon || (peek(p, 2).kind == .Ident && peek(p, 3).kind == .Colon)):
-		return parse_variable_declaration(p, true)
+		stmt =  parse_variable_declaration(p, true)
 	case:
-		return parse_expr_stmt(p)
+		stmt = parse_expr_stmt(p)
 	}
+	skip_optional_semicolon(p)
+	return stmt
 }
 
 parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {

@@ -1,5 +1,11 @@
-package test
+package test;
 
 event player_join() {
-    test_var := item("warped_nylium")
-}
+    test_var := item("warped_nylium");
+    for i in repeat_multi_times(10) {
+    	player_send_message("all_players", i);
+	    for j in repeat_multi_times(10) {
+    		player_send_message("all_players", j);
+	    };
+    };
+};
