@@ -48,17 +48,14 @@ Basic_Lit :: struct {
 
 Func_Stmt :: struct {
 	using node: Stmt,
-	tok:    lexer.Token,
 	name:   string,
 	params: ^Param_List,
-	arrow:  lexer.Pos,
 	result: string,
 	body:   ^Block_Stmt,
 }
 
 Event_Stmt :: struct {
 	using node: Stmt,
-	tok:    lexer.Token,
 	name:   string,
 	params: ^Param_List,
 	body:   ^Block_Stmt,
@@ -94,10 +91,8 @@ Member_Access_Expr :: struct {
 Call_Expr :: struct {
 	using node: Expr,
 	expr:     ^Expr,
-	open:     lexer.Pos,
 	args:     []^Expr,
 	ellipsis: lexer.Token,
-	close:    lexer.Pos,
 }
 
 Field_Value :: struct {
@@ -121,14 +116,11 @@ Assign_Stmt :: struct {
 
 Block_Stmt :: struct {
 	using node: Stmt,
-	open:  lexer.Pos,
 	stmts: []^Stmt,
-	close: lexer.Pos,
 }
 
 If_Stmt :: struct {
 	using node: Stmt,
-	if_pos:    lexer.Pos,
 	init:      ^Stmt,
 	cond:      ^Expr,
 	body:      ^Block_Stmt,
@@ -168,15 +160,12 @@ Field_Access :: struct {
 	using base: Expr,
 	expr: ^Expr,
 	field: string,
-	dot: lexer.Pos,
 }
 
 Index_Expr :: struct {
 	using base: Expr,
 	expr: ^Expr,
 	index: ^Expr,
-	open_bracket: lexer.Pos,
-	close_bracket: lexer.Pos,
 }
 
 Param :: struct {
@@ -187,9 +176,7 @@ Param :: struct {
 
 Param_List :: struct {
 	using node: Node,
-	open:  lexer.Pos,
 	list:  []^Param,
-	close: lexer.Pos,
 }
 
 Any_Node :: union {

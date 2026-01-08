@@ -224,7 +224,6 @@ parse_if_stmt :: proc(p: ^Parser) -> ^ast.If_Stmt {
 	}
 
 	if_stmt := ast.new(ast.If_Stmt, if_tok.pos, current(p).pos, p.file.alloc)
-	if_stmt.if_pos = if_tok.pos
 	if_stmt.cond = expr
 	if_stmt.body = body
 	if_stmt.else_stmt = else_stmt
@@ -317,7 +316,6 @@ parse_event_stmt :: proc(p: ^Parser) -> ^ast.Event_Stmt {
 	block_stmt := parse_block_stmt(p)
 
 	event_stmt := ast.new(ast.Event_Stmt, event_keyword.pos, current(p).pos, p.file.alloc)
-	event_stmt.tok = event_keyword
 	event_stmt.name = event_name.content
 	event_stmt.params = params_list
 	event_stmt.body = block_stmt
@@ -355,10 +353,8 @@ parse_func_stmt :: proc(p: ^Parser) -> ^ast.Func_Stmt {
 	params_list.list = params[:]
 
 	advance(p)
-	arrow_tok_pos: lexer.Pos
 	result_type := "void"
 	if match(p, .Arrow_Right) {
-		arrow_tok_pos = current(p).pos
 		result_type = advance(p).content
 		advance(p)
 	}
@@ -366,10 +362,8 @@ parse_func_stmt :: proc(p: ^Parser) -> ^ast.Func_Stmt {
 	block_stmt := parse_block_stmt(p)
 
 	func_stmt := ast.new(ast.Func_Stmt, func_keyword.pos, current(p).pos, p.file.alloc)
-	func_stmt.tok = func_keyword
 	func_stmt.name = func_name.content
 	func_stmt.params = params_list
-	func_stmt.arrow = arrow_tok_pos
 	func_stmt.result = result_type
 	func_stmt.body = block_stmt
 	return func_stmt
@@ -571,8 +565,6 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 	call_expr := ast.new(ast.Call_Expr, func_expr.pos, close_paren.pos, p.file.alloc)
 	call_expr.expr = func_expr
 	call_expr.args = args[:]
-	call_expr.open = open_paren.pos
-	call_expr.close = close_paren.pos
 
 	return call_expr
 }
@@ -616,7 +608,6 @@ parse_access_chain :: proc(p: ^Parser) -> ^ast.Expr {
 			field_access := ast.new(ast.Field_Access, expr.pos, field_token.pos, p.file.alloc)
 			field_access.expr = expr
 			field_access.field = field_token.content
-			field_access.dot = dot_token.pos
 			expr = field_access
 
 		case .Open_Bracket:
@@ -637,8 +628,6 @@ parse_access_chain :: proc(p: ^Parser) -> ^ast.Expr {
 			index_access := ast.new(ast.Index_Expr, expr.pos, close_bracket.pos, p.file.alloc)
 			index_access.expr = expr
 			index_access.index = index_expr
-			index_access.open_bracket = open_bracket.pos
-			index_access.close_bracket = close_bracket.pos
 			expr = index_access
 
 		case .Open_Paren:
