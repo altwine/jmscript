@@ -35,7 +35,7 @@ ACTIONS_BLACKLIST := []string{
 }
 
 Action_In_Out :: struct {
-	ins: [dynamic]string,
+	ins:  [dynamic]string,
 	outs: [dynamic]string,
 }
 
@@ -174,9 +174,8 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 		case "container_with_conditional":
 			fmt.fprintln(fd, "\t\t.CONTAINER_WITH_CONDITIONAL,")
 		}
-		fmt.fprint(fd, "\t")
 		if len(action.args) > 0 {
-			fmt.fprintln(fd, "\t[]Slot{")
+			fmt.fprintln(fd, "\t\t[]Slot{")
 			for slot in action.args {
 				fmt.fprintf(fd, "\t\t\tSlot{{\"%s\", \"%s", slot.name, slot.type)
 				if slot.type == "enum" {
@@ -195,13 +194,14 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 			}
 			fmt.fprintln(fd, "\t\t},")
 		} else {
-			fmt.fprintln(fd, "\tnil,")
+			fmt.fprintln(fd, "\t\tnil,")
 		}
 		fmt.fprintln(fd, "\t}")
 	}
 	fmt.fprintln(fd, "}\n")
 
-	fmt.fprintln(fd, "@(fini)\ncleanup_actions :: proc \"contextless\" () {")
+	fmt.fprintln(fd, "@(fini)")
+	fmt.fprintln(fd, "cleanup_actions :: proc \"contextless\" () {")
 	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
 	fmt.fprintln(fd, "\tdelete(actions)")
 	fmt.fprintln(fd, "}\n")

@@ -6,10 +6,10 @@ import "core:encoding/json"
 import "core:os"
 
 Event :: struct {
-	name: string `json:"id"`,
-	category: string `json:"category"`,
-	cancellable: bool `json:"cancellable"`,
-	works_with: []string `json:"worksWith,omitempty"`,
+	name:            string   `json:"id"`,
+	category:        string   `json:"category"`,
+	cancellable:     bool     `json:"cancellable"`,
+	works_with:      []string `json:"worksWith,omitempty"`,
 	additional_info: []string `json:"additionalInfo,omitempty"`,
 }
 
@@ -41,7 +41,10 @@ extract_events :: proc(output_file: string) -> (string, bool) {
 
 	fmt.fprintln(fd, "import \"base:runtime\"\n")
 
-	fmt.fprintln(fd, "Event :: struct {\n\tname: string,\n\tcancellable: bool,\n}\n")
+	fmt.fprintln(fd, "Event :: struct {")
+	fmt.fprintln(fd, "\tname: string,")
+	fmt.fprintln(fd, "\tcancellable: bool,")
+	fmt.fprintln(fd, "}\n")
 
 	fmt.fprintln(fd, "events: map[string]Event\n")
 
