@@ -136,7 +136,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			case ^ast.Ident:
 				ident := cast(^ast.Ident)call_expr
 				ident_name := ident.name
-				action, is_exist := assets.action_native_from_mapped(ident_name, irb.alloc)
+				action, is_exist := assets.action_native_from_mapped(ident_name)
 				if !is_exist {
 					fmt.printfln("Unknown conditional action")
 					break
@@ -183,7 +183,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 					case ^ast.Ident:
 						ident := cast(^ast.Ident)cond_expr_call_expr.expr
 						ident_name := ident.name
-						action, is_exist := assets.action_native_from_mapped(ident_name, irb.alloc)
+						action, is_exist := assets.action_native_from_mapped(ident_name)
 						if !is_exist {
 							fmt.printfln("Unknown repeat action")
 							break
@@ -428,7 +428,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 		case ^ast.Ident:
 			ident_expr := cast(^ast.Ident)call_expr.expr
 			call_name := ident_expr.name
-			native_action, is_valid := assets.action_native_from_mapped(call_name, irb.alloc)
+			native_action, is_valid := assets.action_native_from_mapped(call_name)
 			if is_valid {
 				selection: Operation_Selection
 				if native_action.accept_selector && len(args_handled) > 0 {
