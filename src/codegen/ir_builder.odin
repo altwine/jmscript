@@ -20,9 +20,25 @@ IR_Builder :: struct {
 	handler_index: int,
 	inner_names_index: int,
 	alloc: mem.Allocator,
+	errs: [dynamic]IR_Builder_Error,
+	warns: [dynamic]IR_Builder_Warning,
+}
+
+IR_Builder_Error :: struct {
+	message: string,
+	offset_from: int,
+	offset_to: int,
+}
+
+IR_Builder_Warning :: struct {
+	message: string,
+	offset_from: int,
+	offset_to: int,
 }
 
 ir_builder_init :: proc(irb: ^IR_Builder, minify: bool, unique_id: string, symbols: ^checker.Symbol_Table, allocator := context.allocator) {
+	irb.errs = make([dynamic]IR_Builder_Error, allocator)
+	irb.warns = make([dynamic]IR_Builder_Warning, allocator)
 	irb.alloc = allocator
 	irb.unique_id = unique_id
 	irb.symbols = symbols
@@ -31,6 +47,16 @@ ir_builder_init :: proc(irb: ^IR_Builder, minify: bool, unique_id: string, symbo
 	irb.handlers = make([dynamic]^Handler, irb.alloc)
 	irb.entry_handler = new_handler(irb, "event", "world_start")
 	json_builder_init(&irb.jb, irb.minify, irb.alloc)
+}
+
+ir_add_error :: proc(irb: ^IR_Builder, message: string) {
+	err := IR_Builder_Error{message=message}
+	append(&irb.errs, err)
+}
+
+ir_add_warning :: proc(irb: ^IR_Builder, message: string) {
+	warn := IR_Builder_Warning{message=message}
+	append(&irb.warns, warn)
 }
 
 ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
@@ -489,7 +515,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 	return operations_list, result_value
 }
 
-ir_build :: proc(irb: ^IR_Builder) -> string {
+ir_build :: proc(irb: ^IR_Builder) -> (string, [dynamic]IR_Builder_Error, [dynamic]IR_Builder_Warning) {
 	json_begin_object(&irb.jb)
 	json_begin_array(&irb.jb, "handlers")
 
@@ -512,7 +538,8 @@ ir_build :: proc(irb: ^IR_Builder) -> string {
 	json_end_array(&irb.jb, false)
 	json_end_object(&irb.jb, false)
 
-	return strings.clone(strings.to_string(irb.jb.builder), irb.alloc)
+	result := strings.clone(strings.to_string(irb.jb.builder), irb.alloc)
+	return result, irb.errs, irb.warns
 }
 
 get_new_position :: proc(irb: ^IR_Builder) -> int {

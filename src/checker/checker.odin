@@ -31,6 +31,7 @@ Checker :: struct {
 	symbol_table: Symbol_Table,
 	files: map[string]^ast.File,
 	errs: [dynamic]Checker_Error,
+	warns: [dynamic]Checker_Warning,
 	current_file: ^ast.File,
 }
 
@@ -42,6 +43,14 @@ Symbol_Table :: struct {
 
 Checker_Error :: struct {
 	message: string,
+	offset_from: int,
+	offset_to: int,
+}
+
+Checker_Warning :: struct {
+	message: string,
+	offset_from: int,
+	offset_to: int,
 }
 
 checker_init :: proc(c: ^Checker, allocator := context.allocator) {
@@ -51,7 +60,7 @@ checker_init :: proc(c: ^Checker, allocator := context.allocator) {
 	c.symbol_table.scope_level = -1
 }
 
-checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (Symbol_Table, [dynamic]Checker_Error) {
+checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (Symbol_Table, [dynamic]Checker_Error, [dynamic]Checker_Warning) {
 	enter_scope(c)
 	c.symbol_table.global_scope.file = "global"
 
@@ -78,7 +87,7 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (Symbol_Table, 
 	}
 
 	exit_scope(c)
-	return c.symbol_table, c.errs
+	return c.symbol_table, c.errs, c.warns
 }
 
 is_global_declaration :: proc(decl: ^ast.Stmt) -> bool {
@@ -429,4 +438,15 @@ add_error :: proc(c: ^Checker, message: string) {
 	}
 	err := Checker_Error{message=fmt.tprintf("%s: %s", file_name, message)}
 	append(&c.errs, err)
+}
+
+add_warning :: proc(c: ^Checker, message: string) {
+	file_name: string
+	if c.current_file != nil {
+		file_name = c.current_file.fullpath
+	} else {
+		file_name = "unknown"
+	}
+	err := Checker_Warning{message=fmt.tprintf("%s: %s", file_name, message)}
+	append(&c.warns, err)
 }

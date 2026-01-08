@@ -94,7 +94,11 @@ main :: proc() {
 	minify := slice.contains(os.args, "-m")
 	unique_id_raw := transmute([16]byte)rand.uint128()
 	unique_id := string(hex.encode(unique_id_raw[:], c.alloc))
-	result_code := compiler.compile(&c, dir_path, minify, unique_id)
+	result_code, success := compiler.compile(&c, dir_path, minify, unique_id)
+
+	if !success {
+		return
+	}
 
 	if slice.contains(os.args, "-r") {
 		fmt.printfln("%s", result_code)

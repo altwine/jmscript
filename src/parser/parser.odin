@@ -12,9 +12,16 @@ Parser :: struct {
 	tokens: [dynamic]lexer.Token,
 	offset: int,
 	errs: [dynamic]Parse_Error,
+	warns: [dynamic]Parse_Warning,
 }
 
 Parse_Error :: struct {
+	message: string,
+	offset_from: int,
+	offset_to: int,
+}
+
+Parse_Warning :: struct {
 	message: string,
 	offset_from: int,
 	offset_to: int,
@@ -24,9 +31,10 @@ parser_init :: proc(p: ^Parser, allocator := context.allocator) {
 	p.offset = 0
 	p.alloc = allocator
 	p.errs = make([dynamic]Parse_Error, allocator)
+	p.warns = make([dynamic]Parse_Warning, allocator)
 }
 
-parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [dynamic]Parse_Error) {
+parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [dynamic]Parse_Error, [dynamic]Parse_Warning) {
 	l: lexer.Lexer
 	lexer.lexer_init(&l, fullpath, p.alloc)
 	p.tokens = lexer.lex(&l)
@@ -38,7 +46,7 @@ parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [d
 	p.file.tags = parse_file_tags(p)
 	p.file.pkg = parse_package(p)
 	p.file.decls = parse_stmt_list(p)
-	return p.file, p.errs
+	return p.file, p.errs, p.warns
 }
 
 parse_file_tags :: proc(p: ^Parser) -> [dynamic]string {
@@ -76,6 +84,12 @@ add_error :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token
 	offset_from := token_from.pos.offset
 	offset_to := token_to.pos.offset
 	append(&p.errs, Parse_Error{message, offset_from, offset_to})
+}
+
+add_warning :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
+	offset_from := token_from.pos.offset
+	offset_to := token_to.pos.offset
+	append(&p.warns, Parse_Warning{message, offset_from, offset_to})
 }
 
 match :: proc(p: ^Parser, kind: lexer.Token_Kind) -> bool {
