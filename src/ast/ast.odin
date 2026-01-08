@@ -13,6 +13,7 @@ Node :: struct {
 
 File :: struct {
 	using node: Node,
+	alloc:    mem.Allocator,
 	id:       int,
 	pkg:      string,
 	fullpath: string,

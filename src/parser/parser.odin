@@ -41,6 +41,7 @@ parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [d
 	first_token := p.tokens[0]
 	last_token := p.tokens[len(p.tokens)-1]
 	p.file = ast.new(ast.File, first_token.pos, last_token.pos, p.alloc)
+	p.file.alloc = p.alloc
 	p.file.fullpath = fullpath
 	p.file.id = file_id
 	p.file.tags = parse_file_tags(p)
@@ -50,7 +51,7 @@ parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [d
 }
 
 parse_file_tags :: proc(p: ^Parser) -> [dynamic]string {
-	file_tags := make([dynamic]string, p.alloc)
+	file_tags := make([dynamic]string, p.file.alloc)
 	for match(p, .File_Tag) {
 		append(&file_tags, current(p).content[2:])
 		advance(p)
@@ -121,7 +122,7 @@ advance :: proc(p: ^Parser) -> lexer.Token {
 }
 
 parse_stmt_list :: proc(p: ^Parser) -> [dynamic]^ast.Stmt {
-	stmt_list := make([dynamic]^ast.Stmt, p.alloc)
+	stmt_list := make([dynamic]^ast.Stmt, p.file.alloc)
 
 	for !match(p, .EOF) {
 		stmt := parse_stmt(p)
@@ -163,7 +164,7 @@ parse_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
 parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {
 	for_tok := current(p)
 	body:  ^ast.Block_Stmt
-	init := make([dynamic]^ast.Ident, p.alloc)
+	init := make([dynamic]^ast.Ident, p.file.alloc)
 	cond: ^ast.Expr
 	range_tok: lexer.Token
 	second_cond: ^ast.Expr
@@ -174,7 +175,7 @@ parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {
 		for match(p, .Ident) {
 			ident_tok := current(p)
 			advance(p)
-			init1 := ast.new(ast.Ident, ident_tok.pos, ident_tok.pos, p.alloc)
+			init1 := ast.new(ast.Ident, ident_tok.pos, ident_tok.pos, p.file.alloc)
 			init1.name = ident_tok.content
 			append(&init, init1)
 			if match(p, .Comma) {
@@ -192,7 +193,7 @@ parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {
 		}
 	}
 
-	for_stmt := ast.new(ast.For_Stmt, for_tok.pos, current(p).pos, p.alloc)
+	for_stmt := ast.new(ast.For_Stmt, for_tok.pos, current(p).pos, p.file.alloc)
 	for_stmt.for_pos = for_tok.pos
 	for_stmt.init = init[:]
 	for_stmt.cond = cond
@@ -205,7 +206,7 @@ parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {
 parse_expr_stmt :: proc(p: ^Parser) -> ^ast.Expr_Stmt {
 	initial_tok := current(p)
 	expr := parse_expression(p)
-	expr_stmt := ast.new(ast.Expr_Stmt, initial_tok.pos, current(p).pos, p.alloc)
+	expr_stmt := ast.new(ast.Expr_Stmt, initial_tok.pos, current(p).pos, p.file.alloc)
 	expr_stmt.expr = expr
 	return expr_stmt
 }
@@ -222,7 +223,7 @@ parse_if_stmt :: proc(p: ^Parser) -> ^ast.If_Stmt {
 		else_stmt = parse_block_stmt(p)
 	}
 
-	if_stmt := ast.new(ast.If_Stmt, if_tok.pos, current(p).pos, p.alloc)
+	if_stmt := ast.new(ast.If_Stmt, if_tok.pos, current(p).pos, p.file.alloc)
 	if_stmt.if_pos = if_tok.pos
 	if_stmt.cond = expr
 	if_stmt.body = body
@@ -234,7 +235,7 @@ parse_defer_stmt :: proc(p: ^Parser) -> ^ast.Defer_Stmt {
 	defer_tok := current(p)
 	advance(p)
 	stmt := parse_stmt(p)
-	defer_stmt := ast.new(ast.Defer_Stmt, defer_tok.pos, current(p).pos, p.alloc)
+	defer_stmt := ast.new(ast.Defer_Stmt, defer_tok.pos, current(p).pos, p.file.alloc)
 	defer_stmt.stmt = stmt
 	return defer_stmt
 }
@@ -243,7 +244,7 @@ parse_return_stmt :: proc(p: ^Parser) -> ^ast.Return_Stmt {
 	return_tok := current(p)
 	advance(p)
 	expr := parse_expression(p)
-	return_stmt := ast.new(ast.Return_Stmt, return_tok.pos, current(p).pos, p.alloc)
+	return_stmt := ast.new(ast.Return_Stmt, return_tok.pos, current(p).pos, p.file.alloc)
 	return_stmt.result = expr
 	return return_stmt
 }
@@ -254,7 +255,7 @@ parse_assignment_stmt :: proc(p: ^Parser) -> ^ast.Assign_Stmt {
 	advance(p)
 	expr := parse_expression(p)
 
-	assign_stmt := ast.new(ast.Assign_Stmt, var_name.pos, current(p).pos, p.alloc)
+	assign_stmt := ast.new(ast.Assign_Stmt, var_name.pos, current(p).pos, p.file.alloc)
 	assign_stmt.name = var_name.content
 	assign_stmt.op = op_tok
 	assign_stmt.expr = expr
@@ -273,7 +274,7 @@ parse_variable_declaration :: proc(p: ^Parser, is_const: bool) -> ^ast.Value_Dec
 	advance(p)
 	value := parse_expression(p)
 
-	const_decl := ast.new(ast.Value_Decl, name.pos, current(p).pos, p.alloc)
+	const_decl := ast.new(ast.Value_Decl, name.pos, current(p).pos, p.file.alloc)
 	const_decl.name = name.content
 	const_decl.type = type
 	const_decl.is_const = is_const
@@ -286,13 +287,13 @@ parse_event_stmt :: proc(p: ^Parser) -> ^ast.Event_Stmt {
 	event_name := advance(p)
 
 	open_paren := advance(p)
-	params := make([dynamic]^ast.Param, p.alloc)
+	params := make([dynamic]^ast.Param, p.file.alloc)
 	if peek(p).kind != .Close_Paren {
 		for {
 			param_name := advance(p)
 			param_sep := advance(p)
 			param_type := advance(p)
-			param := ast.new(ast.Param, param_name.pos, param_type.pos, p.alloc)
+			param := ast.new(ast.Param, param_name.pos, param_type.pos, p.file.alloc)
 			param.name = param_name.content
 			param.type = param_type.content
 			append(&params, param)
@@ -308,14 +309,14 @@ parse_event_stmt :: proc(p: ^Parser) -> ^ast.Event_Stmt {
 		advance(p)
 	}
 	close_paren := current(p)
-	params_list := ast.new(ast.Param_List, open_paren.pos, close_paren.pos, p.alloc)
+	params_list := ast.new(ast.Param_List, open_paren.pos, close_paren.pos, p.file.alloc)
 	params_list.list = params[:]
 
 	advance(p)
 
 	block_stmt := parse_block_stmt(p)
 
-	event_stmt := ast.new(ast.Event_Stmt, event_keyword.pos, current(p).pos, p.alloc)
+	event_stmt := ast.new(ast.Event_Stmt, event_keyword.pos, current(p).pos, p.file.alloc)
 	event_stmt.tok = event_keyword
 	event_stmt.name = event_name.content
 	event_stmt.params = params_list
@@ -328,13 +329,13 @@ parse_func_stmt :: proc(p: ^Parser) -> ^ast.Func_Stmt {
 	func_name := advance(p)
 
 	open_paren := advance(p)
-	params := make([dynamic]^ast.Param, p.alloc)
+	params := make([dynamic]^ast.Param, p.file.alloc)
 	if peek(p).kind != .Close_Paren {
 		for {
 			param_name := advance(p)
 			param_sep := advance(p)
 			param_type := advance(p)
-			param := ast.new(ast.Param, param_name.pos, param_type.pos, p.alloc)
+			param := ast.new(ast.Param, param_name.pos, param_type.pos, p.file.alloc)
 			param.name = param_name.content
 			param.type = param_type.content
 			append(&params, param)
@@ -350,7 +351,7 @@ parse_func_stmt :: proc(p: ^Parser) -> ^ast.Func_Stmt {
 		advance(p)
 	}
 	close_paren := current(p)
-	params_list := ast.new(ast.Param_List, open_paren.pos, close_paren.pos, p.alloc)
+	params_list := ast.new(ast.Param_List, open_paren.pos, close_paren.pos, p.file.alloc)
 	params_list.list = params[:]
 
 	advance(p)
@@ -364,7 +365,7 @@ parse_func_stmt :: proc(p: ^Parser) -> ^ast.Func_Stmt {
 
 	block_stmt := parse_block_stmt(p)
 
-	func_stmt := ast.new(ast.Func_Stmt, func_keyword.pos, current(p).pos, p.alloc)
+	func_stmt := ast.new(ast.Func_Stmt, func_keyword.pos, current(p).pos, p.file.alloc)
 	func_stmt.tok = func_keyword
 	func_stmt.name = func_name.content
 	func_stmt.params = params_list
@@ -378,7 +379,7 @@ parse_block_stmt :: proc(p: ^Parser) -> ^ast.Block_Stmt {
 	open_brace := current(p)
 	advance(p)
 
-	stmt_list := make([dynamic]^ast.Stmt, p.alloc)
+	stmt_list := make([dynamic]^ast.Stmt, p.file.alloc)
 
 	for !match(p, .Close_Brace) && !match(p, .EOF) {
 		stmt := parse_stmt(p)
@@ -397,7 +398,7 @@ parse_block_stmt :: proc(p: ^Parser) -> ^ast.Block_Stmt {
 	close_brace := current(p)
 	advance(p)
 
-	block_stmt := ast.new(ast.Block_Stmt, open_brace.pos, close_brace.pos, p.alloc)
+	block_stmt := ast.new(ast.Block_Stmt, open_brace.pos, close_brace.pos, p.file.alloc)
 	block_stmt.stmts = stmt_list[:]
 	return block_stmt
 }
@@ -421,7 +422,7 @@ parse_logical_or :: proc(p: ^Parser) -> ^ast.Expr {
 			return left
 		}
 
-		binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.alloc)
+		binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.file.alloc)
 		binary_expr.left = left
 		binary_expr.right = right
 		binary_expr.op = op_token
@@ -445,7 +446,7 @@ parse_logical_and :: proc(p: ^Parser) -> ^ast.Expr {
 			return left
 		}
 
-		binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.alloc)
+		binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.file.alloc)
 		binary_expr.left = left
 		binary_expr.right = right
 		binary_expr.op = op_token
@@ -471,7 +472,7 @@ parse_comparison :: proc(p: ^Parser) -> ^ast.Expr {
 				return left
 			}
 
-			binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.alloc)
+			binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.file.alloc)
 			binary_expr.left = left
 			binary_expr.right = right
 			binary_expr.op = op_token
@@ -499,7 +500,7 @@ parse_addition :: proc(p: ^Parser) -> ^ast.Expr {
 				return left
 			}
 
-			binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.alloc)
+			binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.file.alloc)
 			binary_expr.left = left
 			binary_expr.right = right
 			binary_expr.op = op_token
@@ -527,7 +528,7 @@ parse_multiplication :: proc(p: ^Parser) -> ^ast.Expr {
 				return left
 			}
 
-			binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.alloc)
+			binary_expr := ast.new(ast.Binary_Expr, left.pos, right.pos, p.file.alloc)
 			binary_expr.left = left
 			binary_expr.right = right
 			binary_expr.op = op_token
@@ -542,7 +543,7 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 	open_paren := current(p)
 	advance(p)
 
-	args := make([dynamic]^ast.Expr, p.alloc)
+	args := make([dynamic]^ast.Expr, p.file.alloc)
 
 	if !match(p, .Close_Paren) {
 		for {
@@ -567,7 +568,7 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 	}
 	close_paren := advance(p)
 
-	call_expr := ast.new(ast.Call_Expr, func_expr.pos, close_paren.pos, p.alloc)
+	call_expr := ast.new(ast.Call_Expr, func_expr.pos, close_paren.pos, p.file.alloc)
 	call_expr.expr = func_expr
 	call_expr.args = args[:]
 	call_expr.open = open_paren.pos
@@ -585,7 +586,7 @@ parse_unary :: proc(p: ^Parser) -> ^ast.Expr {
 			return nil
 		}
 
-		unary_expr := ast.new(ast.Unary_Expr, op_token.pos, operand.pos, p.alloc)
+		unary_expr := ast.new(ast.Unary_Expr, op_token.pos, operand.pos, p.file.alloc)
 		unary_expr.op = op_token
 		unary_expr.expr = operand
 		return unary_expr
@@ -612,7 +613,7 @@ parse_access_chain :: proc(p: ^Parser) -> ^ast.Expr {
 			field_token := current(p)
 			advance(p)
 
-			field_access := ast.new(ast.Field_Access, expr.pos, field_token.pos, p.alloc)
+			field_access := ast.new(ast.Field_Access, expr.pos, field_token.pos, p.file.alloc)
 			field_access.expr = expr
 			field_access.field = field_token.content
 			field_access.dot = dot_token.pos
@@ -633,7 +634,7 @@ parse_access_chain :: proc(p: ^Parser) -> ^ast.Expr {
 			close_bracket := current(p)
 			advance(p)
 
-			index_access := ast.new(ast.Index_Expr, expr.pos, close_bracket.pos, p.alloc)
+			index_access := ast.new(ast.Index_Expr, expr.pos, close_bracket.pos, p.file.alloc)
 			index_access.expr = expr
 			index_access.index = index_expr
 			index_access.open_bracket = open_bracket.pos
@@ -656,7 +657,7 @@ parse_primary :: proc(p: ^Parser) -> ^ast.Expr {
 	case .Ident:
 		advance(p)
 
-		ident_expr := ast.new(ast.Ident, token.pos, token.pos, p.alloc)
+		ident_expr := ast.new(ast.Ident, token.pos, token.pos, p.file.alloc)
 		ident_expr.name = token.content
 
 		if match(p, .Open_Paren) {
@@ -667,7 +668,7 @@ parse_primary :: proc(p: ^Parser) -> ^ast.Expr {
 
 	case .Float, .Text, .Integer, .True, .False:
 		advance(p)
-		basic_lit := ast.new(ast.Basic_Lit, token.pos, token.pos, p.alloc)
+		basic_lit := ast.new(ast.Basic_Lit, token.pos, token.pos, p.file.alloc)
 		basic_lit.tok = token
 		return basic_lit
 
@@ -686,7 +687,7 @@ parse_primary :: proc(p: ^Parser) -> ^ast.Expr {
 		close_token := current(p)
 		advance(p)
 
-		paren_expr := ast.new(ast.Paren_Expr, open_token.pos, close_token.pos, p.alloc)
+		paren_expr := ast.new(ast.Paren_Expr, open_token.pos, close_token.pos, p.file.alloc)
 		paren_expr.expr = expr
 		paren_expr.open = open_token.pos
 		paren_expr.close = close_token.pos
