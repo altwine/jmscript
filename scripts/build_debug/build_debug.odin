@@ -27,7 +27,7 @@ main :: proc() {
     append(&build_debug_cmd, src_dir)
     append(&build_debug_cmd, "-build-mode:exe")
 	append(&build_debug_cmd, "-target:windows_amd64")
-	append(&build_debug_cmd, "-extra-linker-flags:/LTCG")
+	append(&build_debug_cmd, "-extra-linker-flags:/LTCG /IGNORE:4099")
 	append(&build_debug_cmd, "-subsystem:console")
 	append(&build_debug_cmd, "-debug")
 	append(&build_debug_cmd, "-vet-shadowing")
