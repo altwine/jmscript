@@ -9109,4 +9109,3 @@ cleanup_actions :: proc "contextless" () {
 action_native_from_mapped :: proc(action_name: string) -> (Action, bool) {
 	return actions[action_name]
 }
-

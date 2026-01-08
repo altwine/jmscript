@@ -159,46 +159,46 @@ init_events :: proc "contextless" () {
 	events["furnace_smelt"] = Event{name="furnace_smelt", cancellable=true}
 	events["furnace_start_smelt"] = Event{name="furnace_start_smelt", cancellable=false}
 	events["furnace_burn"] = Event{name="furnace_burn", cancellable=true}
-	events["player_combust"] = Event{name="player_combust", cancellable=true}
-	events["world_dummy"] = Event{name="world_dummy", cancellable=false}
+	events["entity_knockback"] = Event{name="entity_knockback", cancellable=true}
+	events["player_start_gliding"] = Event{name="player_start_gliding", cancellable=true}
 	events["player_equipment_changed"] = Event{name="player_equipment_changed", cancellable=false}
-	events["entity_start_gliding"] = Event{name="entity_start_gliding", cancellable=true}
-	events["entity_stop_gliding"] = Event{name="entity_stop_gliding", cancellable=true}
-	events["fishing_hook_state_change"] = Event{name="fishing_hook_state_change", cancellable=true}
-	events["player_prepare_item_enchant"] = Event{name="player_prepare_item_enchant", cancellable=true}
-	events["player_anvil_rename_input"] = Event{name="player_anvil_rename_input", cancellable=false}
-	events["vault_display_item"] = Event{name="vault_display_item", cancellable=true}
-	events["player_vault_change_state"] = Event{name="player_vault_change_state", cancellable=true}
+	events["player_input_event"] = Event{name="player_input_event", cancellable=false}
+	events["player_dummy"] = Event{name="player_dummy", cancellable=false}
 	events["player_item_cooldown"] = Event{name="player_item_cooldown", cancellable=true}
-	events["player_close_advancements_menu"] = Event{name="player_close_advancements_menu", cancellable=false}
-	events["player_custom_click"] = Event{name="player_custom_click", cancellable=false}
-	events["player_open_advancements_tab"] = Event{name="player_open_advancements_tab", cancellable=true}
 	events["entity_combust"] = Event{name="entity_combust", cancellable=true}
 	events["crafter_craft"] = Event{name="crafter_craft", cancellable=true}
-	events["player_item_mend"] = Event{name="player_item_mend", cancellable=false}
-	events["player_knockback"] = Event{name="player_knockback", cancellable=true}
-	events["player_location_change"] = Event{name="player_location_change", cancellable=true}
-	events["entity_knockback"] = Event{name="entity_knockback", cancellable=true}
-	events["vault_change_state"] = Event{name="vault_change_state", cancellable=true}
-	events["player_start_gliding"] = Event{name="player_start_gliding", cancellable=true}
-	events["player_prepare_result"] = Event{name="player_prepare_result", cancellable=true}
-	events["item_merge"] = Event{name="item_merge", cancellable=true}
-	events["entity_dummy"] = Event{name="entity_dummy", cancellable=false}
-	events["player_rotate"] = Event{name="player_rotate", cancellable=true}
-	events["moisture_change"] = Event{name="moisture_change", cancellable=true}
-	events["entity_teleport"] = Event{name="entity_teleport", cancellable=true}
-	events["entity_equipment_changed"] = Event{name="entity_equipment_changed", cancellable=false}
-	events["player_dummy"] = Event{name="player_dummy", cancellable=false}
-	events["player_ask_gamemode_change"] = Event{name="player_ask_gamemode_change", cancellable=true}
-	events["player_stop_gliding"] = Event{name="player_stop_gliding", cancellable=true}
-	events["player_sign_change"] = Event{name="player_sign_change", cancellable=true}
 	events["player_velocity"] = Event{name="player_velocity", cancellable=true}
-	events["player_input_event"] = Event{name="player_input_event", cancellable=false}
-	events["player_item_group_cooldown"] = Event{name="player_item_group_cooldown", cancellable=true}
+	events["player_item_mend"] = Event{name="player_item_mend", cancellable=false}
+	events["player_prepare_item_enchant"] = Event{name="player_prepare_item_enchant", cancellable=true}
+	events["entity_dummy"] = Event{name="entity_dummy", cancellable=false}
 	events["player_pick_block"] = Event{name="player_pick_block", cancellable=true}
+	events["world_dummy"] = Event{name="world_dummy", cancellable=false}
+	events["entity_stop_gliding"] = Event{name="entity_stop_gliding", cancellable=true}
+	events["player_item_group_cooldown"] = Event{name="player_item_group_cooldown", cancellable=true}
+	events["player_prepare_result"] = Event{name="player_prepare_result", cancellable=true}
 	events["world_web_exception"] = Event{name="world_web_exception", cancellable=false}
-	events["player_enchant_item"] = Event{name="player_enchant_item", cancellable=true}
 	events["player_pick_entity"] = Event{name="player_pick_entity", cancellable=true}
+	events["entity_teleport"] = Event{name="entity_teleport", cancellable=true}
+	events["moisture_change"] = Event{name="moisture_change", cancellable=true}
+	events["entity_equipment_changed"] = Event{name="entity_equipment_changed", cancellable=false}
+	events["entity_start_gliding"] = Event{name="entity_start_gliding", cancellable=true}
+	events["player_custom_click"] = Event{name="player_custom_click", cancellable=false}
+	events["player_ask_gamemode_change"] = Event{name="player_ask_gamemode_change", cancellable=true}
+	events["item_merge"] = Event{name="item_merge", cancellable=true}
+	events["player_rotate"] = Event{name="player_rotate", cancellable=true}
+	events["player_location_change"] = Event{name="player_location_change", cancellable=true}
+	events["player_enchant_item"] = Event{name="player_enchant_item", cancellable=true}
+	events["vault_change_state"] = Event{name="vault_change_state", cancellable=true}
+	events["player_close_advancements_menu"] = Event{name="player_close_advancements_menu", cancellable=false}
+	events["player_stop_gliding"] = Event{name="player_stop_gliding", cancellable=true}
+	events["player_knockback"] = Event{name="player_knockback", cancellable=true}
+	events["player_open_advancements_tab"] = Event{name="player_open_advancements_tab", cancellable=true}
+	events["player_sign_change"] = Event{name="player_sign_change", cancellable=true}
+	events["player_anvil_rename_input"] = Event{name="player_anvil_rename_input", cancellable=false}
+	events["player_combust"] = Event{name="player_combust", cancellable=true}
+	events["player_vault_change_state"] = Event{name="player_vault_change_state", cancellable=true}
+	events["fishing_hook_state_change"] = Event{name="fishing_hook_state_change", cancellable=true}
+	events["vault_display_item"] = Event{name="vault_display_item", cancellable=true}
 }
 
 @(fini)

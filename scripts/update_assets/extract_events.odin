@@ -1,6 +1,7 @@
 #+feature dynamic-literals
 package update_assets
 
+import "core:fmt"
 import "core:encoding/json"
 import "core:os"
 
@@ -36,30 +37,38 @@ extract_events :: proc(output_file: string) -> (string, bool) {
 
 	fd, _ := os.open(output_file, os.O_CREATE | os.O_RDWR | os.O_TRUNC)
 	defer os.close(fd)
-	os.write_string(fd, "package assets\n\n")
-	os.write_string(fd, "import \"base:runtime\"\n\n")
-	os.write_string(fd, "Event :: struct {\n\tname: string,\n\tcancellable: bool,\n}\n\n")
-	os.write_string(fd, "events: map[string]Event\n\n")
-	os.write_string(fd, "@(init)\ninit_events :: proc \"contextless\" () {\n")
-	os.write_string(fd, "\tcontext = runtime.default_context()\n\tevents = make(map[string]Event, context.allocator)\n")
+	fmt.fprintln(fd, "package assets\n")
+
+	fmt.fprintln(fd, "import \"base:runtime\"\n")
+
+	fmt.fprintln(fd, "Event :: struct {\n\tname: string,\n\tcancellable: bool,\n}\n")
+
+	fmt.fprintln(fd, "events: map[string]Event\n")
+
+	fmt.fprintln(fd, "@(init)")
+	fmt.fprintln(fd, "init_events :: proc \"contextless\" () {")
+	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "\tevents = make(map[string]Event, context.allocator)")
 	for event in events {
-		os.write_string(fd, "\tevents[\"")
-		os.write_string(fd, event.name)
-		os.write_string(fd, "\"] = Event{name=\"")
-		os.write_string(fd, event.name)
-		os.write_string(fd, "\", cancellable=")
+		fmt.fprintf(fd, "\tevents[\"%s\"] = Event{{name=\"%s\", cancellable=", event.name, event.name)
 		if event.cancellable {
-			os.write_string(fd, "true")
+			fmt.fprint(fd, "true")
 		} else {
-			os.write_string(fd, "false")
+			fmt.fprint(fd, "false")
 		}
-		os.write_string(fd, "}\n")
+		fmt.fprintln(fd, "}")
 	}
-	os.write_string(fd, "}\n\n")
-	os.write_string(fd, "@(fini)\ncleanup_events :: proc \"contextless\" () {\n")
-	os.write_string(fd, "\tcontext = runtime.default_context()\n\tdelete(events)\n}\n\n")
-	os.write_string(fd, "event_native_from_mapped :: proc(event_name: string) -> (Event, bool) {\n")
-	os.write_string(fd, "\treturn events[event_name]\n")
-	os.write_string(fd, "}\n")
+	fmt.fprintln(fd, "}\n")
+
+	fmt.fprintln(fd, "@(fini)")
+	fmt.fprintln(fd, "cleanup_events :: proc \"contextless\" () {")
+	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "\tdelete(events)")
+	fmt.fprintln(fd, "}\n")
+
+	fmt.fprintln(fd, "event_native_from_mapped :: proc(event_name: string) -> (Event, bool) {")
+	fmt.fprintln(fd, "\treturn events[event_name]")
+	fmt.fprintln(fd, "}")
+
 	return "", true
 }

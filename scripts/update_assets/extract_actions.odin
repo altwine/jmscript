@@ -89,119 +89,126 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 		return "Failed to parse JSON", false
 	}
 
+	actions_count := len(actions) - len(ACTIONS_BLACKLIST)
+
 	fd, _ := os.open(output_file, os.O_CREATE | os.O_RDWR | os.O_TRUNC)
 	defer os.close(fd)
-	os.write_string(fd, "#+feature dynamic-literals\n")
-	os.write_string(fd, "package assets\n\n")
-	os.write_string(fd, "import \"base:runtime\"\n\n")
-	os.write_string(fd, "Action :: struct {\n\tname: string,\n\tin_slots: []string,\n\tout_slots: []string,\n\taccept_selector: bool,\n\ttype: Action_Type,\n\tslots: []Slot,\n}\n\n")
-	os.write_string(fd, "Action_Type :: enum {\n\tBASIC,\n\tCONTAINER,\n\tBASIC_WITH_CONDITIONAL,\n\tCONTAINER_WITH_CONDITIONAL,\n}\n\n")
-	os.write_string(fd, "Slot :: struct {\n\tname: string,\n\ttype: string,\n\t_enum: []string,\n}\n\n")
-	os.write_string(fd, "actions: map[string]Action\n\n")
-	os.write_string(fd, "@(init)\ninit_actions :: proc \"contextless\" () {\n")
-	os.write_string(fd, "\tcontext = runtime.default_context()\n\tactions = make(map[string]Action, ")
-	actions_count := 0
+
+	fmt.fprintln(fd, "#+feature dynamic-literals")
+	fmt.fprintln(fd, "package assets\n")
+
+	fmt.fprintln(fd, "import \"base:runtime\"\n")
+
+	fmt.fprintln(fd, "Action :: struct {")
+	fmt.fprintln(fd, "\tname: string,")
+	fmt.fprintln(fd, "\tin_slots: []string,")
+	fmt.fprintln(fd, "\tout_slots: []string,")
+	fmt.fprintln(fd, "\taccept_selector: bool,")
+	fmt.fprintln(fd, "\ttype: Action_Type,")
+	fmt.fprintln(fd, "\tslots: []Slot,")
+	fmt.fprintln(fd, "}\n")
+
+	fmt.fprintln(fd, "Action_Type :: enum {")
+	fmt.fprintln(fd, "\tBASIC,")
+	fmt.fprintln(fd, "\tCONTAINER,")
+	fmt.fprintln(fd, "\tBASIC_WITH_CONDITIONAL,")
+	fmt.fprintln(fd, "\tCONTAINER_WITH_CONDITIONAL,")
+	fmt.fprintln(fd, "}\n")
+
+	fmt.fprintln(fd, "Slot :: struct {")
+	fmt.fprintln(fd, "\tname: string,")
+	fmt.fprintln(fd, "\ttype: string,")
+	fmt.fprintln(fd, "\t_enum: []string,")
+	fmt.fprintln(fd, "}\n")
+
+	fmt.fprintln(fd, "actions: map[string]Action\n")
+
+	fmt.fprintln(fd, "@(init)")
+	fmt.fprintln(fd, "init_actions :: proc \"contextless\" () {")
+	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintfln(fd, "\tactions = make(map[string]Action, %d, context.allocator)", actions_count)
 	for action in actions {
-		if !slice.contains(ACTIONS_BLACKLIST[:], action.name) {
-			actions_count += 1
-		}
-	}
-	os.write_string(fd, fmt.tprint(actions_count))
-	os.write_string(fd, ", context.allocator)\n")
-	for action, action_idx in actions {
 		if slice.contains(ACTIONS_BLACKLIST[:], action.name) {
 			continue
 		}
 		action_in_out, has_in_outs := ACTION_INS_OUTS[action.name]
-		os.write_string(fd, "\tactions[\"")
-		os.write_string(fd, action.name)
-		os.write_string(fd, "\"] = Action{\n\t\t\"")
-		os.write_string(fd, action.name)
-		os.write_string(fd, "\",\n\t\t")
+		fmt.fprintfln(fd, "\tactions[\"%s\"] = Action{{", action.name)
+		fmt.fprintfln(fd, "\t\t\"%s\",", action.name)
 		if has_in_outs {
-			os.write_string(fd, "[]string{")
+			fmt.fprint(fd, "\t\t[]string{")
 			for _in, idx in action_in_out.ins {
-				os.write_string(fd, "\"")
-				os.write_string(fd, _in)
-				os.write_string(fd, "\"")
+				fmt.fprintf(fd, "\"%s\"", _in)
 				if idx != len(action_in_out.ins)-1 {
-				  os.write_string(fd, ", ")
+				  fmt.fprint(fd, ", ")
 				}
 			}
-			os.write_string(fd, "}")
+			fmt.fprintln(fd, "},")
 		} else {
-			os.write_string(fd, "nil")
+			fmt.fprintln(fd, "\t\tnil,")
 		}
-		os.write_string(fd, ",\n\t\t")
 		if has_in_outs {
-			os.write_string(fd, "[]string{")
+			fmt.fprint(fd, "\t\t[]string{")
 			for out, idx in action_in_out.outs {
-				os.write_string(fd, "\"")
-				os.write_string(fd, out)
-				os.write_string(fd, "\"")
+				fmt.fprintf(fd, "\"%s\"", out)
 				if idx != len(action_in_out.outs)-1 {
-				  os.write_string(fd, ", ")
+				  fmt.fprint(fd, ", ")
 				}
 			}
-			os.write_string(fd, "}")
+			fmt.fprintln(fd, "},")
 		} else {
-			os.write_string(fd, "nil")
+			fmt.fprintln(fd, "\t\tnil,")
 		}
-		os.write_string(fd, ",\n")
 		_, accept_selector := ACTION_SELECTORS[action.name]
 		if accept_selector {
-			os.write_string(fd, "\t\ttrue,\n")
+			fmt.fprintln(fd, "\t\ttrue,")
 		} else {
-			os.write_string(fd, "\t\tfalse,\n")
+			fmt.fprintln(fd, "\t\tfalse,")
 		}
-		os.write_string(fd, "\t\t")
 		switch action.type {
 		case "basic":
-			os.write_string(fd, ".BASIC")
+			fmt.fprintln(fd, "\t\t.BASIC,")
 		case "basic_with_conditional":
-			os.write_string(fd, ".BASIC_WITH_CONDITIONAL")
+			fmt.fprintln(fd, "\t\t.BASIC_WITH_CONDITIONAL,")
 		case "container":
-			os.write_string(fd, ".CONTAINER")
+			fmt.fprintln(fd, "\t\t.CONTAINER,")
 		case "container_with_conditional":
-			os.write_string(fd, ".CONTAINER_WITH_CONDITIONAL")
+			fmt.fprintln(fd, "\t\t.CONTAINER_WITH_CONDITIONAL,")
 		}
-		os.write_string(fd, ",\n\t")
+		fmt.fprint(fd, "\t")
 		if len(action.args) > 0 {
-			os.write_string(fd, "\t[]Slot{\n")
+			fmt.fprintln(fd, "\t[]Slot{")
 			for slot in action.args {
-				os.write_string(fd, "\t\t\tSlot{\"")
-				os.write_string(fd, slot.name)
-				os.write_string(fd, "\", \"")
-				os.write_string(fd, slot.type)
+				fmt.fprintf(fd, "\t\t\tSlot{{\"%s\", \"%s", slot.name, slot.type)
 				if slot.type == "enum" {
-					os.write_string(fd, "\", {")
-					vcount := len(slot.values)
-					for v, vi in slot.values {
-						os.write_string(fd, "\"")
-						os.write_string(fd, v)
-						os.write_string(fd, "\"")
-						if vi != vcount-1 {
-						  os.write_string(fd, ", ")
+					fmt.fprint(fd, "\", {")
+					values_count := len(slot.values)
+					for value, value_idx in slot.values {
+						fmt.fprintf(fd, "\"%s\"", value)
+						if value_idx != values_count-1 {
+						  fmt.fprint(fd, ", ")
 						}
 					}
-					os.write_string(fd, "}},\n")
+					fmt.fprintln(fd, "}},")
 				} else {
-					os.write_string(fd, "\", nil},\n")
+					fmt.fprintln(fd, "\", nil},")
 				}
 			}
-			os.write_string(fd, "\t\t},\n")
+			fmt.fprintln(fd, "\t\t},")
 		} else {
-			os.write_string(fd, "\tnil,\n")
+			fmt.fprintln(fd, "\tnil,")
 		}
-		os.write_string(fd, "\t}\n")
+		fmt.fprintln(fd, "\t}")
 	}
-	os.write_string(fd, "}\n\n")
-	os.write_string(fd, "@(fini)\ncleanup_actions :: proc \"contextless\" () {\n")
-	os.write_string(fd, "\tcontext = runtime.default_context()\n")
-	os.write_string(fd, "\tdelete(actions)\n")
-	os.write_string(fd, "}\n\n")
-	os.write_string(fd, "action_native_from_mapped :: proc(action_name: string) -> (Action, bool) {\n")
-	os.write_string(fd, "\treturn actions[action_name]\n")
-	os.write_string(fd, "}\n\n")
+	fmt.fprintln(fd, "}\n")
+
+	fmt.fprintln(fd, "@(fini)\ncleanup_actions :: proc \"contextless\" () {")
+	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "\tdelete(actions)")
+	fmt.fprintln(fd, "}\n")
+
+	fmt.fprintln(fd, "action_native_from_mapped :: proc(action_name: string) -> (Action, bool) {")
+	fmt.fprintln(fd, "\treturn actions[action_name]")
+	fmt.fprintln(fd, "}")
+
 	return "", true
 }
