@@ -51,7 +51,7 @@ extract_events :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "@(init)")
 	fmt.fprintln(fd, "init_events :: proc \"contextless\" () {")
 	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
-	fmt.fprintln(fd, "\tevents = make(map[string]Event, context.allocator)")
+	fmt.fprintln(fd, fmt.tprintf("\tevents = make(map[string]Event, %d, context.allocator)", len(events)))
 	for event in events {
 		fmt.fprintf(fd, "\tevents[\"%s\"] = {{\"%s\", ", event.name, event.name)
 		if event.cancellable {
