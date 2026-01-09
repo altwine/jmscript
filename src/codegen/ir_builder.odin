@@ -303,7 +303,7 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 			append(&func_handler.values, named_value("display_name", localized_text_value(display_name_data)))
 			append(&func_handler.values, named_value("display_description", localized_text_value(display_desc_data)))
 
-			func_test_icon := generate_item("minecraft:lapis_lazuli", 1)
+			func_test_icon := generate_item("minecraft:lapis_lazuli", 1, irb.alloc)
 			append(&func_handler.values, named_value("icon", item_value(func_test_icon)))
 
 			append(&func_handler.values, named_value("is_hidden", enum_value("FALSE")))
