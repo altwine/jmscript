@@ -53,7 +53,7 @@ extract_events :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
 	fmt.fprintln(fd, "\tevents = make(map[string]Event, context.allocator)")
 	for event in events {
-		fmt.fprintf(fd, "\tevents[\"%s\"] = Event{{name=\"%s\", cancellable=", event.name, event.name)
+		fmt.fprintf(fd, "\tevents[\"%s\"] = {{\"%s\", ", event.name, event.name)
 		if event.cancellable {
 			fmt.fprint(fd, "true")
 		} else {

@@ -101,11 +101,11 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 
 	fmt.fprintln(fd, "Action :: struct {")
 	fmt.fprintln(fd, "\tname: string,")
-	fmt.fprintln(fd, "\tin_slots: []string,")
-	fmt.fprintln(fd, "\tout_slots: []string,")
+	fmt.fprintln(fd, "\tin_slots: [dynamic]string,")
+	fmt.fprintln(fd, "\tout_slots: [dynamic]string,")
 	fmt.fprintln(fd, "\taccept_selector: bool,")
 	fmt.fprintln(fd, "\ttype: Action_Type,")
-	fmt.fprintln(fd, "\tslots: []Slot,")
+	fmt.fprintln(fd, "\tslots: [dynamic]Slot,")
 	fmt.fprintln(fd, "}\n")
 
 	fmt.fprintln(fd, "Action_Type :: enum {")
@@ -118,7 +118,7 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "Slot :: struct {")
 	fmt.fprintln(fd, "\tname: string,")
 	fmt.fprintln(fd, "\ttype: string,")
-	fmt.fprintln(fd, "\t_enum: []string,")
+	fmt.fprintln(fd, "\t_enum: [dynamic]string,")
 	fmt.fprintln(fd, "}\n")
 
 	fmt.fprintln(fd, "actions: map[string]Action\n")
@@ -135,7 +135,7 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 		fmt.fprintfln(fd, "\tactions[\"%s\"] = Action{{", action.name)
 		fmt.fprintfln(fd, "\t\t\"%s\",", action.name)
 		if has_in_outs {
-			fmt.fprint(fd, "\t\t[]string{")
+			fmt.fprint(fd, "\t\t[dynamic]string{")
 			for _in, idx in action_in_out.ins {
 				fmt.fprintf(fd, "\"%s\"", _in)
 				if idx != len(action_in_out.ins)-1 {
@@ -147,7 +147,7 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 			fmt.fprintln(fd, "\t\tnil,")
 		}
 		if has_in_outs {
-			fmt.fprint(fd, "\t\t[]string{")
+			fmt.fprint(fd, "\t\t[dynamic]string{")
 			for out, idx in action_in_out.outs {
 				fmt.fprintf(fd, "\"%s\"", out)
 				if idx != len(action_in_out.outs)-1 {
@@ -175,7 +175,7 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 			fmt.fprintln(fd, "\t\t.CONTAINER_WITH_CONDITIONAL,")
 		}
 		if len(action.args) > 0 {
-			fmt.fprintln(fd, "\t\t[]Slot{")
+			fmt.fprintln(fd, "\t\t[dynamic]Slot{")
 			for slot in action.args {
 				fmt.fprintf(fd, "\t\t\tSlot{{\"%s\", \"%s", slot.name, slot.type)
 				if slot.type == "enum" {
@@ -203,6 +203,14 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "@(fini)")
 	fmt.fprintln(fd, "cleanup_actions :: proc \"contextless\" () {")
 	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "\tfor _, action in actions {")
+	fmt.fprintln(fd, "\t\tdelete(action.in_slots)")
+	fmt.fprintln(fd, "\t\tdelete(action.out_slots)")
+	fmt.fprintln(fd, "\t\tfor slot in action.slots {")
+	fmt.fprintln(fd, "\t\t\tdelete(slot._enum)")
+	fmt.fprintln(fd, "\t\t}")
+	fmt.fprintln(fd, "\t\tdelete(action.slots)")
+	fmt.fprintln(fd, "\t}")
 	fmt.fprintln(fd, "\tdelete(actions)")
 	fmt.fprintln(fd, "}\n")
 

@@ -5,11 +5,11 @@ import "base:runtime"
 
 Action :: struct {
 	name: string,
-	in_slots: []string,
-	out_slots: []string,
+	in_slots: [dynamic]string,
+	out_slots: [dynamic]string,
 	accept_selector: bool,
 	type: Action_Type,
-	slots: []Slot,
+	slots: [dynamic]Slot,
 }
 
 Action_Type :: enum {
@@ -22,7 +22,7 @@ Action_Type :: enum {
 Slot :: struct {
 	name: string,
 	type: string,
-	_enum: []string,
+	_enum: [dynamic]string,
 }
 
 actions: map[string]Action
@@ -37,7 +37,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"function_name", "text", nil},
 		},
 	}
@@ -47,7 +47,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"message", "text", nil},
 			Slot{"type", "enum", {"WARNING", "ERROR", "FATAL"}},
@@ -75,7 +75,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"exception_type", "enum", {"WARNING", "ERROR"}},
 		},
@@ -86,7 +86,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"duration", "enum", {"NANOSECONDS", "MICROSECONDS", "MILLISECONDS"}},
 		},
@@ -121,7 +121,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"duration", "number", nil},
 			Slot{"time_unit", "enum", {"TICKS", "SECONDS", "MINUTES"}},
 		},
@@ -132,7 +132,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"location", "location", nil},
 		},
@@ -159,7 +159,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"damage", "number", nil},
 			Slot{"source", "text", nil},
 		},
@@ -170,7 +170,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 		},
 	}
@@ -180,7 +180,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"entity_type", "item", nil},
 		},
 	}
@@ -190,7 +190,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 		},
 	}
@@ -200,7 +200,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"display_name", "text", nil},
 			Slot{"server_type", "enum", {"MOJANG", "SERVER"}},
@@ -220,7 +220,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -238,7 +238,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -248,7 +248,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"name", "text", nil},
 			Slot{"default", "any", nil},
@@ -260,7 +260,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"potions", "potion", nil},
 			Slot{"overwrite", "enum", {"TRUE", "FALSE"}},
 			Slot{"show_icon", "enum", {"TRUE", "FALSE"}},
@@ -273,7 +273,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"heal", "number", nil},
 		},
 	}
@@ -299,7 +299,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"power", "number", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
 			Slot{"launch_axis", "enum", {"YAW_AND_PITCH", "YAW"}},
@@ -311,7 +311,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"projectile", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"name", "text", nil},
@@ -326,7 +326,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"power", "number", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
@@ -338,7 +338,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"power", "number", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
 		},
@@ -349,7 +349,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"materials", "item", nil},
 			Slot{"modification_mode", "enum", {"ADD", "REMOVE"}},
 		},
@@ -360,7 +360,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"materials", "item", nil},
 			Slot{"modification_mode", "enum", {"ADD", "REMOVE"}},
 		},
@@ -371,7 +371,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"speed", "number", nil},
 		},
@@ -390,7 +390,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"damage_type", "enum", {"DAMAGE", "CRITICAL_DAMAGE", "MAGICAL_DAMAGE"}},
 		},
 	}
@@ -400,7 +400,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"yaw", "number", nil},
 		},
 	}
@@ -410,7 +410,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -428,7 +428,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name", "text", nil},
 		},
 	}
@@ -446,7 +446,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"recipe_index", "number", nil},
 		},
 	}
@@ -456,7 +456,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"effects", "potion", nil},
 		},
 	}
@@ -490,7 +490,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -500,7 +500,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"health", "number", nil},
 		},
 	}
@@ -510,7 +510,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ai", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -520,7 +520,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"dance", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -530,7 +530,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"angry", "enum", {"TRUE", "FALSE"}},
 			Slot{"target", "text", nil},
 		},
@@ -541,7 +541,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"age", "number", nil},
 			Slot{"lock", "enum", {"ENABLE", "DISABLE", "DONT_CHANGE"}},
 		},
@@ -552,7 +552,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"helmet", "item", nil},
 			Slot{"chestplate", "item", nil},
 			Slot{"leggings", "item", nil},
@@ -565,7 +565,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"arms", "enum", {"ENABLE", "DISABLE", "DONT_CHANGE"}},
 			Slot{"base_plate", "enum", {"ENABLE", "DISABLE", "DONT_CHANGE"}},
 		},
@@ -576,7 +576,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"x_rotation", "number", nil},
 			Slot{"y_rotation", "number", nil},
 			Slot{"z_rotation", "number", nil},
@@ -589,7 +589,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "number", nil},
 			Slot{"attribute_type", "enum", {}},
 		},
@@ -600,7 +600,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"aware", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -610,7 +610,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"axolotl_type", "enum", {"BLUE", "CYAN", "GOLD", "LUCY", "WILD"}},
 		},
 	}
@@ -620,7 +620,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"baby", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -630,7 +630,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"nectar", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -640,7 +640,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"displayed_block", "block", nil},
 		},
 	}
@@ -650,7 +650,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"dashing", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -660,7 +660,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"carrying", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -670,7 +670,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"lying_down", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -680,7 +680,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"cat_type", "enum", {"ALL_BLACK", "BLACK", "BRITISH_SHORTHAIR", "CALICO", "JELLIE", "PERSIAN", "RAGDOLL", "RED", "SIAMESE", "TABBY", "WHITE"}},
 		},
 	}
@@ -690,7 +690,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"celebrating", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -700,7 +700,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"collidable", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -710,7 +710,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"charged", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -720,7 +720,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"fuse_ticks", "number", nil},
 		},
 	}
@@ -730,7 +730,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"health", "number", nil},
 		},
 	}
@@ -740,7 +740,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"custom_name", "text", nil},
 		},
 	}
@@ -750,7 +750,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"visibility", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -760,7 +760,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name", "text", nil},
 			Slot{"value", "text", nil},
 		},
@@ -771,7 +771,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"drops", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -781,7 +781,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"death_time", "number", nil},
 		},
 	}
@@ -791,7 +791,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"despawning", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -801,7 +801,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"billboard_type", "enum", {"CENTER", "FIXED", "HORIZONTAL", "VERTICAL"}},
 		},
 	}
@@ -811,7 +811,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block_light_level", "number", nil},
 			Slot{"sky_light_level", "number", nil},
 		},
@@ -822,7 +822,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"width", "number", nil},
 			Slot{"height", "number", nil},
 		},
@@ -833,7 +833,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"color_hexadecimal", "text", nil},
 		},
 	}
@@ -843,7 +843,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"interpolation_duration", "number", nil},
 			Slot{"interpolation_delay", "number", nil},
 		},
@@ -854,7 +854,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"axis_vector", "vector", nil},
 			Slot{"angle", "number", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
@@ -868,7 +868,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pitch", "number", nil},
 			Slot{"yaw", "number", nil},
 			Slot{"roll", "number", nil},
@@ -883,7 +883,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"scale_vector", "vector", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
 		},
@@ -894,7 +894,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"shadow_radius", "number", nil},
 			Slot{"shadow_opacity_percentage", "number", nil},
 		},
@@ -905,7 +905,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"duration", "number", nil},
 		},
 	}
@@ -915,7 +915,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"row_major_matrix", "number", nil},
 		},
 	}
@@ -925,7 +925,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"translation_vector", "vector", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
 		},
@@ -936,7 +936,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"view_range", "number", nil},
 		},
 	}
@@ -946,7 +946,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"phase", "enum", {"BREATH_ATTACK", "CHARGE_PLAYER", "CIRCLING", "DYING", "FLY_TO_PORTAL", "HOVER", "LAND_ON_PORTAL", "LEAVE_PORTAL", "ROAR_BEFORE_ATTACK", "SEARCH_FOR_BREATH_ATTACK_TARGET", "STRAFING"}},
 		},
 	}
@@ -956,7 +956,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"color", "enum", {"BLACK", "BLUE", "BROWN", "CYAN", "GRAY", "GREEN", "LIGHT_BLUE", "LIGHT_GRAY", "LIME", "MAGENTA", "ORANGE", "PINK", "PURPLE", "RED", "WHITE", "YELLOW"}},
 		},
 	}
@@ -966,7 +966,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"beam", "location", nil},
 		},
 	}
@@ -976,7 +976,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 		},
 	}
@@ -986,7 +986,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"slot", "enum", {"CHEST", "FEET", "HAND", "HEAD", "LEGS", "OFF_HAND"}},
 		},
@@ -997,7 +997,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"power", "number", nil},
 		},
 	}
@@ -1007,7 +1007,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"fall_distance", "number", nil},
 		},
 	}
@@ -1017,7 +1017,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 		},
 	}
@@ -1027,7 +1027,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ticks", "number", nil},
 		},
 	}
@@ -1037,7 +1037,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"time", "number", nil},
 		},
 	}
@@ -1047,7 +1047,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"leaping", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1057,7 +1057,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"fox_type", "enum", {"RED", "SNOW"}},
 		},
 	}
@@ -1067,7 +1067,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ticks", "number", nil},
 			Slot{"ticking_locked", "enum", {"TRUE", "FALSE"}},
 		},
@@ -1078,7 +1078,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"frog_variant", "enum", {"COLD", "TEMPERATE", "WARM"}},
 		},
 	}
@@ -1088,7 +1088,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"is_gliding", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1098,7 +1098,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"glowing", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1108,7 +1108,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"dark_ticks", "number", nil},
 		},
 	}
@@ -1118,7 +1118,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"screams", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1128,7 +1128,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"gravity", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1138,7 +1138,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"power", "number", nil},
 		},
 	}
@@ -1148,7 +1148,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"horse_color", "enum", {"WHITE", "CREAMY", "CHESTNUT", "BROWN", "DARK_BROWN", "GRAY", "BLACK", "DO_NOT_CHANGE"}},
 			Slot{"horse_style", "enum", {"NONE", "WHITE", "WHITEFIELD", "WHITE_DOTS", "BLACK_DOTS", "DO_NOT_CHANGE"}},
 		},
@@ -1159,7 +1159,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"is_immune", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1169,7 +1169,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"responsive", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1179,7 +1179,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"width", "number", nil},
 			Slot{"height", "number", nil},
 		},
@@ -1190,7 +1190,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"invisible", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1200,7 +1200,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ticks", "number", nil},
 		},
 	}
@@ -1210,7 +1210,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"invulnerable", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1220,7 +1220,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 		},
 	}
@@ -1230,7 +1230,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"displayed_item", "item", nil},
 		},
 	}
@@ -1240,7 +1240,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"display_model_type", "enum", {"FIRSTPERSON_LEFTHAND", "FIRSTPERSON_RIGHTHAND", "FIXED", "GROUND", "GUI", "HEAD", "NONE", "THIRDPERSON_LEFTHAND", "THIRDPERSON_RIGHTHAND"}},
 		},
 	}
@@ -1250,7 +1250,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 		},
 	}
@@ -1260,7 +1260,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"type", "enum", {"BROWN", "CREAMY", "GRAY", "WHITE"}},
 		},
 	}
@@ -1270,7 +1270,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"marker", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1280,7 +1280,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"max_health", "number", nil},
 			Slot{"heal_to_max", "enum", {"TRUE", "FALSE"}},
 		},
@@ -1291,7 +1291,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"result", "item", nil},
 			Slot{"ingredient_one", "item", nil},
 			Slot{"ingredient_two", "item", nil},
@@ -1313,7 +1313,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 			Slot{"block_offset", "number", nil},
 		},
@@ -1324,7 +1324,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"aggressive", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1334,7 +1334,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"cow_type", "enum", {"BROWN", "RED"}},
 		},
 	}
@@ -1344,7 +1344,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"gene", "enum", {"MAIN", "HIDDEN", "BOTH"}},
 			Slot{"gene_type", "enum", {"NORMAL", "LAZY", "WORRIED", "PLAYFUL", "BROWN", "WEAK", "AGGRESSIVE"}},
 		},
@@ -1355,7 +1355,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"parrot_type", "enum", {"BLUE", "CYAN", "GRAY", "GREEN", "RED"}},
 		},
 	}
@@ -1365,7 +1365,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"persistence", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1375,7 +1375,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"delay", "number", nil},
 		},
 	}
@@ -1385,7 +1385,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"able", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1395,7 +1395,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"charging", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1405,7 +1405,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"dancing_time", "number", nil},
 		},
 	}
@@ -1415,7 +1415,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pose", "enum", {"CROAKING", "DIGGING", "DYING", "EMERGING", "FALL_FLYING", "LONG_JUMPING", "ROARING", "SLEEPING", "SNEAKING", "SNIFFING", "SPIN_ATTACK", "STANDING", "SWIMMING", "USING_TONGUE"}},
 		},
 	}
@@ -1425,7 +1425,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"radius", "number", nil},
 			Slot{"shrinking_speed", "number", nil},
 		},
@@ -1436,7 +1436,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 		},
 	}
@@ -1446,7 +1446,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 		},
 	}
@@ -1456,7 +1456,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"uuid", "text", nil},
 		},
 	}
@@ -1466,7 +1466,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"rabbit_type", "enum", {"BLACK", "BLACK_AND_WHITE", "BROWN", "GOLD", "SALT_AND_PEPPER", "THE_KILLER_BUNNY", "WHITE"}},
 		},
 	}
@@ -1476,7 +1476,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"rearing", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1486,7 +1486,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"riptiding", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1496,7 +1496,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"yaw", "number", nil},
 			Slot{"pitch", "number", nil},
 		},
@@ -1507,7 +1507,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"vector", "vector", nil},
 		},
 	}
@@ -1517,7 +1517,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"sheared", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1527,7 +1527,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"target", "text", nil},
 		},
 	}
@@ -1537,7 +1537,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"silenced", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1547,7 +1547,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"sitting", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1557,7 +1557,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"size", "number", nil},
 		},
 	}
@@ -1567,7 +1567,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"state", "enum", {"DIGGING", "FEELING_HAPPY", "IDLING", "RISING", "SCENTING", "SEARCHING", "SNIFFING"}},
 		},
 	}
@@ -1577,7 +1577,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pumpkin", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1587,7 +1587,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -1597,7 +1597,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -1607,7 +1607,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"text_alignment", "enum", {"CENTER", "LEFT", "RIGHT"}},
 		},
 	}
@@ -1617,7 +1617,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"color_hexadecimal", "text", nil},
 			Slot{"opacity", "number", nil},
 		},
@@ -1628,7 +1628,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"line_width", "number", nil},
 		},
 	}
@@ -1638,7 +1638,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"text_opacity", "number", nil},
 		},
 	}
@@ -1648,7 +1648,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"enable_see_through", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1658,7 +1658,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"displayed_text", "text", nil},
 			Slot{"merging_mode", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
 		},
@@ -1669,7 +1669,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"enable_text_shadow", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1679,7 +1679,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pattern_color", "enum", {"WHITE", "ORANGE", "MAGENTA", "LIGHT_BLUE", "YELLOW", "LIME", "PINK", "GRAY", "LIGHT_GRAY", "CYAN", "PURPLE", "BLUE", "BROWN", "GREEN", "RED", "BLACK", "DO_NOT_CHANGE"}},
 			Slot{"body_color", "enum", {"WHITE", "ORANGE", "MAGENTA", "LIGHT_BLUE", "YELLOW", "LIME", "PINK", "GRAY", "LIGHT_GRAY", "CYAN", "PURPLE", "BLUE", "BROWN", "GREEN", "RED", "BLACK", "DO_NOT_CHANGE"}},
 			Slot{"pattern", "enum", {"KOB", "SUNSTREAK", "SNOOPER", "DASHER", "BRINELY", "SPOTTY", "FLOPPER", "STRIPEY", "GLITTER", "BLOCKFISH", "BETTY", "CLAYFISH", "DO_NOT_CHANGE"}},
@@ -1691,7 +1691,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"velocity", "vector", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
 		},
@@ -1702,7 +1702,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"charging", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1712,7 +1712,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"lifetime", "number", nil},
 		},
 	}
@@ -1722,7 +1722,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"biome", "enum", {"DESERT", "JUNGLE", "PLAINS", "SAVANNA", "SNOW", "SWAMP", "TAIGA"}},
 		},
 	}
@@ -1732,7 +1732,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"experience", "number", nil},
 		},
 	}
@@ -1742,7 +1742,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"profession", "enum", {"NONE", "ARMORER", "BUTCHER", "CARTOGRAPHER", "CLERIC", "FARMER", "FISHERMAN", "FLETCHER", "LEATHERWORKER", "LIBRARIAN", "MASON", "NITWIT", "SHEPHERD", "TOOLSMITH", "WEAPONSMITH"}},
 		},
 	}
@@ -1752,7 +1752,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"visual_fire", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1762,7 +1762,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"anger", "number", nil},
 		},
@@ -1773,7 +1773,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"digging", "enum", {"EMERGE", "DIG_DOWN"}},
 		},
 	}
@@ -1783,7 +1783,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"wearing", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1793,7 +1793,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ticks", "number", nil},
 		},
 	}
@@ -1803,7 +1803,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"arms_raised", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1821,7 +1821,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"sleep", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -1831,7 +1831,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"hand_type", "enum", {"MAIN", "OFF"}},
 		},
 	}
@@ -1841,7 +1841,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"keep_rotation", "enum", {"TRUE", "FALSE"}},
 		},
@@ -1852,7 +1852,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"hand", "enum", {"MAIN_HAND", "OFF_HAND"}},
 			Slot{"enable", "enum", {"TRUE", "FALSE"}},
 		},
@@ -1863,7 +1863,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"growth_stage", "number", nil},
 			Slot{"growth_type", "enum", {"STAGE_NUMBER", "PERCENTAGE"}},
@@ -1875,7 +1875,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"bloom_location", "location", nil},
 			Slot{"charge", "number", nil},
@@ -1887,7 +1887,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"count", "number", nil},
 		},
@@ -1898,7 +1898,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"locations", "location", nil},
 			Slot{"tool", "item", nil},
 			Slot{"drop_exp", "enum", {"TRUE", "FALSE"}},
@@ -1918,7 +1918,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -1928,7 +1928,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"items", "item", nil},
 		},
@@ -1939,7 +1939,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -1949,7 +1949,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pos_1", "location", nil},
 			Slot{"pos_2", "location", nil},
 		},
@@ -1960,7 +1960,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 		},
 	}
@@ -1970,7 +1970,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pos_1", "location", nil},
 			Slot{"pos_2", "location", nil},
 			Slot{"target_pos", "location", nil},
@@ -1985,7 +1985,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"power", "number", nil},
 		},
@@ -1996,7 +1996,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"display_name", "text", nil},
 		},
@@ -2007,7 +2007,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"items", "item", nil},
 		},
@@ -2018,7 +2018,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"tree_type", "enum", {"TREE", "ACACIA", "BIG_TREE", "BIRCH", "BROWN_MUSHROOM", "CHORUS_PLANT", "COCOA_TREE", "CRIMSON_FUNGUS", "DARK_OAK", "JUNGLE", "JUNGLE_BUSH", "MEGA_REDWOOD", "REDWOOD", "RED_MUSHROOM", "SMALL_JUNGLE", "SWAMP", "TALL_BIRCH", "TALL_REDWOOD", "WARPED_FUNGUS", "AZALEA"}},
 		},
@@ -2029,7 +2029,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"hide", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -2039,7 +2039,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"firework", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"movement", "enum", {"UPWARDS", "DIRECTIONAL"}},
@@ -2052,7 +2052,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"projectile", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"speed", "number", nil},
@@ -2067,7 +2067,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"times", "number", nil},
 		},
@@ -2078,7 +2078,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"items", "item", nil},
 		},
@@ -2089,7 +2089,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 		},
 	}
@@ -2099,7 +2099,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"text", "text", nil},
 		},
@@ -2110,7 +2110,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"score", "number", nil},
 		},
@@ -2121,7 +2121,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"old_block", "block", nil},
 			Slot{"pos_1", "location", nil},
 			Slot{"pos_2", "location", nil},
@@ -2134,7 +2134,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"replace", "item", nil},
@@ -2147,7 +2147,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"url", "text", nil},
 			Slot{"content_body", "text", nil},
 			Slot{"request_type", "enum", {"GET", "POST", "PUT", "DELETE"}},
@@ -2160,7 +2160,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"tick", "number", nil},
 		},
@@ -2171,7 +2171,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"power_level", "number", nil},
 		},
@@ -2182,7 +2182,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 			Slot{"locations", "location", nil},
 			Slot{"update_blocks", "enum", {"TRUE", "FALSE"}},
@@ -2194,7 +2194,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"tag_name", "text", nil},
 			Slot{"tag_value", "text", nil},
@@ -2206,7 +2206,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"block_data", "text", nil},
 		},
@@ -2217,7 +2217,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"enable", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -2227,7 +2227,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"data", "text", nil},
 			Slot{"value", "text", nil},
@@ -2239,7 +2239,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"item", "item", nil},
 		},
@@ -2250,7 +2250,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"item", "item", nil},
 			Slot{"cooking_time", "number", nil},
@@ -2263,7 +2263,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"items", "item", nil},
 		},
@@ -2274,7 +2274,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"container_key", "text", nil},
 		},
@@ -2285,7 +2285,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"name", "text", nil},
 		},
@@ -2296,7 +2296,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"item", "item", nil},
 			Slot{"side", "enum", {"BACK", "FRONT", "LEFT", "RIGHT"}},
@@ -2308,7 +2308,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"damage", "number", nil},
 		},
 	}
@@ -2318,7 +2318,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"exhaustion", "number", nil},
 		},
 	}
@@ -2328,7 +2328,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"experience", "number", nil},
 		},
 	}
@@ -2338,7 +2338,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"heal", "number", nil},
 		},
 	}
@@ -2348,7 +2348,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 		},
 	}
@@ -2358,7 +2358,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 		},
 	}
@@ -2368,7 +2368,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"allowed", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -2378,7 +2378,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"projectile", "item", nil},
 			Slot{"name", "text", nil},
 		},
@@ -2389,7 +2389,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"information", "text", nil},
 		},
 	}
@@ -2399,7 +2399,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"sound", "sound", nil},
 		},
 	}
@@ -2409,7 +2409,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"source_slot", "number", nil},
 		},
 	}
@@ -2419,7 +2419,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"target", "number", nil},
 		},
 	}
@@ -2429,7 +2429,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"time", "number", nil},
 		},
@@ -2440,7 +2440,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"item", "item", nil},
 			Slot{"slot", "number", nil},
@@ -2452,7 +2452,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"item", "item", nil},
 			Slot{"page", "number", nil},
@@ -2464,7 +2464,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"receive_type", "enum", {"NAME_OR_UUID", "VALUE"}},
@@ -2476,7 +2476,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"powered", "enum", {"TRUE", "FALSE"}},
 		},
@@ -2487,7 +2487,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 			Slot{"pos_1", "location", nil},
 			Slot{"pos_2", "location", nil},
@@ -2499,7 +2499,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"line", "text", nil},
 			Slot{"display", "text", nil},
@@ -2514,7 +2514,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"line", "text", nil},
 			Slot{"display", "text", nil},
@@ -2526,7 +2526,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"line", "text", nil},
 			Slot{"format_content", "text", nil},
@@ -2539,7 +2539,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"format_content", "text", nil},
 			Slot{"format", "enum", {"BLANK", "FIXED", "STYLED", "RESET"}},
@@ -2551,7 +2551,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"text", "text", nil},
 			Slot{"score", "number", nil},
@@ -2563,7 +2563,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"title", "text", nil},
 		},
@@ -2574,7 +2574,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"can_summon", "enum", {"TRUE", "FALSE"}},
 		},
@@ -2585,7 +2585,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"shrieking", "enum", {"TRUE", "FALSE"}},
 		},
@@ -2596,7 +2596,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"warning_level", "number", nil},
 		},
@@ -2607,7 +2607,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"text", "text", nil},
 			Slot{"line", "number", nil},
@@ -2620,7 +2620,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"side", "enum", {"FRONT", "BACK", "ALL"}},
 			Slot{"sign_text_color", "enum", {"BLACK", "BLUE", "BROWN", "CYAN", "GRAY", "GREEN", "LIGHT_BLUE", "LIGHT_GRAY", "LIME", "MAGENTA", "ORANGE", "PINK", "PURPLE", "RED", "WHITE", "YELLOW"}},
@@ -2633,7 +2633,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"waxed", "enum", {"TRUE", "FALSE"}},
 		},
@@ -2644,7 +2644,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"entity", "item", nil},
 		},
@@ -2655,7 +2655,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"difficulty", "enum", {"EASY", "HARD", "NORMAL", "PEACEFUL"}},
 		},
 	}
@@ -2665,7 +2665,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"distance", "number", nil},
 		},
 	}
@@ -2675,7 +2675,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"time", "number", nil},
 		},
 	}
@@ -2685,7 +2685,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"weather_type", "enum", {"CLEAR", "RAINING", "THUNDER"}},
 			Slot{"weather_duration", "number", nil},
 		},
@@ -2696,7 +2696,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"helmet", "item", nil},
 			Slot{"chestplate", "item", nil},
 			Slot{"leggings", "item", nil},
@@ -2719,7 +2719,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"spawn_location", "location", nil},
 			Slot{"custom_name", "text", nil},
 			Slot{"block", "block", nil},
@@ -2731,7 +2731,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"effects", "potion", nil},
 			Slot{"radius", "number", nil},
@@ -2746,7 +2746,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"custom_name", "text", nil},
 			Slot{"show_bottom", "enum", {"TRUE", "FALSE"}},
@@ -2758,7 +2758,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"custom_name", "text", nil},
 		},
@@ -2769,7 +2769,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"experience_amount", "number", nil},
 			Slot{"custom_name", "text", nil},
@@ -2781,7 +2781,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"destination", "location", nil},
 			Slot{"lifespan", "number", nil},
@@ -2795,7 +2795,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 			Slot{"location", "location", nil},
 			Slot{"name", "text", nil},
@@ -2808,7 +2808,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"custom_name", "text", nil},
 			Slot{"width", "number", nil},
@@ -2822,7 +2822,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"custom_name", "text", nil},
@@ -2837,7 +2837,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"spawn_location", "location", nil},
 			Slot{"custom_name", "text", nil},
 			Slot{"displayed_item", "item", nil},
@@ -2849,7 +2849,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -2859,7 +2859,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"mob", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"health", "number", nil},
@@ -2880,7 +2880,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"tnt_power", "number", nil},
 			Slot{"fuse_duration", "number", nil},
@@ -2894,7 +2894,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"custom_name", "text", nil},
 		},
@@ -2905,7 +2905,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"spawn_location", "location", nil},
 			Slot{"custom_name", "text", nil},
 			Slot{"merging_mode", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
@@ -2918,7 +2918,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"vehicle", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"custom_name", "text", nil},
@@ -2938,7 +2938,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -2948,7 +2948,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -2958,7 +2958,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"min", "location", nil},
 			Slot{"max", "location", nil},
 		},
@@ -2969,7 +2969,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"check_type", "enum", {"OVERLAPS", "CONTAINS"}},
 		},
@@ -2988,7 +2988,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"tag", "text", nil},
 			Slot{"tag_value", "text", nil},
 		},
@@ -2999,7 +2999,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"potions", "potion", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
 		},
@@ -3026,7 +3026,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location_1", "location", nil},
 			Slot{"location_2", "location", nil},
 			Slot{"ignore_y_axis", "enum", {"TRUE", "FALSE"}},
@@ -3056,7 +3056,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ignore_y_axis", "enum", {"TRUE", "FALSE"}},
 			Slot{"location", "location", nil},
 			Slot{"range", "number", nil},
@@ -3076,7 +3076,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"entity_ids", "text", nil},
 			Slot{"compare_mode", "enum", {"NEAREST", "FARTHEST"}},
 		},
@@ -3087,7 +3087,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"blocks", "block", nil},
 			Slot{"locations", "location", nil},
 			Slot{"only_solid", "enum", {"TRUE", "FALSE"}},
@@ -3099,7 +3099,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"entity_types", "item", nil},
 		},
 	}
@@ -3117,7 +3117,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"names_or_uuids", "text", nil},
 		},
 	}
@@ -3127,7 +3127,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"reason", "enum", {"BEEHIVE", "BREEDING", "BUILD_IRONGOLEM", "BUILD_SNOWMAN", "BUILD_WITHER", "COMMAND", "CURED", "CUSTOM", "DEFAULT", "DISPENSE_EGG", "DROWNED", "EGG", "ENDER_PEARL", "EXPLOSION", "FROZEN", "INFECTION", "JOCKEY", "LIGHTNING", "MOUNT", "NATURAL", "NETHER_PORTAL", "OCELOT_BABY", "PATROL", "PIGLIN_ZOMBIFIED", "RAID", "REINFORCEMENTS", "SHEARED", "SHOULDER_ENTITY", "SILVERFISH_BLOCK", "SLIME_SPLIT", "SPAWNER", "SPAWNER_EGG", "TRAP", "VILLAGER_DEFENSE", "VILLAGE_INVASION"}},
 		},
 	}
@@ -3137,7 +3137,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"blocks", "block", nil},
 		},
@@ -3148,7 +3148,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"locations", "location", nil},
 			Slot{"power_mode", "enum", {"DIRECT", "INDIRECT"}},
 		},
@@ -3159,7 +3159,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -3169,7 +3169,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"items", "item", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
@@ -3182,7 +3182,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"items", "item", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
@@ -3194,7 +3194,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"cause", "enum", {"BLOCK_EXPLOSION", "CONTACT", "CRAMMING", "CUSTOM", "DRAGON_BREATH", "DROWNING", "DRYOUT", "ENTITY_ATTACK", "ENTITY_EXPLOSION", "ENTITY_SWEEP_ATTACK", "FALL", "FALLING_BLOCK", "FIRE", "FIRE_TICK", "FLY_INTO_WALL", "FREEZE", "HOT_FLOOR", "LAVA", "LIGHTNING", "MAGIC", "MELTING", "POISON", "PROJECTILE", "STARVATION", "SUFFOCATION", "SUICIDE", "THORNS", "VOID", "WITHER"}},
 		},
 	}
@@ -3212,7 +3212,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"blocks", "block", nil},
 			Slot{"locations", "location", nil},
 		},
@@ -3231,7 +3231,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
 		},
@@ -3242,7 +3242,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"names_or_uuids", "text", nil},
 		},
 	}
@@ -3252,7 +3252,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"heal_cause", "enum", {"CUSTOM", "EATING", "ENDER_CRYSTAL", "MAGIC", "MAGIC_REGEN", "REGEN", "SATIATED", "WITHER", "WITHER_SPAWN"}},
 		},
 	}
@@ -3262,7 +3262,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"cause", "enum", {"ARROW", "ENDER_CRYSTAL", "EXPLOSION", "FIREBALL", "FLINT_AND_STEEL", "LAVA", "LIGHTNING", "SPREAD"}},
 		},
 	}
@@ -3272,7 +3272,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"instrument", "enum", {"BANJO", "BASS_DRUM", "BASS_GUITAR", "BELL", "BIT", "CHIME", "COW_BELL", "DIDGERIDOO", "FLUTE", "GUITAR", "IRON_XYLOPHONE", "PIANO", "PLING", "SNARE_DRUM", "STICKS", "XYLOPHONE"}},
 		},
 	}
@@ -3282,7 +3282,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"texts", "text", nil},
 			Slot{"check_side", "enum", {"ANY", "FRONT", "BACK"}},
@@ -3296,7 +3296,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"chat_messages", "text", nil},
 		},
 	}
@@ -3306,7 +3306,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -3316,7 +3316,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"min", "location", nil},
 			Slot{"max", "location", nil},
 		},
@@ -3327,7 +3327,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"check_type", "enum", {"OVERLAPS", "CONTAINS"}},
 		},
@@ -3338,7 +3338,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
 		},
@@ -3349,7 +3349,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"gamemode", "enum", {"SURVIVAL", "CREATIVE", "ADVENTURE", "SPECTATOR"}},
 		},
 	}
@@ -3359,7 +3359,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
@@ -3371,7 +3371,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"count", "number", nil},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "TYPE_ONLY"}},
@@ -3383,7 +3383,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"slots", "number", nil},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
@@ -3395,7 +3395,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"potions", "potion", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
 		},
@@ -3406,7 +3406,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"privilege", "enum", {"BUILDER", "DEVELOPER", "BUILDER_AND_DEVELOPER", "WHITELISTED", "OWNER"}},
 			Slot{"exact", "enum", {"TRUE", "FALSE"}},
 		},
@@ -3417,7 +3417,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
 			Slot{"checked_slots", "enum", {"ENTIRE_INVENTORY", "MAIN_INVENTORY", "UPPER_INVENTORY", "HOTBAR", "ARMOR"}},
@@ -3429,7 +3429,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"slot", "number", nil},
 		},
 	}
@@ -3439,7 +3439,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"slots", "number", nil},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
@@ -3451,7 +3451,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"inventory_type", "enum", {"CHEST", "DISPENSER", "DROPPER", "FURNACE", "WORKBENCH", "CRAFTING", "ENCHANTING", "BREWING", "PLAYER", "CREATIVE", "MERCHANT", "ENDER_CHEST", "ANVIL", "SMITHING", "BEACON", "HOPPER", "SHULKER_BOX", "BARREL", "BLAST_FURNACE", "LECTERN", "SMOKER", "LOOM", "CARTOGRAPHY", "GRINDSTONE", "STONECUTTER", "COMPOSTER"}},
 		},
 	}
@@ -3493,7 +3493,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"hand_slot", "enum", {"EITHER_HAND", "MAIN_HAND", "OFF_HAND"}},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
@@ -3505,7 +3505,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location_1", "location", nil},
 			Slot{"location_2", "location", nil},
 			Slot{"ignore_y_axis", "enum", {"TRUE", "FALSE"}},
@@ -3519,7 +3519,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 		},
 	}
@@ -3529,7 +3529,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"blocks", "block", nil},
 			Slot{"locations", "location", nil},
 			Slot{"distance", "number", nil},
@@ -3542,7 +3542,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ignore_y_axis", "enum", {"TRUE", "FALSE"}},
 			Slot{"location", "location", nil},
 			Slot{"range", "number", nil},
@@ -3570,7 +3570,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"entity_ids", "text", nil},
 			Slot{"compare_mode", "enum", {"NEAREST", "FARTHEST"}},
 		},
@@ -3613,7 +3613,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"blocks", "block", nil},
 			Slot{"locations", "location", nil},
 			Slot{"only_solid", "enum", {"TRUE", "FALSE"}},
@@ -3633,7 +3633,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
 		},
@@ -3644,7 +3644,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
@@ -3656,7 +3656,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"names_or_uuids", "text", nil},
 		},
 	}
@@ -3666,7 +3666,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "any", nil},
 			Slot{"compare", "any", nil},
 		},
@@ -3677,7 +3677,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 		},
 	}
@@ -3687,7 +3687,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "number", nil},
 			Slot{"compare", "number", nil},
 		},
@@ -3698,7 +3698,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "number", nil},
 			Slot{"compare", "number", nil},
 		},
@@ -3709,7 +3709,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "any", nil},
 			Slot{"min", "any", nil},
 			Slot{"max", "any", nil},
@@ -3721,7 +3721,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "any", nil},
 			Slot{"variable_type", "enum", {"NUMBER", "TEXT", "LOCATION", "ITEM", "POTION", "SOUND", "PARTICLE", "VECTOR", "ARRAY", "MAP"}},
 		},
@@ -3732,7 +3732,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "item", nil},
 			Slot{"compare", "item", nil},
 			Slot{"comparison_mode", "enum", {"EXACTLY", "IGNORE_STACK_SIZE", "IGNORE_DURABILITY_AND_STACK_SIZE", "TYPE_ONLY"}},
@@ -3744,7 +3744,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"enchant", "text", nil},
 			Slot{"level", "number", nil},
@@ -3756,7 +3756,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"tag", "text", nil},
 			Slot{"value", "text", nil},
@@ -3768,7 +3768,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "number", nil},
 			Slot{"compare", "number", nil},
 		},
@@ -3779,7 +3779,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "number", nil},
 			Slot{"compare", "number", nil},
 		},
@@ -3790,7 +3790,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"list", "list", nil},
 			Slot{"values", "any", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
@@ -3802,7 +3802,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"list", "list", nil},
 			Slot{"index", "number", nil},
 			Slot{"values", "any", nil},
@@ -3814,7 +3814,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "location", nil},
 			Slot{"min", "location", nil},
 			Slot{"max", "location", nil},
@@ -3827,7 +3827,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"radius", "number", nil},
 			Slot{"check", "location", nil},
@@ -3840,7 +3840,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"map", "dictionary", nil},
 			Slot{"key", "any", nil},
 		},
@@ -3851,7 +3851,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"map", "dictionary", nil},
 			Slot{"key", "any", nil},
 			Slot{"values", "any", nil},
@@ -3863,7 +3863,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "any", nil},
 			Slot{"compare", "any", nil},
 		},
@@ -3874,7 +3874,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"min1", "location", nil},
 			Slot{"max1", "location", nil},
 			Slot{"min2", "location", nil},
@@ -3888,7 +3888,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "text", nil},
 			Slot{"compare", "text", nil},
 			Slot{"ignore_case", "enum", {"TRUE", "FALSE"}},
@@ -3900,7 +3900,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "text", nil},
 			Slot{"compare", "text", nil},
 			Slot{"ignore_case", "enum", {"TRUE", "FALSE"}},
@@ -3912,7 +3912,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"match", "text", nil},
 			Slot{"values", "text", nil},
 			Slot{"ignore_case", "enum", {"TRUE", "FALSE"}},
@@ -3925,7 +3925,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "text", nil},
 			Slot{"compare", "text", nil},
 			Slot{"ignore_case", "enum", {"TRUE", "FALSE"}},
@@ -3937,7 +3937,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"list", "any", nil},
 		},
 	}
@@ -3947,7 +3947,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"position", "enum", {"TOP", "BUTTON"}},
 		},
@@ -3958,7 +3958,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"allow", "enum", {"TRUE", "FALSE"}},
 			Slot{"blocks", "block", nil},
 		},
@@ -3969,7 +3969,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"firework", "item", nil},
 		},
 	}
@@ -4003,7 +4003,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"clear_mode", "enum", {"ENTIRE", "MAIN", "UPPER", "HOTBAR", "ARMOR"}},
 		},
 	}
@@ -4013,7 +4013,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 		},
 	}
@@ -4039,7 +4039,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"damage", "number", nil},
 			Slot{"source", "text", nil},
 		},
@@ -4050,7 +4050,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 			Slot{"visible_to_self", "enum", {"TRUE", "FALSE"}},
 		},
@@ -4061,7 +4061,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"entity_type", "item", nil},
 			Slot{"visible_to_self", "enum", {"TRUE", "FALSE"}},
 		},
@@ -4072,7 +4072,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"visible_to_self", "enum", {"TRUE", "FALSE"}},
 		},
@@ -4083,7 +4083,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"direction", "enum", {"DOWN", "NORTH", "SOUTH", "WEST", "EAST"}},
 		},
@@ -4094,7 +4094,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"block", "block", nil},
 		},
@@ -4105,7 +4105,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"is_opened", "enum", {"TRUE", "FALSE"}},
 		},
@@ -4116,7 +4116,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"color", "enum", {"LIGHT_PURPLE", "DARK_PURPLE"}},
 		},
@@ -4127,7 +4127,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"text", "text", nil},
 		},
@@ -4138,7 +4138,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -4148,7 +4148,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"particle", "particle", nil},
 			Slot{"location", "location", nil},
 		},
@@ -4159,7 +4159,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"particle", "particle", nil},
 			Slot{"center", "location", nil},
 			Slot{"radius", "number", nil},
@@ -4175,7 +4175,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"particle", "particle", nil},
 			Slot{"first_corner", "location", nil},
 			Slot{"second_corner", "location", nil},
@@ -4189,7 +4189,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"particle", "particle", nil},
 			Slot{"start", "location", nil},
 			Slot{"end", "location", nil},
@@ -4203,7 +4203,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"particle", "particle", nil},
 			Slot{"start", "location", nil},
 			Slot{"ray", "vector", nil},
@@ -4217,7 +4217,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"particle", "particle", nil},
 			Slot{"center", "location", nil},
 			Slot{"radius", "number", nil},
@@ -4230,7 +4230,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"particle", "particle", nil},
 			Slot{"center", "location", nil},
 			Slot{"distance", "number", nil},
@@ -4247,7 +4247,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"collected_name_or_uuid", "text", nil},
 			Slot{"collector_name_or_uuid", "text", nil},
 			Slot{"amount", "number", nil},
@@ -4259,7 +4259,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"line_1", "text", nil},
 			Slot{"line_2", "text", nil},
@@ -4273,7 +4273,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"from", "location", nil},
 			Slot{"to", "location", nil},
 			Slot{"destination_time", "number", nil},
@@ -4285,7 +4285,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"size", "number", nil},
 		},
@@ -4296,7 +4296,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -4306,7 +4306,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"is_flying", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -4316,7 +4316,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"experience", "number", nil},
 			Slot{"mode", "enum", {"POINTS", "LEVEL", "LEVEL_PERCENTAGE"}},
 		},
@@ -4327,7 +4327,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"amount", "number", nil},
 		},
@@ -4338,7 +4338,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"potions", "potion", nil},
 			Slot{"overwrite", "enum", {"TRUE", "FALSE"}},
 			Slot{"show_icon", "enum", {"TRUE", "FALSE"}},
@@ -4351,7 +4351,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 		},
 	}
@@ -4361,7 +4361,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"heal", "number", nil},
 		},
 	}
@@ -4371,7 +4371,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"hide", "enum", {"TRUE", "FALSE"}},
 		},
@@ -4398,7 +4398,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"power", "number", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
 			Slot{"launch_axis", "enum", {"YAW_AND_PITCH", "YAW"}},
@@ -4410,7 +4410,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"projectile", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"name", "text", nil},
@@ -4425,7 +4425,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"power", "number", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
@@ -4437,7 +4437,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"power", "number", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
 		},
@@ -4456,7 +4456,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"book", "item", nil},
 		},
 	}
@@ -4466,7 +4466,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -4476,7 +4476,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"animation", "enum", {"DAMAGE", "WAKE_UP", "TOTEM", "JUMPSCARE"}},
 		},
 	}
@@ -4486,7 +4486,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"yaw", "number", nil},
 		},
 	}
@@ -4496,7 +4496,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"sound", "sound", nil},
 			Slot{"location", "location", nil},
 		},
@@ -4507,7 +4507,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"sounds", "sound", nil},
 			Slot{"name_or_uuid", "text", nil},
 		},
@@ -4518,7 +4518,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"sounds", "sound", nil},
 			Slot{"delay", "number", nil},
 			Slot{"location", "location", nil},
@@ -4530,7 +4530,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"locations", "location", nil},
 			Slot{"keep_rotation", "enum", {"TRUE", "FALSE"}},
 			Slot{"keep_velocity", "enum", {"TRUE", "FALSE"}},
@@ -4543,7 +4543,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"world_id", "text", nil},
 		},
 	}
@@ -4553,7 +4553,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 		},
 	}
@@ -4571,7 +4571,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pos_1", "location", nil},
 			Slot{"pos_2", "location", nil},
 		},
@@ -4582,7 +4582,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"size", "number", nil},
 			Slot{"position", "enum", {"TOP", "BUTTON"}},
 		},
@@ -4593,7 +4593,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 		},
 	}
@@ -4611,7 +4611,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"potions", "potion", nil},
 		},
 	}
@@ -4645,7 +4645,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"replace", "item", nil},
 			Slot{"count", "number", nil},
@@ -4665,7 +4665,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -4683,7 +4683,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"block", "block", nil},
 		},
 	}
@@ -4693,7 +4693,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"entity_type", "item", nil},
 		},
 	}
@@ -4703,7 +4703,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 		},
 	}
@@ -4713,7 +4713,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"messages", "text", nil},
 			Slot{"merging", "enum", {"SPACES", "CONCATENATION"}},
 		},
@@ -4724,7 +4724,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"frame", "enum", {"TASK", "CHALLENGE", "GOAL"}},
 			Slot{"name", "text", nil},
 			Slot{"icon", "item", nil},
@@ -4736,7 +4736,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"locations", "location", nil},
 			Slot{"stage", "number", nil},
 		},
@@ -4747,7 +4747,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"messages", "text", nil},
 			Slot{"delay", "number", nil},
 		},
@@ -4758,7 +4758,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"message", "text", nil},
 			Slot{"hover", "text", nil},
 		},
@@ -4769,7 +4769,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		true,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"messages", "text", nil},
 			Slot{"merging", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
 		},
@@ -4780,7 +4780,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"minimessage", "text", nil},
 		},
 	}
@@ -4790,7 +4790,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"title", "text", nil},
 			Slot{"subtitle", "text", nil},
 			Slot{"fade_in", "number", nil},
@@ -4804,7 +4804,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"health", "number", nil},
 		},
 	}
@@ -4814,7 +4814,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ticks", "number", nil},
 		},
 	}
@@ -4824,7 +4824,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"allow_flying", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -4834,7 +4834,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"helmet", "item", nil},
 			Slot{"chestplate", "item", nil},
 			Slot{"leggings", "item", nil},
@@ -4847,7 +4847,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"amount", "number", nil},
 		},
 	}
@@ -4857,7 +4857,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"speed", "number", nil},
 		},
 	}
@@ -4867,7 +4867,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"value", "number", nil},
 			Slot{"attribute_type", "enum", {}},
 		},
@@ -4878,7 +4878,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"amount", "number", nil},
 		},
 	}
@@ -4888,7 +4888,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 			Slot{"title", "text", nil},
 			Slot{"progress", "number", nil},
@@ -4903,7 +4903,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"completions", "text", nil},
 			Slot{"setting_mode", "enum", {"ADD", "SET", "REMOVE"}},
 		},
@@ -4914,7 +4914,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"collidable", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -4924,7 +4924,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 		},
 	}
@@ -4934,7 +4934,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 		},
 	}
@@ -4944,7 +4944,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"death_drops", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -4954,7 +4954,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 		},
 	}
@@ -4964,7 +4964,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"color", "enum", {"WHITE", "GRAY", "DARK_GRAY", "BLACK", "DARK_RED", "RED", "GOLD", "YELLOW", "GREEN", "DARK_GREEN", "DARK_AQUA", "AQUA", "BLUE", "DARK_BLUE", "DARK_PURPLE", "PURPLE"}},
 			Slot{"glow", "enum", {"TRUE", "FALSE"}},
@@ -4976,7 +4976,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"slot", "enum", {"CHEST", "FEET", "HAND", "HEAD", "LEGS", "OFF_HAND"}},
 		},
@@ -4987,7 +4987,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"exhaustion", "number", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
 		},
@@ -4998,7 +4998,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"experience", "number", nil},
 			Slot{"mode", "enum", {"POINTS", "LEVEL", "LEVEL_PERCENTAGE"}},
 		},
@@ -5009,7 +5009,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"distance", "number", nil},
 		},
 	}
@@ -5019,7 +5019,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ticks", "number", nil},
 		},
 	}
@@ -5029,7 +5029,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"is_flying", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -5039,7 +5039,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"distance", "number", nil},
 		},
 	}
@@ -5049,7 +5049,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"food", "number", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
 		},
@@ -5060,7 +5060,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ticks", "number", nil},
 			Slot{"ticking_locked", "enum", {"TRUE", "FALSE"}},
 		},
@@ -5071,7 +5071,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"gamemode", "enum", {"SURVIVAL", "CREATIVE", "ADVENTURE", "SPECTATOR"}},
 			Slot{"flight_mode", "enum", {"RESPECT_GAMEMODE", "KEEP_ORIGINAL"}},
 		},
@@ -5082,7 +5082,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"is_gliding", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -5092,7 +5092,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"health", "number", nil},
 		},
 	}
@@ -5102,7 +5102,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"slot", "number", nil},
 		},
 	}
@@ -5112,7 +5112,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"instant_respawn", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -5122,7 +5122,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"kept", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -5132,7 +5132,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"slot", "number", nil},
 		},
@@ -5143,7 +5143,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"text", "text", nil},
 		},
 	}
@@ -5153,7 +5153,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"ticks", "number", nil},
 		},
 	}
@@ -5163,7 +5163,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"cooldown", "number", nil},
 			Slot{"sound", "sound", nil},
@@ -5175,7 +5175,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 		},
 	}
@@ -5185,7 +5185,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"health", "number", nil},
 			Slot{"heal", "enum", {"TRUE", "FALSE"}},
 		},
@@ -5196,7 +5196,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"distance", "number", nil},
 			Slot{"movement_type", "enum", {"WALK", "FLY"}},
 		},
@@ -5207,7 +5207,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"visible", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -5217,7 +5217,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"text", "text", nil},
 			Slot{"position", "enum", {"HEADER", "FOOTER"}},
 			Slot{"merging", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
@@ -5229,7 +5229,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pose", "enum", {"CROAKING", "DIGGING", "DYING", "EMERGING", "FALL_FLYING", "LONG_JUMPING", "ROARING", "SLEEPING", "SNEAKING", "SNIFFING", "SPIN_ATTACK", "STANDING", "SWIMMING", "USING_TONGUE"}},
 			Slot{"locked", "enum", {"TRUE", "FALSE"}},
 		},
@@ -5240,7 +5240,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"pvp", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -5250,7 +5250,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"rain_level", "number", nil},
 		},
 	}
@@ -5260,7 +5260,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"yaw", "number", nil},
 			Slot{"pitch", "number", nil},
 		},
@@ -5271,7 +5271,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"vector", "vector", nil},
 		},
 	}
@@ -5281,7 +5281,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"saturation", "number", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
 		},
@@ -5292,7 +5292,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"distance", "number", nil},
 		},
 	}
@@ -5302,7 +5302,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"server_type", "enum", {"MOJANG", "SERVER"}},
 		},
@@ -5313,7 +5313,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"item", "item", nil},
 			Slot{"slot", "number", nil},
 		},
@@ -5324,7 +5324,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"spawn_point", "location", nil},
 		},
 	}
@@ -5334,7 +5334,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"thunder_level", "number", nil},
 		},
 	}
@@ -5344,7 +5344,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"tick_rate", "number", nil},
 		},
 	}
@@ -5354,7 +5354,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"time", "number", nil},
 		},
 	}
@@ -5364,7 +5364,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"velocity", "vector", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
 		},
@@ -5375,7 +5375,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"visual_fire", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -5385,7 +5385,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"weather_type", "enum", {"DOWNFALL", "CLEAR"}},
 		},
 	}
@@ -5395,7 +5395,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"center", "location", nil},
 			Slot{"size", "number", nil},
 			Slot{"warning", "number", nil},
@@ -5407,7 +5407,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"old_size", "number", nil},
 			Slot{"size", "number", nil},
 			Slot{"time", "number", nil},
@@ -5419,7 +5419,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"name", "text", nil},
 			Slot{"duration", "number", nil},
@@ -5443,7 +5443,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"items", "item", nil},
 			Slot{"name", "text", nil},
 			Slot{"inventory_type", "enum", {"CHEST", "DISPENSER", "DROPPER", "FURNACE", "WORKBENCH", "ENCHANTING", "BREWING", "ANVIL", "SMITHING", "BEACON", "HOPPER", "BLAST_FURNACE", "SMOKER", "CARTOGRAPHY", "GRINDSTONE", "STONECUTTER"}},
@@ -5455,7 +5455,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"id", "text", nil},
 		},
 	}
@@ -5473,7 +5473,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -5483,7 +5483,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"sounds", "sound", nil},
 		},
 	}
@@ -5493,7 +5493,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"source", "enum", {"AMBIENT", "BLOCK", "HOSTILE", "MASTER", "MUSIC", "NEUTRAL", "PLAYER", "RECORD", "VOICE", "WEATHER"}},
 		},
 	}
@@ -5503,7 +5503,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"hand_type", "enum", {"MAIN", "OFF"}},
 		},
 	}
@@ -5513,7 +5513,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"keep_rotation", "enum", {"TRUE", "FALSE"}},
 			Slot{"keep_velocity", "enum", {"TRUE", "FALSE"}},
@@ -5526,18 +5526,18 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"delay", "number", nil},
 			Slot{"locations", "location", nil},
 		},
 	}
 	actions["repeat_adjacently"] = Action{
 		"repeat_adjacently",
-		[]string{"origin", "change_rotation", "include_self", "pattern"},
-		[]string{"variable"},
+		[dynamic]string{"origin", "change_rotation", "include_self", "pattern"},
+		[dynamic]string{"variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"origin", "location", nil},
 			Slot{"change_rotation", "enum", {"TRUE", "FALSE"}},
@@ -5547,11 +5547,11 @@ init_actions :: proc "contextless" () {
 	}
 	actions["repeat_for_each_in_list"] = Action{
 		"repeat_for_each_in_list",
-		[]string{"list"},
-		[]string{"index_variable", "value_variable"},
+		[dynamic]string{"list"},
+		[dynamic]string{"index_variable", "value_variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"index_variable", "variable", nil},
 			Slot{"value_variable", "variable", nil},
 			Slot{"list", "list", nil},
@@ -5559,11 +5559,11 @@ init_actions :: proc "contextless" () {
 	}
 	actions["repeat_for_each_map_entry"] = Action{
 		"repeat_for_each_map_entry",
-		[]string{"map"},
-		[]string{"key_variable", "value_variable"},
+		[dynamic]string{"map"},
+		[dynamic]string{"key_variable", "value_variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"key_variable", "variable", nil},
 			Slot{"value_variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
@@ -5579,22 +5579,22 @@ init_actions :: proc "contextless" () {
 	}
 	actions["repeat_multi_times"] = Action{
 		"repeat_multi_times",
-		[]string{"amount"},
-		[]string{"variable"},
+		[dynamic]string{"amount"},
+		[dynamic]string{"variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"amount", "number", nil},
 		},
 	}
 	actions["repeat_on_circle"] = Action{
 		"repeat_on_circle",
-		[]string{"center", "radius", "circle_points", "perpendicular_to_plane", "start_angle", "angle_unit"},
-		[]string{"variable"},
+		[dynamic]string{"center", "radius", "circle_points", "perpendicular_to_plane", "start_angle", "angle_unit"},
+		[dynamic]string{"variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"center", "location", nil},
 			Slot{"radius", "number", nil},
@@ -5606,11 +5606,11 @@ init_actions :: proc "contextless" () {
 	}
 	actions["repeat_on_grid"] = Action{
 		"repeat_on_grid",
-		[]string{"start", "end"},
-		[]string{"variable"},
+		[dynamic]string{"start", "end"},
+		[dynamic]string{"variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"start", "location", nil},
 			Slot{"end", "location", nil},
@@ -5618,11 +5618,11 @@ init_actions :: proc "contextless" () {
 	}
 	actions["repeat_on_path"] = Action{
 		"repeat_on_path",
-		[]string{"step", "locations", "rotation"},
-		[]string{"variable"},
+		[dynamic]string{"step", "locations", "rotation"},
+		[dynamic]string{"variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"step", "number", nil},
 			Slot{"locations", "location", nil},
@@ -5631,11 +5631,11 @@ init_actions :: proc "contextless" () {
 	}
 	actions["repeat_on_range"] = Action{
 		"repeat_on_range",
-		[]string{"start", "end", "interval"},
-		[]string{"variable"},
+		[dynamic]string{"start", "end", "interval"},
+		[dynamic]string{"variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"start", "number", nil},
 			Slot{"end", "number", nil},
@@ -5644,11 +5644,11 @@ init_actions :: proc "contextless" () {
 	}
 	actions["repeat_on_sphere"] = Action{
 		"repeat_on_sphere",
-		[]string{"center", "radius", "points", "rotate_location"},
-		[]string{"variable"},
+		[dynamic]string{"center", "radius", "points", "rotate_location"},
+		[dynamic]string{"variable"},
 		false,
 		.CONTAINER,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"center", "location", nil},
 			Slot{"radius", "number", nil},
@@ -5702,7 +5702,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -5712,7 +5712,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"selection_type", "enum", {"DEFAULT", "KILLER", "DAMAGER", "VICTIM", "SHOOTER", "PROJECTILE"}},
 		},
 	}
@@ -5738,7 +5738,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -5756,7 +5756,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -5822,7 +5822,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -5832,7 +5832,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"selection_type", "enum", {"DEFAULT", "KILLER", "DAMAGER", "VICTIM", "SHOOTER", "PROJECTILE"}},
 		},
 	}
@@ -5850,7 +5850,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"selection_size", "number", nil},
 			Slot{"ignore_y_axis", "enum", {"TRUE", "FALSE"}},
@@ -5863,7 +5863,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"origin", "location", nil},
 			Slot{"max_distance", "number", nil},
@@ -5880,7 +5880,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"size", "number", nil},
 		},
 	}
@@ -5914,7 +5914,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -5932,7 +5932,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"name_or_uuid", "text", nil},
 		},
 	}
@@ -5974,7 +5974,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 		},
@@ -5985,7 +5985,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "any", nil},
 		},
@@ -5996,7 +5996,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "number", nil},
 		},
@@ -6007,7 +6007,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"enchantment", "text", nil},
@@ -6020,7 +6020,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"potions", "potion", nil},
@@ -6035,7 +6035,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vectors", "vector", nil},
 		},
@@ -6046,7 +6046,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"rotation_mode", "enum", {"KEEP", "REMOVE"}},
@@ -6060,7 +6060,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 			Slot{"normalize", "enum", {"TRUE", "FALSE"}},
@@ -6072,7 +6072,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"components", "text", nil},
 			Slot{"merging", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
@@ -6084,7 +6084,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list_1", "list", nil},
 			Slot{"list_2", "list", nil},
@@ -6096,7 +6096,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 			Slot{"other_map", "dictionary", nil},
@@ -6108,7 +6108,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"values", "any", nil},
 		},
@@ -6119,7 +6119,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "number", nil},
 		},
@@ -6130,7 +6130,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"operand1", "number", nil},
 			Slot{"operand2", "number", nil},
@@ -6143,7 +6143,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"locations", "location", nil},
 		},
@@ -6154,7 +6154,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"parsing", "enum", {"PLAIN", "LEGACY", "MINIMESSAGE", "JSON"}},
@@ -6166,7 +6166,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"char", "text", nil},
 		},
@@ -6177,7 +6177,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"min", "number", nil},
@@ -6190,7 +6190,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 		},
@@ -6201,7 +6201,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"map", "variable", nil},
 		},
 	}
@@ -6211,7 +6211,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 		},
@@ -6222,7 +6222,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"components", "text", nil},
 		},
@@ -6233,7 +6233,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"radix", "number", nil},
@@ -6245,7 +6245,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"radix", "number", nil},
@@ -6257,7 +6257,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"variant", "enum", {"COSINE", "ARCCOSINE", "HYPERBOLIC_COSINE"}},
@@ -6270,7 +6270,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"variant", "enum", {"COTANGENT", "ARCCOTANGENT", "HYPERBOLIC_COTANGENT"}},
@@ -6283,7 +6283,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"key", "text", nil},
 		},
@@ -6294,7 +6294,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"values", "any", nil},
 		},
@@ -6305,7 +6305,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"keys", "list", nil},
 			Slot{"values", "list", nil},
@@ -6317,7 +6317,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"keys", "any", nil},
 			Slot{"values", "any", nil},
@@ -6329,7 +6329,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"key", "text", nil},
 			Slot{"args", "text", nil},
@@ -6341,7 +6341,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector_1", "vector", nil},
 			Slot{"vector_2", "vector", nil},
@@ -6353,7 +6353,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 		},
@@ -6364,7 +6364,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "number", nil},
 			Slot{"division_mode", "enum", {"DEFAULT", "ROUND_TO_INT", "FLOOR", "CEIL"}},
@@ -6376,7 +6376,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 			Slot{"divider", "vector", nil},
@@ -6388,7 +6388,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector_1", "vector", nil},
 			Slot{"vector_2", "vector", nil},
@@ -6400,7 +6400,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"target", "location", nil},
@@ -6412,7 +6412,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 		},
@@ -6423,7 +6423,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"time", "number", nil},
 			Slot{"pattern", "text", nil},
@@ -6438,7 +6438,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"deviant", "number", nil},
 			Slot{"mean", "number", nil},
@@ -6451,7 +6451,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"hide_unspecified", "enum", {"TRUE", "FALSE"}},
@@ -6463,7 +6463,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"location", "location", nil},
 			Slot{"x", "variable", nil},
 			Slot{"y", "variable", nil},
@@ -6478,7 +6478,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector_1", "vector", nil},
 			Slot{"vector_2", "vector", nil},
@@ -6491,7 +6491,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"tag_name", "text", nil},
@@ -6505,7 +6505,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"tag_name", "text", nil},
@@ -6517,7 +6517,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"growth_unit", "enum", {"GROWTH_STAGE", "GROWTH_PERCENTAGE"}},
@@ -6529,7 +6529,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"value_type", "enum", {"ID", "ID_WITH_DATA", "NAME", "ITEM"}},
@@ -6541,7 +6541,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"block", "block", nil},
 			Slot{"property", "enum", {"HARDNESS", "BLAST_RESISTANCE", "SLIPPERINESS"}},
@@ -6553,7 +6553,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 		},
@@ -6564,7 +6564,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"book", "item", nil},
 			Slot{"page", "number", nil},
@@ -6576,7 +6576,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 		},
@@ -6587,7 +6587,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"bundle", "item", nil},
 		},
@@ -6598,7 +6598,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"index", "number", nil},
@@ -6610,7 +6610,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"color", "text", nil},
 			Slot{"color_channels", "enum", {"RGB", "HSB", "HSL"}},
@@ -6622,7 +6622,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6633,7 +6633,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 		},
@@ -6644,7 +6644,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 		},
@@ -6655,7 +6655,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 		},
@@ -6666,7 +6666,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 		},
@@ -6677,7 +6677,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"ignore_empty_slots", "enum", {"TRUE", "FALSE"}},
@@ -6689,7 +6689,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 		},
@@ -6700,7 +6700,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 		},
@@ -6711,7 +6711,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"type", "enum", {"X", "Y", "Z", "YAW", "PITCH"}},
@@ -6723,7 +6723,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"side", "enum", {"BACK", "FRONT", "LEFT", "RIGHT"}},
@@ -6735,7 +6735,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"subtext", "text", nil},
@@ -6749,7 +6749,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6760,7 +6760,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"name", "text", nil},
@@ -6775,7 +6775,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6786,7 +6786,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6797,7 +6797,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"tag_name", "text", nil},
@@ -6810,7 +6810,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6821,7 +6821,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6832,7 +6832,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"durability_type", "enum", {"DAMAGE", "DAMAGE_PERCENTAGE", "REMAINING", "REMAINING_PERCENTAGE", "MAXIMUM"}},
@@ -6844,7 +6844,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6855,7 +6855,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6866,7 +6866,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"line", "number", nil},
@@ -6878,7 +6878,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"type", "item", nil},
 			Slot{"value", "enum", {"ID", "NAME", "ITEM"}},
@@ -6890,7 +6890,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6901,7 +6901,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6912,7 +6912,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6923,7 +6923,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6934,7 +6934,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6945,7 +6945,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -6956,7 +6956,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 		},
@@ -6967,7 +6967,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 		},
@@ -6978,7 +6978,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"value_type", "enum", {"TOTAL", "SKY", "BLOCKS"}},
@@ -6990,7 +6990,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 			Slot{"value", "any", nil},
@@ -7003,7 +7003,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 		},
@@ -7014,7 +7014,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 		},
@@ -7025,7 +7025,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 			Slot{"number", "number", nil},
@@ -7038,7 +7038,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"scope", "enum", {"GAME", "SAVE", "LOCAL"}},
 		},
@@ -7049,7 +7049,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 		},
@@ -7060,7 +7060,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 			Slot{"index", "number", nil},
@@ -7073,7 +7073,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 		},
@@ -7084,7 +7084,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 			Slot{"value", "any", nil},
@@ -7098,7 +7098,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 		},
@@ -7109,7 +7109,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 			Slot{"key", "any", nil},
@@ -7122,7 +7122,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 			Slot{"index", "number", nil},
@@ -7135,7 +7135,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 		},
@@ -7146,7 +7146,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector_1", "vector", nil},
 			Slot{"vector_2", "vector", nil},
@@ -7158,7 +7158,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 		},
@@ -7169,7 +7169,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"color_type", "enum", {"COLOR", "TO_COLOR"}},
@@ -7181,7 +7181,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 		},
@@ -7192,7 +7192,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 		},
@@ -7203,7 +7203,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 		},
@@ -7214,7 +7214,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"type", "enum", {"VERTICAL", "HORIZONTAL"}},
@@ -7226,7 +7226,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 		},
@@ -7237,7 +7237,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"receive_type", "enum", {"NAME_OR_UUID", "VALUE"}},
@@ -7249,7 +7249,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"head", "item", nil},
 			Slot{"return_value", "enum", {"NAME", "UUID", "VALUE"}},
@@ -7261,7 +7261,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"return_value", "enum", {"NAME", "UUID", "VALUE"}},
@@ -7273,7 +7273,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"potion", "potion", nil},
 		},
@@ -7284,7 +7284,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"potion", "potion", nil},
 		},
@@ -7295,7 +7295,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"potion", "potion", nil},
 		},
@@ -7306,7 +7306,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 		},
@@ -7317,7 +7317,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"check_side", "enum", {"FRONT", "BACK", "ALL"}},
@@ -7330,7 +7330,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 		},
@@ -7341,7 +7341,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 		},
@@ -7352,7 +7352,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 		},
@@ -7363,7 +7363,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 		},
@@ -7374,7 +7374,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 		},
@@ -7385,7 +7385,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 		},
@@ -7396,7 +7396,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"template", "item", nil},
 			Slot{"return_type", "enum", {"TEXT", "MAP"}},
@@ -7408,7 +7408,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 		},
@@ -7419,7 +7419,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 		},
@@ -7430,7 +7430,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"vector", "vector", nil},
 			Slot{"x", "variable", nil},
 			Slot{"y", "variable", nil},
@@ -7443,7 +7443,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"start_location", "location", nil},
 			Slot{"end_location", "location", nil},
@@ -7455,7 +7455,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 			Slot{"vector_component", "enum", {"X", "Y", "Z"}},
@@ -7467,7 +7467,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"block_face", "text", nil},
 		},
@@ -7478,7 +7478,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 			Slot{"length_type", "enum", {"LENGTH", "LENGTH_SQUARED"}},
@@ -7490,7 +7490,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"algorithm", "enum", {"MD5", "SHA1", "SHA256"}},
@@ -7502,7 +7502,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 		},
@@ -7513,7 +7513,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 			Slot{"number", "number", nil},
@@ -7526,7 +7526,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 			Slot{"separator", "text", nil},
@@ -7542,7 +7542,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"start", "number", nil},
 			Slot{"stop", "number", nil},
@@ -7555,7 +7555,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"distance", "number", nil},
@@ -7568,7 +7568,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location_1", "location", nil},
 			Slot{"location_2", "location", nil},
@@ -7581,7 +7581,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"base", "number", nil},
@@ -7593,7 +7593,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"from_start", "number", nil},
@@ -7608,7 +7608,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "number", nil},
 		},
@@ -7619,7 +7619,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "number", nil},
 		},
@@ -7630,7 +7630,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "number", nil},
 		},
@@ -7641,7 +7641,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 			Slot{"multiplier", "number", nil},
@@ -7653,7 +7653,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"json", "text", nil},
 		},
@@ -7664,7 +7664,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"parsing", "enum", {"PLAIN", "LEGACY", "MINIMESSAGE", "JSON"}},
@@ -7676,7 +7676,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"seed", "number", nil},
@@ -7694,7 +7694,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"base", "number", nil},
 			Slot{"power", "number", nil},
@@ -7706,7 +7706,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"names", "text", nil},
 			Slot{"scope", "enum", {"GAME", "SAVE", "LOCAL"}},
 			Slot{"match", "enum", {"EQUALS", "NAME_CONTAINS", "PART_CONTAINS"}},
@@ -7719,7 +7719,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"values", "any", nil},
 		},
@@ -7730,7 +7730,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 		},
@@ -7741,7 +7741,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location_1", "location", nil},
 			Slot{"location_2", "location", nil},
@@ -7754,7 +7754,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"min", "number", nil},
 			Slot{"max", "number", nil},
@@ -7767,7 +7767,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"start", "location", nil},
 			Slot{"ray_size", "number", nil},
 			Slot{"max_distance", "number", nil},
@@ -7787,7 +7787,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector_1", "vector", nil},
 			Slot{"vector_2", "vector", nil},
@@ -7800,7 +7800,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"regex", "text", nil},
@@ -7821,7 +7821,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"dividend", "number", nil},
 			Slot{"divisor", "number", nil},
@@ -7834,7 +7834,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -7845,7 +7845,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"name_or_uuid", "text", nil},
@@ -7858,7 +7858,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 		},
@@ -7869,7 +7869,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"tag_name", "text", nil},
@@ -7881,7 +7881,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"enchantment", "text", nil},
@@ -7893,7 +7893,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"line", "number", nil},
@@ -7905,7 +7905,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"effects", "potion", nil},
@@ -7917,7 +7917,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 		},
@@ -7928,7 +7928,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 			Slot{"value", "any", nil},
@@ -7941,7 +7941,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"removed_value", "variable", nil},
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
@@ -7954,7 +7954,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"removed_value", "variable", nil},
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
@@ -7968,7 +7968,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"regex", "enum", {"TRUE", "FALSE"}},
@@ -7981,7 +7981,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"repeat", "number", nil},
@@ -7993,7 +7993,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"replace", "text", nil},
@@ -8008,7 +8008,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 		},
@@ -8019,7 +8019,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"base", "number", nil},
 			Slot{"root", "number", nil},
@@ -8031,7 +8031,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 			Slot{"angle", "number", nil},
@@ -8045,7 +8045,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"rotating_vector", "vector", nil},
 			Slot{"axis_vector", "vector", nil},
@@ -8059,7 +8059,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"precision", "number", nil},
@@ -8072,7 +8072,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"x", "number", nil},
 			Slot{"y", "number", nil},
@@ -8087,7 +8087,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"armor", "item", nil},
 			Slot{"material", "item", nil},
@@ -8100,7 +8100,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"book", "item", nil},
 			Slot{"text", "text", nil},
@@ -8114,7 +8114,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"book", "item", nil},
 			Slot{"text", "text", nil},
@@ -8126,7 +8126,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"bundle", "item", nil},
 			Slot{"items", "item", nil},
@@ -8139,7 +8139,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"location", "location", nil},
@@ -8152,7 +8152,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"children", "text", nil},
@@ -8164,7 +8164,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"value", "text", nil},
@@ -8177,7 +8177,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"bold", "enum", {"FALSE", "NOT_SET", "TRUE"}},
@@ -8193,7 +8193,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"name_or_uuid", "text", nil},
@@ -8205,7 +8205,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"namespace", "text", nil},
@@ -8218,7 +8218,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"color", "text", nil},
@@ -8230,7 +8230,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"hover", "text", nil},
@@ -8242,7 +8242,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"insertion", "text", nil},
@@ -8254,7 +8254,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"component", "text", nil},
 			Slot{"hover", "item", nil},
@@ -8266,7 +8266,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"coordinate", "number", nil},
@@ -8279,7 +8279,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"amount", "number", nil},
@@ -8291,7 +8291,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"amount", "number", nil},
@@ -8307,7 +8307,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"color", "text", nil},
@@ -8319,7 +8319,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"model", "number", nil},
@@ -8331,7 +8331,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"tag_name", "text", nil},
@@ -8344,7 +8344,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"destroyable", "item", nil},
@@ -8356,7 +8356,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"durability", "number", nil},
@@ -8369,7 +8369,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"enchantments", "dictionary", nil},
@@ -8381,7 +8381,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"lore", "text", nil},
 			Slot{"item", "item", nil},
@@ -8393,7 +8393,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"text", "text", nil},
@@ -8407,7 +8407,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"type", "text", nil},
@@ -8419,7 +8419,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"text", "text", nil},
@@ -8431,7 +8431,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"placeable", "item", nil},
@@ -8443,7 +8443,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"unbreakable", "enum", {"TRUE", "FALSE"}},
@@ -8455,7 +8455,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"item", "item", nil},
 			Slot{"hide_dye", "enum", {"ON", "NO_CHANGE", "OFF"}},
@@ -8474,7 +8474,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 			Slot{"number", "number", nil},
@@ -8487,7 +8487,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"vector", "vector", nil},
@@ -8499,7 +8499,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 			Slot{"key", "any", nil},
@@ -8512,7 +8512,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"amount", "number", nil},
@@ -8524,7 +8524,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"hex_color", "text", nil},
@@ -8537,7 +8537,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"material", "item", nil},
@@ -8549,7 +8549,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"offset", "vector", nil},
@@ -8561,7 +8561,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"size", "number", nil},
@@ -8573,7 +8573,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"horizontal", "number", nil},
@@ -8586,7 +8586,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"type", "text", nil},
@@ -8598,7 +8598,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"potion", "potion", nil},
 			Slot{"amplifier", "number", nil},
@@ -8610,7 +8610,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"potion", "potion", nil},
 			Slot{"duration", "number", nil},
@@ -8622,7 +8622,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"potion", "potion", nil},
 			Slot{"effect_type", "text", nil},
@@ -8634,7 +8634,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"pitch", "number", nil},
@@ -8646,7 +8646,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"source", "enum", {"AMBIENT", "BLOCK", "HOSTILE", "MASTER", "MUSIC", "NEUTRAL", "PLAYER", "RECORD", "VOICE", "WEATHER"}},
@@ -8658,7 +8658,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"namespace", "text", nil},
@@ -8671,7 +8671,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"variation", "text", nil},
@@ -8683,7 +8683,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"volume", "number", nil},
@@ -8695,7 +8695,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"template", "item", nil},
 			Slot{"code", "any", nil},
@@ -8707,7 +8707,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "item", nil},
 			Slot{"url", "text", nil},
@@ -8719,7 +8719,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 			Slot{"value", "number", nil},
@@ -8732,7 +8732,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 			Slot{"length", "number", nil},
@@ -8744,7 +8744,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"x", "number", nil},
@@ -8760,7 +8760,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"distance", "number", nil},
@@ -8773,7 +8773,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"shift", "number", nil},
@@ -8786,7 +8786,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"vector", "vector", nil},
@@ -8799,7 +8799,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location_from", "location", nil},
 			Slot{"location_to", "location", nil},
@@ -8812,7 +8812,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"seed", "number", nil},
@@ -8830,7 +8830,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"variant", "enum", {"SINE", "ARCSINE", "HYPERBOLIC_SINE"}},
@@ -8843,7 +8843,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 			Slot{"sort_mode", "enum", {"ASCENDING", "DESCENDING"}},
@@ -8855,7 +8855,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"map", "dictionary", nil},
 			Slot{"sort_order", "enum", {"ASCENDING", "DESCENDING"}},
@@ -8868,7 +8868,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"delimiter", "text", nil},
@@ -8880,7 +8880,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"strip_type", "enum", {"ALL", "START", "END", "INDENT"}},
@@ -8892,7 +8892,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "number", nil},
 		},
@@ -8903,7 +8903,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vectors", "vector", nil},
 		},
@@ -8914,7 +8914,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"variant", "enum", {"TANGENT", "ARCTANGENT", "HYPERBOLIC_TANGENT"}},
@@ -8927,7 +8927,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"merging", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
@@ -8939,7 +8939,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"case_type", "enum", {"UPPER", "LOWER", "PROPER", "INVERT", "RANDOM"}},
@@ -8951,7 +8951,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 		},
@@ -8962,7 +8962,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"hue", "number", nil},
 			Slot{"saturation", "number", nil},
@@ -8975,7 +8975,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"hue", "number", nil},
 			Slot{"saturation", "number", nil},
@@ -8988,7 +8988,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"value", "any", nil},
 			Slot{"pretty_print", "enum", {"TRUE", "FALSE"}},
@@ -9000,7 +9000,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"red", "number", nil},
 			Slot{"green", "number", nil},
@@ -9013,7 +9013,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"list", "list", nil},
 			Slot{"start", "number", nil},
@@ -9026,7 +9026,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"text", "text", nil},
 			Slot{"start", "number", nil},
@@ -9039,7 +9039,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"x", "number", nil},
 			Slot{"y", "number", nil},
@@ -9052,7 +9052,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"vector", "vector", nil},
 		},
@@ -9063,7 +9063,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"location", "location", nil},
 			Slot{"seed", "number", nil},
@@ -9079,7 +9079,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"variable", "variable", nil},
 			Slot{"number", "number", nil},
 			Slot{"min", "number", nil},
@@ -9092,7 +9092,7 @@ init_actions :: proc "contextless" () {
 		nil,
 		false,
 		.BASIC,
-		[]Slot{
+		[dynamic]Slot{
 			Slot{"process_name", "text", nil},
 			Slot{"target_mode", "enum", {"CURRENT_TARGET", "CURRENT_SELECTION", "NO_TARGET", "FOR_EACH_IN_SELECTION"}},
 			Slot{"local_variables_mode", "enum", {"DONT_COPY", "COPY", "SHARE"}},
@@ -9103,6 +9103,14 @@ init_actions :: proc "contextless" () {
 @(fini)
 cleanup_actions :: proc "contextless" () {
 	context = runtime.default_context()
+	for _, action in actions {
+		delete(action.in_slots)
+		delete(action.out_slots)
+		for slot in action.slots {
+			delete(slot._enum)
+		}
+		delete(action.slots)
+	}
 	delete(actions)
 }
 
