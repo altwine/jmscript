@@ -56,6 +56,24 @@ main :: proc() {
 		}
 	}
 
+	if len(os.args) < 2 {
+		print_help()
+		return
+	}
+
+	switch os.args[1] {
+	case "compile":
+		command_compile()
+	case "version":
+		command_version()
+	case "help":
+		command_help()
+	case:
+		print_help()
+	}
+}
+
+command_compile :: proc() {
 	when thread.IS_SUPPORTED {
 		thread_count := max(1, os.processor_core_count())
 		fmt.printfln("[DEBUG] [Threading] Supported. Available threads: %d", thread_count)
@@ -64,18 +82,9 @@ main :: proc() {
 	}
 	fmt.printfln("[DEBUG] [Threading] Not implemented right now.")
 
-	if len(os.args) < 2 {
-		fmt.printfln("Not enough arguments")
-		return
-	}
-
-	if os.args[1] == "version" {
-		fmt.printfln("jmscript version: %s", #load("../VERSION"))
-		return
-	}
-
 	if len(os.args) < 3 {
 		fmt.printfln("Not enough arguments: path to dir is expected!")
+		print_help()
 		return
 	}
 
@@ -112,6 +121,14 @@ main :: proc() {
 		}
 		fmt.printfln("Your code is uploaded: /module loadUrl force %s", code_url)
 	}
+}
+
+command_version :: proc() {
+	fmt.printfln("jmscript version: %s", #load("../VERSION"))
+}
+
+command_help :: proc() {
+	print_help()
 }
 
 CODE_SERVER_URL :: "https://m.justmc.ru/api/upload"
@@ -200,11 +217,12 @@ upload_code :: proc(code: string, allocator := context.allocator) -> (string, bo
 	return code_url, true
 }
 
-// print_help :: proc() {
-// 	fmt.println("Usage:")
-// 	fmt.printfln("\t%s command [arguments]", os.args[0])
-// 	fmt.println("Commands:")
-// 	fmt.println("\tcompile   Compiles directory. All .jms files in the directory must have same package.")
-// 	fmt.println("\tversion   Prints version.")
-// 	fmt.println("\t...       Everything else shows this table.")
-// }
+print_help :: proc() {
+	fmt.println("Usage:")
+	fmt.printfln("\t%s command [arguments]", os.args[0])
+	fmt.println("Commands:")
+	fmt.println("\tcompile   Compiles directory. All .jms files in the directory must have same package.")
+	fmt.println("\tversion   Prints version.")
+	fmt.println("\thelp      Prints help message.")
+	fmt.println("\t...       Everything else prints this message.")
+}
