@@ -98,8 +98,8 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 				append(&ops, op)
 			}
 			values := make([dynamic]NamedValue, irb.alloc)
-			append(&values, NamedValue{name="value", value=left_value})
-			append(&values, NamedValue{name="compare", value=right_value})
+			append(&values, named_value("value", left_value))
+			append(&values, named_value("compare", right_value))
 			action_name: string
 			#partial switch cond_binary_expr_op_kind {
 			case .Cmp_Eq:
@@ -151,7 +151,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 					break
 				}
 				for call_arg_value, call_arg_value_index in call_args_values {
-					append(&values, NamedValue{name=action.slots[call_arg_value_index].name, value=call_arg_value})
+					append(&values, named_value(action.slots[call_arg_value_index].name, call_arg_value))
 				}
 				append(&ops, Operation{action=action.name, values=values, operations=body_ops })
 			case:
@@ -213,17 +213,17 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 
 						if ident_name == "repeat_multi_times" && len(init_ident) == 1 {
 							values1 := make([dynamic]NamedValue, irb.alloc)
-							res_var := VariableValue{variable=init_ident[0].name, scope=SCOPE_LOCAL}
-							append(&values1, NamedValue{name="variable", value=res_var})
-							append(&values1, NamedValue{name="number", value=NumberValue{number=1}})
+							res_var := variable_value(init_ident[0].name, SCOPE_LOCAL)
+							append(&values1, named_value("variable", res_var))
+							append(&values1, named_value("number", number_value(1)))
 							append(&result_ops, Operation{action="set_variable_decrement", values=values1 })
 						}
 						values := make([dynamic]NamedValue, irb.alloc)
 						for idnt, idnt_idx in init_ident {
-							append(&values, NamedValue{name=action.out_slots[idnt_idx], value=VariableValue{variable=idnt.name, scope=SCOPE_LOCAL}})
+							append(&values, named_value(action.out_slots[idnt_idx], variable_value(idnt.name, SCOPE_LOCAL)))
 						}
 						for argvalue, argvalue_index in argvalues {
-							append(&values, NamedValue{name=action.in_slots[argvalue_index], value=argvalue})
+							append(&values, named_value(action.in_slots[argvalue_index], argvalue))
 						}
 						for op in ops3 {
 							append(&result_ops, op)
@@ -240,18 +240,18 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 	case ^ast.Value_Decl:
 		value_decl := cast(^ast.Value_Decl)stmt
 		values := make([dynamic]NamedValue, irb.alloc)
-		append(&values, NamedValue{name="variable", value=VariableValue{variable=value_decl.name, scope=SCOPE_LOCAL}})
+		append(&values, named_value("variable", variable_value(value_decl.name, SCOPE_LOCAL)))
 		ops2, var := ir_parse_expression(irb, value_decl.value)
 		for op in ops2 {
 			append(&ops, op)
 		}
-		append(&values, NamedValue{name="value", value=var})
+		append(&values, named_value("value", var))
 		append(&ops, Operation{action="set_variable_value", values=values })
 	case ^ast.Assign_Stmt:
 		assign_stmt := cast(^ast.Assign_Stmt)stmt
 		values := make([dynamic]NamedValue, irb.alloc)
-		result_var := VariableValue{variable=assign_stmt.name, scope=SCOPE_LOCAL}
-		append(&values, NamedValue{name="variable", value=result_var})
+		result_var := variable_value(assign_stmt.name, SCOPE_LOCAL)
+		append(&values, named_value("variable", result_var))
 		ops2, var := ir_parse_expression(irb, assign_stmt.expr)
 		for op in ops2 {
 			append(&ops, op)
@@ -261,7 +261,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			array_values := make([dynamic]Value, irb.alloc)
 			append(&array_values, result_var)
 			append(&array_values, var)
-			append(&values, NamedValue{name="value", value=ArrayValue{values=array_values}})
+			append(&values, named_value("value", array_value(array_values)))
 			action_name: string
 			#partial switch assign_stmt.op.kind {
 			case .Add_Eq: action_name = "set_variable_add"
@@ -271,7 +271,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			}
 			append(&ops, Operation{action=action_name, values=values })
 		case .Eq:
-			append(&values, NamedValue{name="value", value=var})
+			append(&values, named_value("value", var))
 			append(&ops, Operation{action="set_variable_value", values=values })
 		}
 	case:
@@ -328,23 +328,24 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 	// case ^ast.File: fmt.printfln("[DEBUG] UNHANDLED EXPRESSION TYPE File")
 	case ^ast.Ident:
 		ident := cast(^ast.Ident)expr
-		result_value = VariableValue{variable=ident.name, scope=SCOPE_LOCAL}
+		result_value = variable_value(ident.name, SCOPE_LOCAL)
 	case ^ast.Basic_Lit:
 		basic_lit := cast(^ast.Basic_Lit)expr
 		#partial switch basic_lit.tok.kind {
 		case .Ident:
 			ident_raw := basic_lit.tok.content
-			result_value = VariableValue{variable=ident_raw, scope=SCOPE_LOCAL}
+			result_value = variable_value(ident_raw, SCOPE_LOCAL)
 		case .Integer, .Float:
 			integer_raw := basic_lit.tok.content
 			num, ok := strconv.parse_f64(integer_raw)
 			if !ok {
 				fmt.printfln("[DEBUG] INVALID FLOAT ??")
 			}
-			result_value = NumberValue{number=num}
+			result_value = number_value(num)
 		case .Text:
 			text_raw := basic_lit.tok.content
-			result_value = TextValue{text=text_raw[1:len(text_raw)-1], parsing=PARSING_LEGACY}
+			result_value = text_value(text_raw, PARSING_LEGACY)
+			// result_value = TextValue{text=text_raw[1:len(text_raw)-1], parsing=PARSING_LEGACY}
 		// case .True:
 		// case .False:
 		case:
@@ -366,13 +367,13 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 
 		#partial switch binary_expr.op.kind {
 		case .Add, .Sub, .Mul, .Quo:
-			result_value = VariableValue{variable=get_new_inner_name(irb), scope=SCOPE_LOCAL}
+			result_value = variable_value(get_new_inner_name(irb), SCOPE_LOCAL)
 			values := make([dynamic]NamedValue, irb.alloc)
-			append(&values, NamedValue{name="variable", value=result_value})
+			append(&values, named_value("variable", result_value))
 			array_values := make([dynamic]Value, irb.alloc)
 			append(&array_values, left_expr)
 			append(&array_values, right_expr)
-			append(&values, NamedValue{name="value", value=ArrayValue{values=array_values}})
+			append(&values, named_value("value", array_value(array_values)))
 			action_name: string
 			#partial switch binary_expr.op.kind {
 			case .Add: action_name = "set_variable_add"
@@ -383,11 +384,11 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			append(&operations_list, Operation{action=action_name, values=values })
 
 		case .Mod:
-			result_value = VariableValue{variable=get_new_inner_name(irb), scope=SCOPE_LOCAL}
+			result_value = variable_value(get_new_inner_name(irb), SCOPE_LOCAL)
 			values := make([dynamic]NamedValue, irb.alloc)
-			append(&values, NamedValue{name="variable", value=result_value})
-			append(&values, NamedValue{name="dividend", value=left_expr})
-			append(&values, NamedValue{name="divisor", value=right_expr})
+			append(&values, named_value("variable", result_value))
+			append(&values, named_value("dividend", left_expr))
+			append(&values, named_value("divisor", right_expr))
 
 			append(&operations_list, Operation{action="set_variable_remainder", values=values })
 
@@ -456,7 +457,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 						fmt.printfln("[DEBUG] NOT ENOUGHT ARGS, just skipping!")
 						break
 					}
-					append(&values, NamedValue{name=slot.name, value=args_handled[slot_idx]})
+					append(&values, named_value(slot.name, args_handled[slot_idx]))
 				}
 				append(&operations_list, Operation{action=native_action.name, values=values, selection=selection })
 				break
@@ -464,13 +465,13 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			func_symb, exists := irb.symbols.global_scope.symbols[call_name]
 			if exists {
 				values := make([dynamic]NamedValue, irb.alloc)
-				append(&values, NamedValue{name="function_name", value=TextValue{text=call_name, parsing=PARSING_LEGACY}})
+				append(&values, named_value("function_name", text_value(call_name, PARSING_LEGACY)))
 				append(&operations_list, Operation{action="call_function", values=values })
 				break
 			}
 
 			if call_name == "get_player_count" {
-				result_value = GameValue{game_value="player_count", selection="null"}
+				result_value = game_value("player_count", "null")
 				break
 			}
 			if call_name == "item" {
@@ -487,7 +488,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 					fmt.printfln("[DEBUG] Can't compress item from raw to nbt format for some reason. Contact compiler devs pls")
 					break
 				}
-				result_value = ItemValue{item=nbt_result}
+				result_value = item_value(nbt_result)
 				break
 			}
 			fmt.printfln("[DEBUG] Unknown action: %s", call_name)
@@ -509,7 +510,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 	// case ^ast.Param_List: fmt.printfln("UNHANDLED EXPRESSION TYPE Param_List")
 	case:
 		fmt.printfln("UNHANDLED :: %v", v)
-		result_value = VariableValue{variable=get_new_inner_name(irb), scope=SCOPE_LOCAL}
+		result_value = variable_value(get_new_inner_name(irb), SCOPE_LOCAL)
 	}
 
 	return operations_list, result_value
@@ -741,6 +742,7 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 			json_begin_object(&irb.jb)
 		}
 		particle_value := value.(ParticleValue)
+		json_write_string(&irb.jb, "type", "particle", true)
 		json_write_string(&irb.jb, "particle_type", particle_value.particle_type, true)
 		json_write_number(&irb.jb, "count", particle_value.count, true)
 		json_write_number(&irb.jb, "size", particle_value.size, true)
