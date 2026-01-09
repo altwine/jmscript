@@ -1,5 +1,6 @@
 package main
 
+import "core:sys/info"
 import "core:thread"
 import "core:strconv"
 import "core:strings"
@@ -66,6 +67,8 @@ main :: proc() {
 		command_compile()
 	case "version":
 		command_version()
+	case "report":
+		command_report()
 	case "help":
 		command_help()
 	case:
@@ -125,6 +128,14 @@ command_compile :: proc() {
 
 command_version :: proc() {
 	fmt.printfln("jmscript version: %s", #load("../VERSION"))
+}
+
+command_report :: proc() {
+	fmt.printfln("If there's nothing confidential, add this to your bug report:")
+	fmt.printfln("\tJMS ver: %s", #load("../VERSION"))
+	fmt.printfln("\tOS: %s", info.os_version.as_string)
+	fmt.printfln("\tRAM: %d MiB", info.ram.total_ram / mem.Megabyte)
+	fmt.printfln("\tCPU: %s", info.cpu.name)
 }
 
 command_help :: proc() {
@@ -223,6 +234,7 @@ print_help :: proc() {
 	fmt.println("Commands:")
 	fmt.println("\tcompile   Compiles directory. All .jms files in the directory must have same package.")
 	fmt.println("\tversion   Prints version.")
+	fmt.println("\treport    Prints system information for bug report.")
 	fmt.println("\thelp      Prints help message.")
 	fmt.println("\t...       Everything else prints this message.")
 }
