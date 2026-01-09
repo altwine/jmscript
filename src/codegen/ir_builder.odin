@@ -795,5 +795,15 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		json_write_string(&irb.jb, "type", "block", true)
 		json_write_string(&irb.jb, "block", block_value.block, false)
 		json_end_object(&irb.jb, comma)
+	case LocalizedTextValue:
+		if is_named {
+			json_begin_object(&irb.jb, "value")
+		} else {
+			json_begin_object(&irb.jb)
+		}
+		localized_text_value := value.(LocalizedTextValue)
+		json_write_string(&irb.jb, "type", "localized_text", true)
+		json_write_string(&irb.jb, "data", localized_text_value.data, false)
+		json_end_object(&irb.jb, comma)
 	}
 }

@@ -176,6 +176,15 @@ block_value :: proc(block: string) -> BlockValue {
 	return BlockValue{type="block", block=block}
 }
 
+LocalizedTextValue :: struct {
+	using base: BaseValue,
+	data: string,
+}
+
+localized_text_value :: proc(data: string) -> LocalizedTextValue {
+	return LocalizedTextValue{type="localized_text", data=data}
+}
+
 NullValue :: struct {}
 
 null_value :: proc() -> NullValue {
@@ -197,4 +206,5 @@ Value :: union {
 	GameValue,
 	PotionValue,
 	BlockValue,
+	LocalizedTextValue,
 }
