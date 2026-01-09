@@ -344,8 +344,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			result_value = number_value(num)
 		case .Text:
 			text_raw := basic_lit.tok.content
-			result_value = text_value(text_raw, PARSING_LEGACY)
-			// result_value = TextValue{text=text_raw[1:len(text_raw)-1], parsing=PARSING_LEGACY}
+			result_value = text_value(text_raw[1:len(text_raw)-1], PARSING_LEGACY)
 		// case .True:
 		// case .False:
 		case:
