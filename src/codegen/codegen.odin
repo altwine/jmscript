@@ -48,7 +48,7 @@ codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Sy
 		})
 	}
 	for irb_warning in irb_warnings {
-		append(&c.errs, Codegen_Error{
+		append(&c.warns, Codegen_Warning{
 			message=irb_warning.message,
 			offset_from=irb_warning.offset_from,
 			offset_to=irb_warning.offset_to,

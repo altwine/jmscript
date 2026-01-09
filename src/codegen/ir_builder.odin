@@ -535,6 +535,7 @@ ir_build :: proc(irb: ^IR_Builder) -> (string, [dynamic]IR_Builder_Error, [dynam
 	for handler in irb.handlers {
 		if len(handler.operations) == 0 {
 			ir_add_warning(irb, "Skipping empty handler")
+			continue
 		}
 		append(&all_handlers, handler)
 	}
