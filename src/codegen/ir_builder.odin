@@ -295,6 +295,18 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 			for op in ops {
 				append(&func_handler.operations, op)
 			}
+			func_handler.values = make([dynamic]NamedValue, irb.alloc)
+
+			translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ua-UA\":{{\"rawText\":\"%s\"\"parsingType\":\"LEGACY\"},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}`
+			display_name_data := fmt.tprintf(translations_template, "Test", "Тест", "Тест", "Test")
+			display_desc_data := fmt.tprintf(translations_template, "Test", "Тест", "Тест", "Test")
+			append(&func_handler.values, named_value("display_name", localized_text_value(display_name_data)))
+			append(&func_handler.values, named_value("display_description", localized_text_value(display_desc_data)))
+
+			func_test_icon := generate_item("minecraft:lapis_lazuli", 1)
+			append(&func_handler.values, named_value("icon", item_value(func_test_icon)))
+
+			append(&func_handler.values, named_value("is_hidden", enum_value("FALSE")))
 			append(&irb.handlers, func_handler)
 		case ^ast.Event_Stmt:
 			event_stmt := cast(^ast.Event_Stmt)decl
@@ -521,9 +533,10 @@ ir_build :: proc(irb: ^IR_Builder) -> (string, [dynamic]IR_Builder_Error, [dynam
 
 	all_handlers := make([dynamic]^Handler, irb.alloc)
 	for handler in irb.handlers {
-		if handler.type == "event" && len(handler.operations) > 0 {
-			append(&all_handlers, handler)
+		if len(handler.operations) == 0 {
+			ir_add_warning(irb, "Skipping empty handler")
 		}
+		append(&all_handlers, handler)
 	}
 	if len(irb.entry_handler.operations) > 0 {
 		append(&all_handlers, irb.entry_handler)
@@ -561,17 +574,14 @@ ir_write_handler :: proc(irb: ^IR_Builder, handler: ^Handler, comma: bool) {
 		json_write_string(&irb.jb, "event", handler.event, true)
 	case "function", "process":
 		json_write_string(&irb.jb, "name", handler.name, true)
+		json_begin_array(&irb.jb, "values")
+		named_values_count := len(handler.values)
+		for &named_value, named_value_idx in handler.values {
+			is_last_named_value := named_value_idx != named_values_count-1
+			ir_write_named_value(irb, &named_value, is_last_named_value)
+		}
+		json_end_array(&irb.jb, true)
 	}
-	// fix, move them to values
-	// if handler.icon != "" {
-	// 	json_write_string(&irb.jb, "icon", handler.icon, true)
-	// }
-	// if handler.description != "" {
-	// 	json_write_string(&irb.jb, "description", handler.description, true)
-	// }
-	// if handler.is_hidden {
-	// 	json_write_boolean(&irb.jb, "is_hidden", true, true)
-	// }
 	json_write_string(&irb.jb, "type", handler.type, true)
 	json_write_number(&irb.jb, "position", get_new_position(irb), true)
 	json_begin_array(&irb.jb, "operations")

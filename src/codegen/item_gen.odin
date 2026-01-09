@@ -8,7 +8,7 @@ Minecraft_Item :: struct {
 	count:    nbt.Int    `nbt:"count"`,
 }
 
-generate_item :: proc(id: string, count: int, allocator := context.allocator) -> (string, bool) {
+generate_item :: proc(id: string, count: int, allocator := context.allocator) -> (string, bool) #optional_ok {
 	w: nbt.Writer
 	nbt.writer_init(&w, allocator)
 	defer nbt.writer_destroy(&w)
