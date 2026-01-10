@@ -12,9 +12,17 @@ Handler :: struct {
 Operation :: struct {
 	action:      string,
 	values:      [dynamic]NamedValue,
+	selection:   Operation_Selection, // can be empty
 	operations:  [dynamic]Operation, // can be empty
 	is_inverted: bool, // can be empty
-	selection:   Operation_Selection,
+}
+
+basic_operation :: proc(action: string, values: [dynamic]NamedValue, selection := Operation_Selection{type=""}) -> Operation {
+	return Operation{action=action, values=values, selection=selection}
+}
+
+container_operation :: proc(action: string, values: [dynamic]NamedValue, operations: [dynamic]Operation, is_inverted := false, selection := Operation_Selection{type=""}) -> Operation {
+	return Operation{action, values, selection, operations, is_inverted}
 }
 
 Operation_Selection :: struct {

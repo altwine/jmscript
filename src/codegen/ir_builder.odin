@@ -69,16 +69,12 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 		block_stmt := cast(^ast.Block_Stmt)stmt
 		for stmt2 in block_stmt.stmts {
 			ops2 := ir_parse_stmt(irb, stmt2)
-			for op in ops2 {
-				append(&ops, op)
-			}
+			append_operations(&ops, ops2)
 		}
 	case ^ast.Expr_Stmt:
 		expr_stmt := cast(^ast.Expr_Stmt)stmt
 		ops2, _ := ir_parse_expression(irb, expr_stmt.expr)
-		for op in ops2 {
-			append(&ops, op)
-		}
+		append_operations(&ops, ops2)
 	case ^ast.If_Stmt:
 		if_stmt := cast(^ast.If_Stmt)stmt
 		cond := if_stmt.cond
@@ -91,12 +87,8 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			cond_binary_expr_op_kind := cond_binary_expr.op.kind
 			left_ops, left_value := ir_parse_expression(irb, cond_binary_expr.left)
 			right_ops, right_value := ir_parse_expression(irb, cond_binary_expr.right)
-			for op in left_ops {
-				append(&ops, op)
-			}
-			for op in right_ops {
-				append(&ops, op)
-			}
+			append_operations(&ops, left_ops)
+			append_operations(&ops, right_ops)
 			values := make([dynamic]NamedValue, irb.alloc)
 			append(&values, named_value("value", left_value))
 			append(&values, named_value("compare", right_value))
@@ -118,7 +110,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 				fmt.printfln("Unhandled operation type in if_stmt: %v", lexer.to_string(cond_binary_expr.op.kind))
 				break
 			}
-			append(&ops, Operation{action=action_name, values=values, operations=body_ops })
+			append(&ops, container_operation(action_name, values, body_ops ))
 		case ^ast.Call_Expr:
 			cond_call_expr := cast(^ast.Call_Expr)cond
 			call_expr := cond_call_expr.expr
@@ -127,9 +119,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			call_args_values := make([dynamic]Value, irb.alloc)
 			for call_arg in call_args {
 				call_arg_ops, call_arg_value := ir_parse_expression(irb, call_arg)
-				for call_arg_op in call_arg_ops {
-					append(&ops, call_arg_op)
-				}
+				append_operations(&ops, call_arg_ops)
 				append(&call_args_values, call_arg_value)
 			}
 			#partial switch v in call_expr.derived {
@@ -153,7 +143,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 				for call_arg_value, call_arg_value_index in call_args_values {
 					append(&values, named_value(action.slots[call_arg_value_index].name, call_arg_value))
 				}
-				append(&ops, Operation{action=action.name, values=values, operations=body_ops })
+				append(&ops, container_operation(action.name, values, body_ops))
 			case:
 				fmt.printfln("Unhandled if_stmt: %v", v)
 				break
@@ -164,14 +154,14 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 		}
 		if len(else_body_ops) > 0 {
 			empty_values := make([dynamic]NamedValue, irb.alloc)
-			append(&ops, Operation{action="else", values=empty_values, operations=else_body_ops })
+			append(&ops, container_operation("else", empty_values, else_body_ops))
 		}
 	case ^ast.For_Stmt:
 		for_stmt := cast(^ast.For_Stmt)stmt
 		if for_stmt.init == nil && for_stmt.cond == nil && for_stmt.post == nil && for_stmt.second_cond == nil {
 			ops3 := ir_parse_stmt(irb, for_stmt.body)
 			values := make([dynamic]NamedValue, irb.alloc)
-			append(&ops, Operation{action="repeat_forever", values=values, operations=ops3 })
+			append(&ops, container_operation("repeat_forever", values, ops3))
 		} else {
 			if for_stmt.init != nil && for_stmt.cond != nil && for_stmt.post == nil && for_stmt.second_cond == nil {
 				init_ident := for_stmt.init
@@ -203,9 +193,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 						argvalues := make([dynamic]Value, irb.alloc)
 						for arg_expr in cond_expr_call_expr.args {
 							opsops, val := ir_parse_expression(irb, arg_expr)
-							for op in opsops {
-								append(&ops, op)
-							}
+							append_operations(&ops, opsops)
 							append(&argvalues, val)
 						}
 						result_ops := make([dynamic]Operation, irb.alloc)
@@ -216,7 +204,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 							res_var := variable_value(init_ident[0].name, SCOPE_LOCAL)
 							append(&values1, named_value("variable", res_var))
 							append(&values1, named_value("number", number_value(1)))
-							append(&result_ops, Operation{action="set_variable_decrement", values=values1 })
+							append(&result_ops, basic_operation("set_variable_decrement", values1))
 						}
 						values := make([dynamic]NamedValue, irb.alloc)
 						for idnt, idnt_idx in init_ident {
@@ -225,10 +213,8 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 						for argvalue, argvalue_index in argvalues {
 							append(&values, named_value(action.in_slots[argvalue_index], argvalue))
 						}
-						for op in ops3 {
-							append(&result_ops, op)
-						}
-						append(&ops, Operation{action=action.name, values=values, operations=result_ops })
+						append_operations(&result_ops, ops3)
+						append(&ops, container_operation(action.name, values, result_ops))
 					case:
 						fmt.printfln("[DEBUG] Unhandled1 for loop construction: %v", for_stmt)
 					}
@@ -242,20 +228,16 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 		values := make([dynamic]NamedValue, irb.alloc)
 		append(&values, named_value("variable", variable_value(value_decl.name, SCOPE_LOCAL)))
 		ops2, var := ir_parse_expression(irb, value_decl.value)
-		for op in ops2 {
-			append(&ops, op)
-		}
+		append_operations(&ops, ops2)
 		append(&values, named_value("value", var))
-		append(&ops, Operation{action="set_variable_value", values=values })
+		append(&ops, basic_operation("set_variable_value", values))
 	case ^ast.Assign_Stmt:
 		assign_stmt := cast(^ast.Assign_Stmt)stmt
 		values := make([dynamic]NamedValue, irb.alloc)
 		result_var := variable_value(assign_stmt.name, SCOPE_LOCAL)
 		append(&values, named_value("variable", result_var))
 		ops2, var := ir_parse_expression(irb, assign_stmt.expr)
-		for op in ops2 {
-			append(&ops, op)
-		}
+		append_operations(&ops, ops2)
 		#partial switch assign_stmt.op.kind {
 		case .Add_Eq, .Sub_Eq, .Quo_Eq, .Mul_Eq:
 			array_values := make([dynamic]Value, irb.alloc)
@@ -269,10 +251,10 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			case .Quo_Eq: action_name = "set_variable_divide"
 			case .Mul_Eq: action_name = "set_variable_multiply"
 			}
-			append(&ops, Operation{action=action_name, values=values })
+			append(&ops, basic_operation(action_name, values))
 		case .Eq:
 			append(&values, named_value("value", var))
-			append(&ops, Operation{action="set_variable_value", values=values })
+			append(&ops, basic_operation("set_variable_value", values))
 		}
 	case:
 		fmt.printfln("Unhandled %v", v)
@@ -285,16 +267,12 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 		#partial switch v in decl.derived {
 		case:
 			ops := ir_parse_stmt(irb, decl)
-			for op in ops {
-				append(&irb.entry_handler.operations, op)
-			}
+			append_operations(&irb.entry_handler.operations, ops)
 		case ^ast.Func_Stmt:
 			func_stmt := cast(^ast.Func_Stmt)decl
 			func_handler := new_handler(irb, "function", func_stmt.name)
 			ops := ir_parse_stmt(irb, func_stmt.body)
-			for op in ops {
-				append(&func_handler.operations, op)
-			}
+			append_operations(&func_handler.operations, ops)
 			func_handler.values = make([dynamic]NamedValue, irb.alloc)
 
 			translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ua-UA\":{{\"rawText\":\"%s\"\"parsingType\":\"LEGACY\"},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}`
@@ -312,9 +290,7 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 			event_stmt := cast(^ast.Event_Stmt)decl
 			event_handler := new_handler(irb, "event", event_stmt.name)
 			ops := ir_parse_stmt(irb, event_stmt.body)
-			for op in ops {
-				append(&event_handler.operations, op)
-			}
+			append_operations(&event_handler.operations, ops)
 			append(&irb.handlers, event_handler)
 		}
 	}
@@ -368,13 +344,9 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 	case ^ast.Binary_Expr:
 		binary_expr := cast(^ast.Binary_Expr)expr
 		ops1, left_expr := ir_parse_expression(irb, binary_expr.left)
-		for op in ops1 {
-			append(&operations_list, op)
-		}
+		append_operations(&operations_list, ops1)
 		ops2, right_expr := ir_parse_expression(irb, binary_expr.right)
-		for op in ops2 {
-			append(&operations_list, op)
-		}
+		append_operations(&operations_list, ops2)
 
 		#partial switch binary_expr.op.kind {
 		case .Add, .Sub, .Mul, .Quo:
@@ -392,7 +364,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			case .Quo: action_name = "set_variable_divide"
 			case .Mul: action_name = "set_variable_multiply"
 			}
-			append(&operations_list, Operation{action=action_name, values=values })
+			append(&operations_list, basic_operation(action_name, values))
 
 		case .Mod:
 			result_value = variable_value(get_new_inner_name(irb), SCOPE_LOCAL)
@@ -401,7 +373,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			append(&values, named_value("dividend", left_expr))
 			append(&values, named_value("divisor", right_expr))
 
-			append(&operations_list, Operation{action="set_variable_remainder", values=values })
+			append(&operations_list, basic_operation("set_variable_remainder", values))
 
 		case .Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
 		case .Not: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
@@ -421,9 +393,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 		paren_expr := cast(^ast.Paren_Expr)expr
 		ops: [dynamic]Operation
 		ops, result_value = ir_parse_expression(irb, paren_expr.expr)
-		for op in ops {
-			append(&operations_list, op)
-		}
+		append_operations(&operations_list, ops)
 	// case ^ast.Member_Access_Expr: fmt.printfln("UNHANDLED EXPRESSION TYPE Member_Access_Expr")
 	// case ^ast.Index_Expr: fmt.printfln("UNHANDLED EXPRESSION TYPE Index_Expr")
 	case ^ast.Call_Expr:
@@ -431,9 +401,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 		args_handled := make([dynamic]Value, irb.alloc)
 		for arg in call_expr.args {
 			opss, vall := ir_parse_expression(irb, arg)
-			for op in opss {
-				append(&operations_list, op)
-			}
+			append_operations(&operations_list, opss)
 			append(&args_handled, vall)
 		}
 		#partial switch v in call_expr.expr.derived {
@@ -470,14 +438,14 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 					}
 					append(&values, named_value(slot.name, args_handled[slot_idx]))
 				}
-				append(&operations_list, Operation{action=native_action.name, values=values, selection=selection })
+				append(&operations_list, basic_operation(native_action.name, values, selection))
 				break
 			}
 			func_symb, exists := irb.symbols.global_scope.symbols[call_name]
 			if exists {
 				values := make([dynamic]NamedValue, irb.alloc)
 				append(&values, named_value("function_name", text_value(call_name, PARSING_LEGACY)))
-				append(&operations_list, Operation{action="call_function", values=values })
+				append(&operations_list, basic_operation("call_function", values))
 				break
 			}
 
@@ -816,5 +784,11 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		json_write_string(&irb.jb, "type", "localized_text", true)
 		json_write_string(&irb.jb, "data", localized_text_value.data, false)
 		json_end_object(&irb.jb, comma)
+	}
+}
+
+append_operations :: proc(operations_1: ^[dynamic]Operation, operations_2: [dynamic]Operation) {
+	for op in operations_2 {
+		append(operations_1, op)
 	}
 }
