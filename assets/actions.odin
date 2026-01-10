@@ -1,8 +1,6 @@
 #+feature dynamic-literals
 package assets
 
-import "base:runtime"
-
 Action :: struct {
 	name:            string,
 	in_slots:        [dynamic]string,
@@ -27,10 +25,8 @@ Slot :: struct {
 
 actions: map[string]Action
 
-@(init)
-init_actions :: proc "contextless" () {
-	context = runtime.default_context()
-	actions = make(map[string]Action, 814, context.allocator)
+init_actions :: proc(allocator := context.allocator) {
+	actions = make(map[string]Action, 814, allocator)
 	actions["call_function"] = Action{
 		"call_function",
 		nil,
@@ -9100,9 +9096,7 @@ init_actions :: proc "contextless" () {
 	}
 }
 
-@(fini)
-cleanup_actions :: proc "contextless" () {
-	context = runtime.default_context()
+cleanup_actions :: proc() {
 	for _, action in actions {
 		delete(action.in_slots)
 		delete(action.out_slots)

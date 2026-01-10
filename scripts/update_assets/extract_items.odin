@@ -33,8 +33,6 @@ write_items :: proc(output_file: string, items: [dynamic]Minecraft_Item) {
 
 	fmt.fprintln(fd, "package assets\n")
 
-	fmt.fprintln(fd, "import \"base:runtime\"\n")
-
 	fmt.fprintln(fd, "Minecraft_Item :: struct {")
 	fmt.fprintln(fd, "\tname:         string,")
 	fmt.fprintln(fd, "\tdisplay_name: string,")
@@ -49,10 +47,8 @@ write_items :: proc(output_file: string, items: [dynamic]Minecraft_Item) {
 
 	fmt.fprintln(fd, "mc_items: map[string]Minecraft_Item\n")
 
-	fmt.fprintln(fd, "@(init)")
-	fmt.fprintln(fd, "init_mc_items :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
-	fmt.fprintln(fd, "\tmc_items = make(map[string]Minecraft_Item, context.allocator)")
+	fmt.fprintln(fd, "init_mc_items :: proc(allocator := context.allocator) {")
+	fmt.fprintln(fd, "\tmc_items = make(map[string]Minecraft_Item, allocator)")
 	for item in items {
 		fmt.fprintfln(fd, "\tmc_items[\"%s\"] = Minecraft_Item{{", item.name)
 		fmt.fprintfln(fd, "\t\t\"%s\",", item.name)
@@ -69,9 +65,7 @@ write_items :: proc(output_file: string, items: [dynamic]Minecraft_Item) {
 	}
 	fmt.fprintln(fd, "}\n")
 
-	fmt.fprintln(fd, "@(fini)")
-	fmt.fprintln(fd, "cleanup_mc_items :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "cleanup_mc_items :: proc() {")
 	fmt.fprintln(fd, "\tdelete(mc_items)")
 	fmt.fprintln(fd, "}\n")
 

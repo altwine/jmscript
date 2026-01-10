@@ -46,8 +46,6 @@ write_events :: proc(output_file: string, events: [dynamic]Event) {
 
 	fmt.fprintln(fd, "package assets\n")
 
-	fmt.fprintln(fd, "import \"base:runtime\"\n")
-
 	fmt.fprintln(fd, "Event :: struct {")
 	fmt.fprintln(fd, "\tname:        string,")
 	fmt.fprintln(fd, "\tcancellable: bool,")
@@ -55,10 +53,8 @@ write_events :: proc(output_file: string, events: [dynamic]Event) {
 
 	fmt.fprintln(fd, "events: map[string]Event\n")
 
-	fmt.fprintln(fd, "@(init)")
-	fmt.fprintln(fd, "init_events :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
-	fmt.fprintln(fd, fmt.tprintf("\tevents = make(map[string]Event, %d, context.allocator)", len(events)))
+	fmt.fprintln(fd, "init_events :: proc(allocator := context.allocator) {")
+	fmt.fprintln(fd, fmt.tprintf("\tevents = make(map[string]Event, %d, allocator)", len(events)))
 	for event in events {
 		fmt.fprintf(fd, "\tevents[\"%s\"] = {{\"%s\", ", event.name, event.name)
 		if event.cancellable {
@@ -70,9 +66,7 @@ write_events :: proc(output_file: string, events: [dynamic]Event) {
 	}
 	fmt.fprintln(fd, "}\n")
 
-	fmt.fprintln(fd, "@(fini)")
-	fmt.fprintln(fd, "cleanup_events :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "cleanup_events :: proc() {")
 	fmt.fprintln(fd, "\tdelete(events)")
 	fmt.fprintln(fd, "}\n")
 

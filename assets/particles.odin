@@ -1,17 +1,13 @@
 package assets
 
-import "base:runtime"
-
 Particle :: struct {
 	name: string,
 }
 
 particles: map[string]Particle
 
-@(init)
-init_particles :: proc "contextless" () {
-	context = runtime.default_context()
-	particles = make(map[string]Particle, 114, context.allocator)
+init_particles :: proc(allocator := context.allocator) {
+	particles = make(map[string]Particle, 114, allocator)
 	particles["angry_villager"] = {"angry_villager"}
 	particles["block"] = {"block"}
 	particles["block_marker"] = {"block_marker"}
@@ -128,9 +124,7 @@ init_particles :: proc "contextless" () {
 	particles["firefly"] = {"firefly"}
 }
 
-@(fini)
-cleanup_particles :: proc "contextless" () {
-	context = runtime.default_context()
+cleanup_particles :: proc() {
 	delete(particles)
 }
 

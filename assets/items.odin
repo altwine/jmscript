@@ -1,7 +1,5 @@
 package assets
 
-import "base:runtime"
-
 Minecraft_Item :: struct {
 	name:         string,
 	display_name: string,
@@ -16,10 +14,8 @@ Stack_Type :: enum {
 
 mc_items: map[string]Minecraft_Item
 
-@(init)
-init_mc_items :: proc "contextless" () {
-	context = runtime.default_context()
-	mc_items = make(map[string]Minecraft_Item, context.allocator)
+init_mc_items :: proc(allocator := context.allocator) {
+	mc_items = make(map[string]Minecraft_Item, allocator)
 	mc_items["air"] = Minecraft_Item{
 		"air",
 		"Air",
@@ -7102,9 +7098,7 @@ init_mc_items :: proc "contextless" () {
 	}
 }
 
-@(fini)
-cleanup_mc_items :: proc "contextless" () {
-	context = runtime.default_context()
+cleanup_mc_items :: proc() {
 	delete(mc_items)
 }
 

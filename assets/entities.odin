@@ -1,17 +1,13 @@
 package assets
 
-import "base:runtime"
-
 Entity :: struct {
 	name: string,
 }
 
 entities: map[string]Entity
 
-@(init)
-init_entities :: proc "contextless" () {
-	context = runtime.default_context()
-	entities = make(map[string]Entity, 151, context.allocator)
+init_entities :: proc(allocator := context.allocator) {
+	entities = make(map[string]Entity, 151, allocator)
 	entities["acacia_boat"] = {"acacia_boat"}
 	entities["acacia_chest_boat"] = {"acacia_chest_boat"}
 	entities["allay"] = {"allay"}
@@ -165,9 +161,7 @@ init_entities :: proc "contextless" () {
 	entities["fishing_bobber"] = {"fishing_bobber"}
 }
 
-@(fini)
-cleanup_entities :: proc "contextless" () {
-	context = runtime.default_context()
+cleanup_entities :: proc() {
 	delete(entities)
 }
 

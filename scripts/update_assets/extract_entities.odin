@@ -35,26 +35,20 @@ write_entities :: proc(output_file: string, entities: [dynamic]Entity) {
 
 	fmt.fprintln(fd, "package assets\n")
 
-	fmt.fprintln(fd, "import \"base:runtime\"\n")
-
 	fmt.fprintln(fd, "Entity :: struct {")
 	fmt.fprintln(fd, "\tname: string,")
 	fmt.fprintln(fd, "}\n")
 
 	fmt.fprintln(fd, "entities: map[string]Entity\n")
 
-	fmt.fprintln(fd, "@(init)")
-	fmt.fprintln(fd, "init_entities :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
-	fmt.fprintln(fd, fmt.tprintf("\tentities = make(map[string]Entity, %d, context.allocator)", len(entities)))
+	fmt.fprintln(fd, "init_entities :: proc(allocator := context.allocator) {")
+	fmt.fprintln(fd, fmt.tprintf("\tentities = make(map[string]Entity, %d, allocator)", len(entities)))
 	for entity in entities {
 		fmt.fprintfln(fd, "\tentities[\"%s\"] = {{\"%s\"}", entity.name, entity.name)
 	}
 	fmt.fprintln(fd, "}\n")
 
-	fmt.fprintln(fd, "@(fini)")
-	fmt.fprintln(fd, "cleanup_entities :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "cleanup_entities :: proc() {")
 	fmt.fprintln(fd, "\tdelete(entities)")
 	fmt.fprintln(fd, "}\n")
 

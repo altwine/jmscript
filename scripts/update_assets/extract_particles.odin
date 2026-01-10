@@ -28,26 +28,20 @@ write_particles :: proc(output_file: string, particles: [dynamic]Particle) {
 
 	fmt.fprintln(fd, "package assets\n")
 
-	fmt.fprintln(fd, "import \"base:runtime\"\n")
-
 	fmt.fprintln(fd, "Particle :: struct {")
 	fmt.fprintln(fd, "\tname: string,")
 	fmt.fprintln(fd, "}\n")
 
 	fmt.fprintln(fd, "particles: map[string]Particle\n")
 
-	fmt.fprintln(fd, "@(init)")
-	fmt.fprintln(fd, "init_particles :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
-	fmt.fprintln(fd, fmt.tprintf("\tparticles = make(map[string]Particle, %d, context.allocator)", len(particles)))
+	fmt.fprintln(fd, "init_particles :: proc(allocator := context.allocator) {")
+	fmt.fprintln(fd, fmt.tprintf("\tparticles = make(map[string]Particle, %d, allocator)", len(particles)))
 	for particle in particles {
 		fmt.fprintfln(fd, "\tparticles[\"%s\"] = {{\"%s\"}", particle.name, particle.name)
 	}
 	fmt.fprintln(fd, "}\n")
 
-	fmt.fprintln(fd, "@(fini)")
-	fmt.fprintln(fd, "cleanup_particles :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "cleanup_particles :: proc() {")
 	fmt.fprintln(fd, "\tdelete(particles)")
 	fmt.fprintln(fd, "}\n")
 

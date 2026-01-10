@@ -12,6 +12,7 @@ unfiltered thoughts. I will clean it up later.
 - Implement `switch` statements with pattern matching stuff;
 - Implement array/dictionary literals;
 - Implement slices;
+- Make decompiler maybe?;
 - Merge integer and float because separation is useless;
 - Rework the memory management.
 

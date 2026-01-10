@@ -1,7 +1,5 @@
 package assets
 
-import "base:runtime"
-
 Event :: struct {
 	name:        string,
 	cancellable: bool,
@@ -9,10 +7,8 @@ Event :: struct {
 
 events: map[string]Event
 
-@(init)
-init_events :: proc "contextless" () {
-	context = runtime.default_context()
-	events = make(map[string]Event, 186, context.allocator)
+init_events :: proc(allocator := context.allocator) {
+	events = make(map[string]Event, 186, allocator)
 	events["player_join"] = {"player_join", false}
 	events["player_quit"] = {"player_quit", false}
 	events["player_rejoin"] = {"player_rejoin", true}
@@ -159,51 +155,49 @@ init_events :: proc "contextless" () {
 	events["furnace_smelt"] = {"furnace_smelt", true}
 	events["furnace_start_smelt"] = {"furnace_start_smelt", false}
 	events["furnace_burn"] = {"furnace_burn", true}
-	events["player_input_event"] = {"player_input_event", false}
+	events["player_knockback"] = {"player_knockback", true}
+	events["player_prepare_result"] = {"player_prepare_result", true}
+	events["player_dummy"] = {"player_dummy", false}
+	events["player_sign_change"] = {"player_sign_change", true}
+	events["entity_dummy"] = {"entity_dummy", false}
+	events["player_item_group_cooldown"] = {"player_item_group_cooldown", true}
+	events["player_stop_gliding"] = {"player_stop_gliding", true}
+	events["fishing_hook_state_change"] = {"fishing_hook_state_change", true}
+	events["player_anvil_rename_input"] = {"player_anvil_rename_input", false}
+	events["vault_display_item"] = {"vault_display_item", true}
+	events["player_combust"] = {"player_combust", true}
+	events["player_equipment_changed"] = {"player_equipment_changed", false}
+	events["player_prepare_item_enchant"] = {"player_prepare_item_enchant", true}
+	events["player_item_cooldown"] = {"player_item_cooldown", true}
+	events["entity_knockback"] = {"entity_knockback", true}
+	events["player_item_mend"] = {"player_item_mend", false}
+	events["player_enchant_item"] = {"player_enchant_item", true}
+	events["world_dummy"] = {"world_dummy", false}
+	events["player_open_advancements_tab"] = {"player_open_advancements_tab", true}
+	events["player_vault_change_state"] = {"player_vault_change_state", true}
 	events["player_rotate"] = {"player_rotate", true}
 	events["entity_stop_gliding"] = {"entity_stop_gliding", true}
-	events["player_item_cooldown"] = {"player_item_cooldown", true}
-	events["world_dummy"] = {"world_dummy", false}
-	events["fishing_hook_state_change"] = {"fishing_hook_state_change", true}
-	events["player_combust"] = {"player_combust", true}
-	events["vault_display_item"] = {"vault_display_item", true}
-	events["entity_knockback"] = {"entity_knockback", true}
-	events["entity_equipment_changed"] = {"entity_equipment_changed", false}
-	events["player_stop_gliding"] = {"player_stop_gliding", true}
-	events["player_sign_change"] = {"player_sign_change", true}
-	events["crafter_craft"] = {"crafter_craft", true}
-	events["player_knockback"] = {"player_knockback", true}
-	events["entity_teleport"] = {"entity_teleport", true}
-	events["player_item_group_cooldown"] = {"player_item_group_cooldown", true}
-	events["player_custom_click"] = {"player_custom_click", false}
-	events["entity_start_gliding"] = {"entity_start_gliding", true}
-	events["entity_dummy"] = {"entity_dummy", false}
-	events["player_pick_entity"] = {"player_pick_entity", true}
-	events["player_anvil_rename_input"] = {"player_anvil_rename_input", false}
-	events["moisture_change"] = {"moisture_change", true}
-	events["player_prepare_result"] = {"player_prepare_result", true}
-	events["item_merge"] = {"item_merge", true}
-	events["player_dummy"] = {"player_dummy", false}
+	events["entity_combust"] = {"entity_combust", true}
 	events["player_ask_gamemode_change"] = {"player_ask_gamemode_change", true}
-	events["player_prepare_item_enchant"] = {"player_prepare_item_enchant", true}
-	events["player_vault_change_state"] = {"player_vault_change_state", true}
-	events["player_item_mend"] = {"player_item_mend", false}
-	events["world_web_exception"] = {"world_web_exception", false}
-	events["player_open_advancements_tab"] = {"player_open_advancements_tab", true}
-	events["player_velocity"] = {"player_velocity", true}
-	events["player_pick_block"] = {"player_pick_block", true}
-	events["player_equipment_changed"] = {"player_equipment_changed", false}
 	events["vault_change_state"] = {"vault_change_state", true}
+	events["moisture_change"] = {"moisture_change", true}
+	events["item_merge"] = {"item_merge", true}
+	events["player_pick_block"] = {"player_pick_block", true}
+	events["crafter_craft"] = {"crafter_craft", true}
+	events["world_web_exception"] = {"world_web_exception", false}
+	events["player_pick_entity"] = {"player_pick_entity", true}
+	events["player_start_gliding"] = {"player_start_gliding", true}
 	events["player_location_change"] = {"player_location_change", true}
 	events["player_close_advancements_menu"] = {"player_close_advancements_menu", false}
-	events["player_enchant_item"] = {"player_enchant_item", true}
-	events["entity_combust"] = {"entity_combust", true}
-	events["player_start_gliding"] = {"player_start_gliding", true}
+	events["entity_teleport"] = {"entity_teleport", true}
+	events["entity_start_gliding"] = {"entity_start_gliding", true}
+	events["player_velocity"] = {"player_velocity", true}
+	events["player_input_event"] = {"player_input_event", false}
+	events["player_custom_click"] = {"player_custom_click", false}
+	events["entity_equipment_changed"] = {"entity_equipment_changed", false}
 }
 
-@(fini)
-cleanup_events :: proc "contextless" () {
-	context = runtime.default_context()
+cleanup_events :: proc() {
 	delete(events)
 }
 

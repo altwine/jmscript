@@ -18,6 +18,7 @@ import vmem "core:mem/virtual"
 import "core:fmt"
 
 import "./compiler"
+import "../assets"
 
 @(init)
 setup_encoding :: proc "contextless"() {
@@ -99,6 +100,17 @@ command_compile :: proc() {
 	err := vmem.arena_init_growing(&arena, mem.Megabyte)
 	alloc := vmem.arena_allocator(&arena)
 	defer vmem.arena_destroy(&arena)
+
+	assets.init_actions(alloc)
+	defer assets.cleanup_actions()
+	assets.init_entities(alloc)
+	defer assets.cleanup_entities()
+	assets.init_events(alloc)
+	defer assets.cleanup_events()
+	assets.init_mc_items(alloc)
+	defer assets.cleanup_mc_items()
+	assets.init_particles(alloc)
+	defer assets.cleanup_particles()
 
 	c: compiler.Compiler
 	compiler.compiler_init(&c, alloc)

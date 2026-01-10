@@ -100,8 +100,6 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 	fmt.fprintln(fd, "#+feature dynamic-literals")
 	fmt.fprintln(fd, "package assets\n")
 
-	fmt.fprintln(fd, "import \"base:runtime\"\n")
-
 	fmt.fprintln(fd, "Action :: struct {")
 	fmt.fprintln(fd, "\tname:            string,")
 	fmt.fprintln(fd, "\tin_slots:        [dynamic]string,")
@@ -126,11 +124,9 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 
 	fmt.fprintln(fd, "actions: map[string]Action\n")
 
-	fmt.fprintln(fd, "@(init)")
-	fmt.fprintln(fd, "init_actions :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "init_actions :: proc(allocator := context.allocator) {")
 	actions_count := len(actions) - len(ACTIONS_BLACKLIST)
-	fmt.fprintfln(fd, "\tactions = make(map[string]Action, %d, context.allocator)", actions_count)
+	fmt.fprintfln(fd, "\tactions = make(map[string]Action, %d, allocator)", actions_count)
 	for action in actions {
 		if slice.contains(ACTIONS_BLACKLIST[:], action.name) {
 			continue
@@ -204,9 +200,7 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 	}
 	fmt.fprintln(fd, "}\n")
 
-	fmt.fprintln(fd, "@(fini)")
-	fmt.fprintln(fd, "cleanup_actions :: proc \"contextless\" () {")
-	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	fmt.fprintln(fd, "cleanup_actions :: proc() {")
 	fmt.fprintln(fd, "\tfor _, action in actions {")
 	fmt.fprintln(fd, "\t\tdelete(action.in_slots)")
 	fmt.fprintln(fd, "\t\tdelete(action.out_slots)")
