@@ -111,6 +111,8 @@ command_compile :: proc() {
 	defer assets.cleanup_mc_items()
 	assets.init_particles(alloc)
 	defer assets.cleanup_particles()
+	assets.init_instruments(alloc)
+	defer assets.cleanup_instruments()
 
 	c: compiler.Compiler
 	compiler.compiler_init(&c, alloc)

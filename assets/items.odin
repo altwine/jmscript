@@ -15,7 +15,7 @@ Stack_Type :: enum {
 mc_items: map[string]Minecraft_Item
 
 init_mc_items :: proc(allocator := context.allocator) {
-	mc_items = make(map[string]Minecraft_Item, allocator)
+	mc_items = make(map[string]Minecraft_Item, 1416, allocator)
 	mc_items["air"] = Minecraft_Item{
 		"air",
 		"Air",

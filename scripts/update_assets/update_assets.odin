@@ -30,4 +30,8 @@ main :: proc() {
 	particles_filepath := filepath.join([]string{assets_dir, "particles.odin"})
 	particles := extract_particles()
 	write_particles(particles_filepath, particles)
+
+	instruments_filepath := filepath.join([]string{assets_dir, "instruments.odin"})
+	instruments := extract_instruments()
+	write_instruments(instruments_filepath, instruments)
 }

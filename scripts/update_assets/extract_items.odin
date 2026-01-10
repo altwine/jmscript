@@ -48,7 +48,7 @@ write_items :: proc(output_file: string, items: [dynamic]Minecraft_Item) {
 	fmt.fprintln(fd, "mc_items: map[string]Minecraft_Item\n")
 
 	fmt.fprintln(fd, "init_mc_items :: proc(allocator := context.allocator) {")
-	fmt.fprintln(fd, "\tmc_items = make(map[string]Minecraft_Item, allocator)")
+	fmt.fprintfln(fd, "\tmc_items = make(map[string]Minecraft_Item, %d, allocator)", len(items))
 	for item in items {
 		fmt.fprintfln(fd, "\tmc_items[\"%s\"] = Minecraft_Item{{", item.name)
 		fmt.fprintfln(fd, "\t\t\"%s\",", item.name)
