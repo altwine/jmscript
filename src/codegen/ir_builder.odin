@@ -256,6 +256,8 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			append(&values, named_value("value", var))
 			append(&ops, basic_operation("set_variable_value", values))
 		}
+	case ^ast.Defer_Stmt:
+		ir_add_error(irb, "Top level defer stmts is disallowed")
 	case:
 		fmt.printfln("Unhandled %v", v)
 	}

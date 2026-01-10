@@ -46,7 +46,7 @@ parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [d
 	p.file.id = file_id
 	p.file.tags = parse_file_tags(p)
 	p.file.pkg = parse_package(p)
-	p.file.decls = parse_stmt_list(p)
+	p.file.decls = parse_top_level_stmt_list(p)
 	return p.file, p.errs, p.warns
 }
 
@@ -122,7 +122,7 @@ advance :: proc(p: ^Parser) -> lexer.Token {
 	return current(p)
 }
 
-parse_stmt_list :: proc(p: ^Parser) -> [dynamic]^ast.Stmt {
+parse_top_level_stmt_list :: proc(p: ^Parser) -> [dynamic]^ast.Stmt {
 	stmt_list := make([dynamic]^ast.Stmt, p.file.alloc)
 
 	for !match(p, .EOF) {
@@ -378,11 +378,17 @@ parse_block_stmt :: proc(p: ^Parser) -> ^ast.Block_Stmt {
 	advance(p)
 
 	stmt_list := make([dynamic]^ast.Stmt, p.file.alloc)
+	deferred_stmt_list := make([dynamic]^ast.Stmt, p.file.alloc)
 
 	for !match(p, .Close_Brace) && !match(p, .EOF) {
 		stmt := parse_stmt(p)
 		if stmt != nil {
-			append(&stmt_list, stmt)
+			defer_stmt, is_defer_stmt := stmt.derived.(^ast.Defer_Stmt)
+			if is_defer_stmt {
+				append(&deferred_stmt_list, defer_stmt.stmt)
+			} else {
+				append(&stmt_list, stmt)
+			}
 		} else if !match(p, .Close_Brace) && !match(p, .EOF) {
 			advance(p)
 		}
@@ -395,6 +401,10 @@ parse_block_stmt :: proc(p: ^Parser) -> ^ast.Block_Stmt {
 
 	close_brace := current(p)
 	advance(p)
+
+	#reverse for deferred_stmt in deferred_stmt_list {
+		append(&stmt_list, deferred_stmt)
+	}
 
 	block_stmt := ast.new(ast.Block_Stmt, open_brace.pos, close_brace.pos, p.file.alloc)
 	block_stmt.stmts = stmt_list[:]
