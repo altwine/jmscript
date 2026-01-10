@@ -81,16 +81,19 @@ ACTION_INS_OUTS := map[string]Action_In_Out {
 	},
 }
 
-extract_actions :: proc(output_file: string) -> (string, bool) {
+URL_ACTIONS_1 :: URL_BASE_JMS+"actions.json"
+
+extract_actions :: proc() -> ([dynamic]Action) {
 	actions1 := fetch_url(URL_ACTIONS_1)
 	actions := make([dynamic]Action)
 	err := json.unmarshal(transmute([]byte)actions1, &actions)
 	if err != nil {
-		return "Failed to parse JSON", false
+		return nil
 	}
+	return actions
+}
 
-	actions_count := len(actions) - len(ACTIONS_BLACKLIST)
-
+write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 	fd, _ := os.open(output_file, os.O_CREATE | os.O_RDWR | os.O_TRUNC)
 	defer os.close(fd)
 
@@ -100,12 +103,12 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "import \"base:runtime\"\n")
 
 	fmt.fprintln(fd, "Action :: struct {")
-	fmt.fprintln(fd, "\tname: string,")
-	fmt.fprintln(fd, "\tin_slots: [dynamic]string,")
-	fmt.fprintln(fd, "\tout_slots: [dynamic]string,")
+	fmt.fprintln(fd, "\tname:            string,")
+	fmt.fprintln(fd, "\tin_slots:        [dynamic]string,")
+	fmt.fprintln(fd, "\tout_slots:       [dynamic]string,")
 	fmt.fprintln(fd, "\taccept_selector: bool,")
-	fmt.fprintln(fd, "\ttype: Action_Type,")
-	fmt.fprintln(fd, "\tslots: [dynamic]Slot,")
+	fmt.fprintln(fd, "\ttype:            Action_Type,")
+	fmt.fprintln(fd, "\tslots:           [dynamic]Slot,")
 	fmt.fprintln(fd, "}\n")
 
 	fmt.fprintln(fd, "Action_Type :: enum {")
@@ -116,8 +119,8 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "}\n")
 
 	fmt.fprintln(fd, "Slot :: struct {")
-	fmt.fprintln(fd, "\tname: string,")
-	fmt.fprintln(fd, "\ttype: string,")
+	fmt.fprintln(fd, "\tname:  string,")
+	fmt.fprintln(fd, "\ttype:  string,")
 	fmt.fprintln(fd, "\t_enum: [dynamic]string,")
 	fmt.fprintln(fd, "}\n")
 
@@ -126,6 +129,7 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "@(init)")
 	fmt.fprintln(fd, "init_actions :: proc \"contextless\" () {")
 	fmt.fprintln(fd, "\tcontext = runtime.default_context()")
+	actions_count := len(actions) - len(ACTIONS_BLACKLIST)
 	fmt.fprintfln(fd, "\tactions = make(map[string]Action, %d, context.allocator)", actions_count)
 	for action in actions {
 		if slice.contains(ACTIONS_BLACKLIST[:], action.name) {
@@ -217,6 +221,4 @@ extract_actions :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "action_native_from_mapped :: proc(action_name: string) -> (Action, bool) {")
 	fmt.fprintln(fd, "\treturn actions[action_name]")
 	fmt.fprintln(fd, "}")
-
-	return "", true
 }

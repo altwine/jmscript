@@ -1,4 +1,3 @@
-#+feature dynamic-literals
 package update_assets
 
 import "core:fmt"
@@ -17,32 +16,40 @@ Event_Stripped :: struct {
 	cancellable: bool `json:"cancellable"`,
 }
 
-extract_events :: proc(output_file: string) -> (string, bool) {
+URL_EVENTS_1 :: URL_BASE_JMS+"events.json"
+URL_EVENTS_2 :: URL_BASE_JMS+"events_map.json"
+
+extract_events :: proc() -> [dynamic]Event {
 	events1 := fetch_url(URL_EVENTS_1)
 	events2 := fetch_url(URL_EVENTS_2)
 	events := make([dynamic]Event)
 	events_stripped: map[string]Event_Stripped
 	err1 := json.unmarshal(transmute([]byte)events1, &events)
 	if err1 != nil {
-		return "Failed to parse JSON (1)", false
+		return nil
 	}
 	err2 := json.unmarshal(transmute([]byte)events2, &events_stripped)
 	if err2 != nil {
-		return "Failed to parse JSON (2)", false
+		return nil
 	}
 
 	for name, cancellable_state in events_stripped {
 		append(&events, Event{name=name, cancellable=cancellable_state.cancellable})
 	}
 
+	return events
+}
+
+write_events :: proc(output_file: string, events: [dynamic]Event) {
 	fd, _ := os.open(output_file, os.O_CREATE | os.O_RDWR | os.O_TRUNC)
 	defer os.close(fd)
+
 	fmt.fprintln(fd, "package assets\n")
 
 	fmt.fprintln(fd, "import \"base:runtime\"\n")
 
 	fmt.fprintln(fd, "Event :: struct {")
-	fmt.fprintln(fd, "\tname: string,")
+	fmt.fprintln(fd, "\tname:        string,")
 	fmt.fprintln(fd, "\tcancellable: bool,")
 	fmt.fprintln(fd, "}\n")
 
@@ -72,6 +79,4 @@ extract_events :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "event_native_from_mapped :: proc(event_name: string) -> (Event, bool) {")
 	fmt.fprintln(fd, "\treturn events[event_name]")
 	fmt.fprintln(fd, "}")
-
-	return "", true
 }

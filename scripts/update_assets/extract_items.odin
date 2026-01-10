@@ -14,14 +14,20 @@ Minecraft_Item :: struct {
 	enchant_categories: []string `json:"enchantCategories"`,
 }
 
-extract_items :: proc(output_file: string) -> (string, bool) {
+URL_ITEMS :: URL_BASE_MC+"items.json"
+
+extract_items :: proc() -> [dynamic]Minecraft_Item {
 	items1 := fetch_url(URL_ITEMS)
 	items := make([dynamic]Minecraft_Item)
 	err := json.unmarshal(transmute([]byte)items1, &items)
 	if err != nil {
-		return "Failed to parse JSON", false
+		return nil
 	}
 
+	return items
+}
+
+write_items :: proc(output_file: string, items: [dynamic]Minecraft_Item) {
 	fd, _ := os.open(output_file, os.O_CREATE | os.O_RDWR | os.O_TRUNC)
 	defer os.close(fd)
 
@@ -30,9 +36,9 @@ extract_items :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "import \"base:runtime\"\n")
 
 	fmt.fprintln(fd, "Minecraft_Item :: struct {")
-	fmt.fprintln(fd, "\tname: string,")
+	fmt.fprintln(fd, "\tname:         string,")
 	fmt.fprintln(fd, "\tdisplay_name: string,")
-	fmt.fprintln(fd, "\tstack_size: Stack_Type,")
+	fmt.fprintln(fd, "\tstack_size:   Stack_Type,")
 	fmt.fprintln(fd, "}\n")
 
 	fmt.fprintln(fd, "Stack_Type :: enum {")
@@ -72,6 +78,4 @@ extract_items :: proc(output_file: string) -> (string, bool) {
 	fmt.fprintln(fd, "get_minecraft_item :: proc(item_name: string) -> (Minecraft_Item, bool) {")
 	fmt.fprintln(fd, "\treturn mc_items[item_name]")
 	fmt.fprintln(fd, "}")
-
-	return "", true
 }

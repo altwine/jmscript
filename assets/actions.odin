@@ -4,12 +4,12 @@ package assets
 import "base:runtime"
 
 Action :: struct {
-	name: string,
-	in_slots: [dynamic]string,
-	out_slots: [dynamic]string,
+	name:            string,
+	in_slots:        [dynamic]string,
+	out_slots:       [dynamic]string,
 	accept_selector: bool,
-	type: Action_Type,
-	slots: [dynamic]Slot,
+	type:            Action_Type,
+	slots:           [dynamic]Slot,
 }
 
 Action_Type :: enum {
@@ -20,8 +20,8 @@ Action_Type :: enum {
 }
 
 Slot :: struct {
-	name: string,
-	type: string,
+	name:  string,
+	type:  string,
 	_enum: [dynamic]string,
 }
 

@@ -3,9 +3,9 @@ package assets
 import "base:runtime"
 
 Minecraft_Item :: struct {
-	name: string,
+	name:         string,
 	display_name: string,
-	stack_size: Stack_Type,
+	stack_size:   Stack_Type,
 }
 
 Stack_Type :: enum {
