@@ -49,9 +49,12 @@ main :: proc() {
 		context.allocator,
 	)
 	if err != nil {
-		fmt.printfln("Err: %v", err)
-		return
+		fmt.eprintln("Err: %v", err)
+		os.exit(1)
 	}
-	fmt.printf("%s", stdout)
-	fmt.printf("%s", stderr)
+	if len(stderr) > 0 {
+		fmt.eprintfln("%s", stderr)
+		os.exit(1)
+	}
+	fmt.printfln("%s", stdout)
 }

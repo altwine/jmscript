@@ -30,6 +30,7 @@ main :: proc() {
 	append(&build_debug_cmd, "-extra-linker-flags:/LTCG /IGNORE:4099")
 	append(&build_debug_cmd, "-subsystem:console")
 	append(&build_debug_cmd, "-debug")
+	append(&build_debug_cmd, "-o:none")
 	append(&build_debug_cmd, "-vet-shadowing")
 	append(&build_debug_cmd, "-vet-tabs")
 	append(&build_debug_cmd, "-vet-cast")
@@ -47,9 +48,12 @@ main :: proc() {
 		context.allocator,
 	)
 	if err != nil {
-		fmt.printfln("Err: %v", err)
-		return
+		fmt.eprintln("Err: %v", err)
+		os.exit(1)
 	}
-	fmt.printf("%s", stdout)
-	fmt.printf("%s", stderr)
+	if len(stderr) > 0 {
+		fmt.eprintfln("%s", stderr)
+		os.exit(1)
+	}
+	fmt.printfln("%s", stdout)
 }
