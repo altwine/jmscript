@@ -58,7 +58,7 @@ main :: proc() {
 		additional_info := translate(t, "creative_plus.additional_information")
 		cancellable := translate(t, "creative_plus.trigger.cancellable")
 
-		for event in events_list {
+		for event, event_index in events_list {
 			name := event.name
 			switch name {
 			case "player_dummy", "entity_dummy", "world_dummy":
@@ -92,7 +92,9 @@ main :: proc() {
 					fmt.fprintfln(events_fd, "*\t%s", translate(t, FMT_EVENT_ADDITIONAL_INFO, name, item))
 				}
 			}
-			fmt.fprintln(events_fd)
+			if event_index != len(events_list)-1 {
+				fmt.fprintln(events_fd)
+			}
 		}
 	}
 }
