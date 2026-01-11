@@ -1245,178 +1245,10 @@ Works with:
 *	Blast furnaces
 *	Smokers
 
-## moisture_change (Cancellable)
+## player_vault_change_state (Cancellable)
 ...
 ```
-event moisture_change() {
-	// Your code here
-}
-```
-
-## Close advancements
-Triggers when the player closes the advancements tab.
-```
-event player_close_advancements_menu() {
-	// Your code here
-}
-```
-
-## player_custom_click
-...
-```
-event player_custom_click() {
-	// Your code here
-}
-```
-
-## Player changes a sign (Cancellable)
-Executes code when a player makes changes to a sign.
-```
-event player_sign_change() {
-	// Your code here
-}
-```
-
-## Open advancements (Cancellable)
-Triggers when the player opens the advancements tab.
-```
-event player_open_advancements_tab() {
-	// Your code here
-}
-```
-
-## entity_combust (Cancellable)
-...
-```
-event entity_combust() {
-	// Your code here
-}
-```
-
-## crafter_craft (Cancellable)
-...
-```
-event crafter_craft() {
-	// Your code here
-}
-```
-
-## player_input_event
-...
-```
-event player_input_event() {
-	// Your code here
-}
-```
-
-## Player change velocity vector (Cancellable)
-Executes code when a player\'s velocity vector is updated.
-```
-event player_velocity() {
-	// Your code here
-}
-```
-
-## player_enchant_item (Cancellable)
-...
-```
-event player_enchant_item() {
-	// Your code here
-}
-```
-
-## player_start_gliding (Cancellable)
-...
-```
-event player_start_gliding() {
-	// Your code here
-}
-```
-
-## fishing_hook_state_change (Cancellable)
-...
-```
-event fishing_hook_state_change() {
-	// Your code here
-}
-```
-
-## Items merge (Cancellable)
-Executes code when nearby items combine into a single stack.
-```
-event item_merge() {
-	// Your code here
-}
-```
-
-## Player renames item
-Executes code when a player renames an item using an anvil.
-```
-event player_anvil_rename_input() {
-	// Your code here
-}
-```
-
-## Entity teleports (Cancellable)
-Executes code when an entity teleports or is teleported.
-```
-event entity_teleport() {
-	// Your code here
-}
-```
-
-## entity_equipment_changed
-...
-```
-event entity_equipment_changed() {
-	// Your code here
-}
-```
-
-## player_ask_gamemode_change (Cancellable)
-...
-```
-event player_ask_gamemode_change() {
-	// Your code here
-}
-```
-
-## player_stop_gliding (Cancellable)
-...
-```
-event player_stop_gliding() {
-	// Your code here
-}
-```
-
-## Player mends item
-Executes code when a player repairs an item using the \"mending\" enchantment.
-```
-event player_item_mend() {
-	// Your code here
-}
-```
-
-## player_item_group_cooldown (Cancellable)
-...
-```
-event player_item_group_cooldown() {
-	// Your code here
-}
-```
-
-## player_pick_block (Cancellable)
-...
-```
-event player_pick_block() {
-	// Your code here
-}
-```
-
-## Player take knockback (Cancellable)
-Executes code when a player is knocked back.
-```
-event player_knockback() {
+event player_vault_change_state() {
 	// Your code here
 }
 ```
@@ -1429,34 +1261,18 @@ event player_location_change() {
 }
 ```
 
-## player_pick_entity (Cancellable)
+## moisture_change (Cancellable)
 ...
 ```
-event player_pick_entity() {
+event moisture_change() {
 	// Your code here
 }
 ```
 
-## Entity take knockback (Cancellable)
-Executes code when an entity is knocked back.
+## Player take knockback (Cancellable)
+Executes code when a player is knocked back.
 ```
-event entity_knockback() {
-	// Your code here
-}
-```
-
-## Web request error
-Triggers when a request responds with an error.
-```
-event world_web_exception() {
-	// Your code here
-}
-```
-
-## vault_change_state (Cancellable)
-...
-```
-event vault_change_state() {
+event player_knockback() {
 	// Your code here
 }
 ```
@@ -1469,34 +1285,50 @@ event player_prepare_result() {
 }
 ```
 
+## Open advancements (Cancellable)
+Triggers when the player opens the advancements tab.
+```
+event player_open_advancements_tab() {
+	// Your code here
+}
+```
+
+## player_input_event
+...
+```
+event player_input_event() {
+	// Your code here
+}
+```
+
+## Items merge (Cancellable)
+Executes code when nearby items combine into a single stack.
+```
+event item_merge() {
+	// Your code here
+}
+```
+
+## entity_combust (Cancellable)
+...
+```
+event entity_combust() {
+	// Your code here
+}
+```
+
+## entity_equipment_changed
+...
+```
+event entity_equipment_changed() {
+	// Your code here
+}
+```
+
 ## player_combust (Cancellable)
 ...
 ```
 event player_combust() {
-	// Your code here
-}
-```
-
-## player_equipment_changed
-...
-```
-event player_equipment_changed() {
-	// Your code here
-}
-```
-
-## entity_start_gliding (Cancellable)
-...
-```
-event entity_start_gliding() {
-	// Your code here
-}
-```
-
-## entity_stop_gliding (Cancellable)
-...
-```
-event entity_stop_gliding() {
 	// Your code here
 }
 ```
@@ -1509,6 +1341,102 @@ event player_prepare_item_enchant() {
 }
 ```
 
+## player_pick_block (Cancellable)
+...
+```
+event player_pick_block() {
+	// Your code here
+}
+```
+
+## Close advancements
+Triggers when the player closes the advancements tab.
+```
+event player_close_advancements_menu() {
+	// Your code here
+}
+```
+
+## ...
+...
+```
+event player_dummy() {
+	// Your code here
+}
+```
+
+## player_stop_gliding (Cancellable)
+...
+```
+event player_stop_gliding() {
+	// Your code here
+}
+```
+
+## player_custom_click
+...
+```
+event player_custom_click() {
+	// Your code here
+}
+```
+
+## entity_stop_gliding (Cancellable)
+...
+```
+event entity_stop_gliding() {
+	// Your code here
+}
+```
+
+## player_item_group_cooldown (Cancellable)
+...
+```
+event player_item_group_cooldown() {
+	// Your code here
+}
+```
+
+## entity_start_gliding (Cancellable)
+...
+```
+event entity_start_gliding() {
+	// Your code here
+}
+```
+
+## player_item_cooldown (Cancellable)
+...
+```
+event player_item_cooldown() {
+	// Your code here
+}
+```
+
+## ...
+...
+```
+event world_dummy() {
+	// Your code here
+}
+```
+
+## Web request error
+Triggers when a request responds with an error.
+```
+event world_web_exception() {
+	// Your code here
+}
+```
+
+## player_enchant_item (Cancellable)
+...
+```
+event player_enchant_item() {
+	// Your code here
+}
+```
+
 ## Player rotates (Cancellable)
 Executes code when the player rotates (changes their yaw or pitch).
 ```
@@ -1517,10 +1445,90 @@ event player_rotate() {
 }
 ```
 
-## player_vault_change_state (Cancellable)
+## player_equipment_changed
 ...
 ```
-event player_vault_change_state() {
+event player_equipment_changed() {
+	// Your code here
+}
+```
+
+## player_pick_entity (Cancellable)
+...
+```
+event player_pick_entity() {
+	// Your code here
+}
+```
+
+## Player change velocity vector (Cancellable)
+Executes code when a player\'s velocity vector is updated.
+```
+event player_velocity() {
+	// Your code here
+}
+```
+
+## Player renames item
+Executes code when a player renames an item using an anvil.
+```
+event player_anvil_rename_input() {
+	// Your code here
+}
+```
+
+## Entity take knockback (Cancellable)
+Executes code when an entity is knocked back.
+```
+event entity_knockback() {
+	// Your code here
+}
+```
+
+## Player mends item
+Executes code when a player repairs an item using the \"mending\" enchantment.
+```
+event player_item_mend() {
+	// Your code here
+}
+```
+
+## ...
+...
+```
+event entity_dummy() {
+	// Your code here
+}
+```
+
+## vault_change_state (Cancellable)
+...
+```
+event vault_change_state() {
+	// Your code here
+}
+```
+
+## Entity teleports (Cancellable)
+Executes code when an entity teleports or is teleported.
+```
+event entity_teleport() {
+	// Your code here
+}
+```
+
+## crafter_craft (Cancellable)
+...
+```
+event crafter_craft() {
+	// Your code here
+}
+```
+
+## player_start_gliding (Cancellable)
+...
+```
+event player_start_gliding() {
 	// Your code here
 }
 ```
@@ -1533,10 +1541,26 @@ event vault_display_item() {
 }
 ```
 
-## player_item_cooldown (Cancellable)
+## Player changes a sign (Cancellable)
+Executes code when a player makes changes to a sign.
+```
+event player_sign_change() {
+	// Your code here
+}
+```
+
+## player_ask_gamemode_change (Cancellable)
 ...
 ```
-event player_item_cooldown() {
+event player_ask_gamemode_change() {
+	// Your code here
+}
+```
+
+## fishing_hook_state_change (Cancellable)
+...
+```
+event fishing_hook_state_change() {
 	// Your code here
 }
 ```

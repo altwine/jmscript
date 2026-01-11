@@ -31,7 +31,11 @@ Action :: struct {
 }
 
 ACTIONS_BLACKLIST := []string{
-	"empty", "else",
+	"empty", "else", // "set_variable_dummy", "repeat_dummy",
+	// "controller_dummy", "control_dummy", "select_dummy",
+	// "if_game_dummy", "game_dummy", "if_variable_dummy",
+	// "if_entity_dummy", "entity_dummy", "if_player_dummy",
+	// "player_dummy",
 }
 
 Action_In_Out :: struct {

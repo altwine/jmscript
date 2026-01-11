@@ -60,10 +60,6 @@ main :: proc() {
 
 		for event, event_index in events_list {
 			name := event.name
-			switch name {
-			case "player_dummy", "entity_dummy", "world_dummy":
-				continue
-			}
 			name_localized, has_name := translate(t, FMT_EVENT_NAME, name)
 			description_localized, has_description := translate(t, FMT_EVENT_DESC, name)
 			if !has_name {

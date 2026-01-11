@@ -1,5 +1,6 @@
 package update_assets
 
+import "core:slice"
 import "core:fmt"
 import "core:encoding/json"
 import "core:os"
@@ -14,6 +15,10 @@ Event :: struct {
 
 Event_Stripped :: struct {
 	cancellable: bool `json:"cancellable"`,
+}
+
+EVENTS_BLACKLIST := []string{
+	"player_dummy", "entity_dummy", "world_dummy"
 }
 
 URL_EVENTS_1 :: URL_BASE_JMS+"events.json"
@@ -54,8 +59,11 @@ write_events :: proc(output_file: string, events: [dynamic]Event) {
 	fmt.fprintln(fd, "events: map[string]Event\n")
 
 	fmt.fprintln(fd, "init_events :: proc(allocator := context.allocator) {")
-	fmt.fprintln(fd, fmt.tprintf("\tevents = make(map[string]Event, %d, allocator)", len(events)))
+	fmt.fprintln(fd, fmt.tprintf("\tevents = make(map[string]Event, %d, allocator)", len(events) - len(EVENTS_BLACKLIST)))
 	for event in events {
+		if slice.contains(EVENTS_BLACKLIST[:], event.name) {
+			continue
+		}
 		fmt.fprintf(fd, "\tevents[\"%s\"] = {{\"%s\", ", event.name, event.name)
 		if event.cancellable {
 			fmt.fprint(fd, "true")
