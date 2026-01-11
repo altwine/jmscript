@@ -158,6 +158,8 @@ parse_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
 		stmt =  parse_variable_declaration(p, false)
 	case match(p, .Ident) && peek(p).kind == .Colon && (peek(p, 2).kind == .Colon || (peek(p, 2).kind == .Ident && peek(p, 3).kind == .Colon)):
 		stmt =  parse_variable_declaration(p, true)
+	case match(p, .Open_Brace):
+		stmt = parse_block_stmt(p)
 	case:
 		stmt = parse_expr_stmt(p)
 	}
