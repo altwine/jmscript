@@ -5,7 +5,7 @@ behaviour: write an issue or do a pull request.**
 This readme is a mess, some is actual useful information and some is just my
 unfiltered thoughts. I will clean it up later.
 
-# TODO
+## TODO
 - Actually FIX checker!!!
 - Move checker logic from codegen to checker;
 - Proper if-else chains handling;
@@ -16,7 +16,7 @@ unfiltered thoughts. I will clean it up later.
 - Merge integer and float because separation is useless;
 - Rework the memory management.
 
-# Building
+## Building
 **TL;DR**:
 1. Make sure you have `odin` available globally.
 2. Use `odin run ./scripts/update_assets` to update assets (mostly justmc & minecraft data).
@@ -29,6 +29,9 @@ Use `odin run ./scripts/update_assets` to update assets.
 
 Use `odin run ./scripts/build_prod` to compile release-ready binary, or compile the debug
 build using `odin run ./scripts/build_debug`.
+
+## Generating docs
+Use `odin run ./scripts/generate_docs`.
 
 # License
 Check the [LICENSE](./LICENSE) file.
