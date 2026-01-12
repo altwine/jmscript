@@ -553,17 +553,30 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 	open_paren := current(p)
 	advance(p)
 
-	args := make([dynamic]^ast.Expr, p.file.alloc)
+	args := make([dynamic]^ast.Call_Expr_Argument, p.file.alloc)
+	positional_args_started := false
 
 	if !match(p, .Close_Paren) {
 		for {
+			pos_arg_name := ""
+			if match(p, .Ident) && peek(p).kind == .Eq {
+				positional_args_started = true
+				pos_arg_name = current(p).content
+				advance(p)
+				advance(p)
+			} else if positional_args_started {
+				fmt.printfln("%v", current(p))
+				add_error(p, "Normal arguments not allowed after positional arguments in function call", current(p), current(p))
+			}
 			arg := parse_expression(p)
 			if arg == nil {
 				add_error(p, "Expected expression in function call argument", current(p), current(p))
 				break
 			}
-			append(&args, arg)
-
+			pos_arg := ast.new(ast.Call_Expr_Argument, arg.pos, arg.end, p.file.alloc)
+			pos_arg.name = pos_arg_name
+			pos_arg.value = arg
+			append(&args, pos_arg)
 			if match(p, .Comma) {
 				advance(p)
 			} else {

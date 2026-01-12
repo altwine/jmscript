@@ -34,7 +34,7 @@ NamedValue :: struct {
 	value: Value,
 }
 
-named_value :: proc(name: string, value: Value, loc := #caller_location) -> NamedValue {
+named_value :: proc(name: string, value: Value) -> NamedValue {
 	return NamedValue{name, value}
 }
 

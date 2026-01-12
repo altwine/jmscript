@@ -91,8 +91,14 @@ Member_Access_Expr :: struct {
 Call_Expr :: struct {
 	using node: Expr,
 	expr:     ^Expr,
-	args:     []^Expr,
+	args:     []^Call_Expr_Argument,
 	ellipsis: lexer.Token,
+}
+
+Call_Expr_Argument :: struct {
+	using node: Expr,
+	name:  string,
+	value: ^Expr,
 }
 
 Field_Value :: struct {
@@ -139,44 +145,44 @@ Defer_Stmt :: struct {
 
 For_Stmt :: struct {
 	using node: Stmt,
-	for_pos:   lexer.Pos,
-	init:      []^Ident,
-	cond:      ^Expr,
-	post:      ^Stmt,
-	body:      ^Block_Stmt,
-	range_tok: lexer.Token,
+	for_pos:     lexer.Pos,
+	init:        []^Ident,
+	cond:        ^Expr,
+	post:        ^Stmt,
+	body:        ^Block_Stmt,
+	range_tok:   lexer.Token,
 	second_cond: ^Expr,
 }
 
 Value_Decl :: struct {
 	using node: Decl,
-	name:      string,
-	type:      string,
-	value:     ^Expr,
-	is_const:  bool,
+	name:     string,
+	type:     string,
+	value:    ^Expr,
+	is_const: bool,
 }
 
 Field_Access :: struct {
 	using base: Expr,
-	expr: ^Expr,
+	expr:  ^Expr,
 	field: string,
 }
 
 Index_Expr :: struct {
 	using base: Expr,
-	expr: ^Expr,
+	expr:  ^Expr,
 	index: ^Expr,
 }
 
 Param :: struct {
 	using node: Node,
-	name:         string,
-	type:          string,
+	name: string,
+	type: string,
 }
 
 Param_List :: struct {
 	using node: Node,
-	list:  []^Param,
+	list: []^Param,
 }
 
 Any_Node :: union {
@@ -207,6 +213,7 @@ Any_Node :: union {
 	^Field_Access,
 	^Param,
 	^Param_List,
+	^Call_Expr_Argument,
 }
 
 Any_Expr :: union {
@@ -263,6 +270,9 @@ print_tree :: proc(node: ^Node, indent := 0) {
 
 	case ^Field_Access:
 		fmt.println("Field_Access")
+	case ^Call_Expr_Argument:
+		fmt.println("Positional_Arg '%s':", n.name)
+		print_inline_expr(n.value)
 	case ^Ident:
 		fmt.printfln("Ident('%s')", n.name)
 	case ^Basic_Lit:

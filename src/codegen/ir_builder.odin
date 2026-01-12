@@ -1,5 +1,6 @@
 package codegen
 
+import "core:slice"
 import "core:strconv"
 import "core:fmt"
 import "core:mem"
@@ -163,65 +164,66 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			values := make([dynamic]NamedValue, irb.alloc)
 			append(&ops, container_operation("repeat_forever", values, ops3))
 		} else {
-			if for_stmt.init != nil && for_stmt.cond != nil && for_stmt.post == nil && for_stmt.second_cond == nil {
-				init_ident := for_stmt.init
-				cond_expr := for_stmt.cond
-				#partial switch v in cond_expr.derived {
-				case ^ast.Call_Expr:
-					cond_expr_call_expr := cast(^ast.Call_Expr)cond_expr
-					#partial switch v in cond_expr_call_expr.expr.derived {
-					case ^ast.Ident:
-						ident := cast(^ast.Ident)cond_expr_call_expr.expr
-						ident_name := ident.name
-						action, is_exist := assets.action_native_from_mapped(ident_name)
-						if !is_exist {
-							fmt.printfln("Unknown repeat action")
-							break
-						}
-						if action.type != .CONTAINER {
-							fmt.printfln("Unhandled4 for loop construction, non-container action: %v", for_stmt)
-							break
-						}
-						if len(init_ident) > len(action.out_slots) {
-							fmt.printfln("(user error) Unhandled5 for loop construction, too much output variables, expected %d or less but got %d: %v", len(action.out_slots), len(init_ident), for_stmt)
-							break
-						}
-						if len(cond_expr_call_expr.args) > len(action.in_slots) {
-							fmt.printfln("(user error) Unhandled6 for loop construction, too much input variables, expected %d or less but got %d: %v", len(cond_expr_call_expr.args), len(action.in_slots), for_stmt)
-							break
-						}
-						argvalues := make([dynamic]Value, irb.alloc)
-						for arg_expr in cond_expr_call_expr.args {
-							opsops, val := ir_parse_expression(irb, arg_expr)
-							append_operations(&ops, opsops)
-							append(&argvalues, val)
-						}
-						result_ops := make([dynamic]Operation, irb.alloc)
-						ops3 := ir_parse_stmt(irb, for_stmt.body)
+			ir_add_error(irb, "Repeats are temporarily disabled")
+			// if for_stmt.init != nil && for_stmt.cond != nil && for_stmt.post == nil && for_stmt.second_cond == nil {
+			// 	init_ident := for_stmt.init
+			// 	cond_expr := for_stmt.cond
+			// 	#partial switch v in cond_expr.derived {
+			// 	case ^ast.Call_Expr:
+			// 		cond_expr_call_expr := cast(^ast.Call_Expr)cond_expr
+			// 		#partial switch v in cond_expr_call_expr.expr.derived {
+			// 		case ^ast.Ident:
+			// 			ident := cast(^ast.Ident)cond_expr_call_expr.expr
+			// 			ident_name := ident.name
+			// 			action, is_exist := assets.action_native_from_mapped(ident_name)
+			// 			if !is_exist {
+			// 				fmt.printfln("Unknown repeat action")
+			// 				break
+			// 			}
+			// 			if action.type != .CONTAINER {
+			// 				fmt.printfln("Unhandled4 for loop construction, non-container action: %v", for_stmt)
+			// 				break
+			// 			}
+			// 			if len(init_ident) > len(action.out_slots) {
+			// 				fmt.printfln("(user error) Unhandled5 for loop construction, too much output variables, expected %d or less but got %d: %v", len(action.out_slots), len(init_ident), for_stmt)
+			// 				break
+			// 			}
+			// 			if len(cond_expr_call_expr.args) > len(action.in_slots) {
+			// 				fmt.printfln("(user error) Unhandled6 for loop construction, too much input variables, expected %d or less but got %d: %v", len(cond_expr_call_expr.args), len(action.in_slots), for_stmt)
+			// 				break
+			// 			}
+			// 			argvalues := make([dynamic]Value, irb.alloc)
+			// 			for arg_expr in cond_expr_call_expr.args {
+			// 				opsops, val := ir_parse_expression(irb, arg_expr)
+			// 				append_operations(&ops, opsops)
+			// 				append(&argvalues, val)
+			// 			}
+			// 			result_ops := make([dynamic]Operation, irb.alloc)
+			// 			ops3 := ir_parse_stmt(irb, for_stmt.body)
 
-						if ident_name == "repeat_multi_times" && len(init_ident) == 1 {
-							values1 := make([dynamic]NamedValue, irb.alloc)
-							res_var := variable_value(init_ident[0].name, SCOPE_LOCAL)
-							append(&values1, named_value("variable", res_var))
-							append(&values1, named_value("number", number_value(1)))
-							append(&result_ops, basic_operation("set_variable_decrement", values1))
-						}
-						values := make([dynamic]NamedValue, irb.alloc)
-						for idnt, idnt_idx in init_ident {
-							append(&values, named_value(action.out_slots[idnt_idx], variable_value(idnt.name, SCOPE_LOCAL)))
-						}
-						for argvalue, argvalue_index in argvalues {
-							append(&values, named_value(action.in_slots[argvalue_index], argvalue))
-						}
-						append_operations(&result_ops, ops3)
-						append(&ops, container_operation(action.name, values, result_ops))
-					case:
-						fmt.printfln("[DEBUG] Unhandled1 for loop construction: %v", for_stmt)
-					}
-				case:
-					fmt.printfln("[DEBUG] Unhandled2 for loop construction: %v", for_stmt)
-				}
-			}
+			// 			if ident_name == "repeat_multi_times" && len(init_ident) == 1 {
+			// 				values1 := make([dynamic]NamedValue, irb.alloc)
+			// 				res_var := variable_value(init_ident[0].name, SCOPE_LOCAL)
+			// 				append(&values1, named_value("variable", res_var))
+			// 				append(&values1, named_value("number", number_value(1)))
+			// 				append(&result_ops, basic_operation("set_variable_decrement", values1))
+			// 			}
+			// 			values := make([dynamic]NamedValue, irb.alloc)
+			// 			for idnt, idnt_idx in init_ident {
+			// 				append(&values, named_value(action.out_slots[idnt_idx], variable_value(idnt.name, SCOPE_LOCAL)))
+			// 			}
+			// 			for argvalue, argvalue_index in argvalues {
+			// 				append(&values, named_value(action.in_slots[argvalue_index], argvalue))
+			// 			}
+			// 			append_operations(&result_ops, ops3)
+			// 			append(&ops, container_operation(action.name, values, result_ops))
+			// 		case:
+			// 			fmt.printfln("[DEBUG] Unhandled1 for loop construction: %v", for_stmt)
+			// 		}
+			// 	case:
+			// 		fmt.printfln("[DEBUG] Unhandled2 for loop construction: %v", for_stmt)
+			// 	}
+			// }
 		}
 	case ^ast.Value_Decl:
 		value_decl := cast(^ast.Value_Decl)stmt
@@ -314,8 +316,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 	operations_list := make([dynamic]Operation, irb.alloc)
 	result_value: Value
 
-	#partial switch v in expr.derived {
-	// case ^ast.File: fmt.printfln("[DEBUG] UNHANDLED EXPRESSION TYPE File")
+	#partial expr_type_switch: switch v in expr.derived {
 	case ^ast.Ident:
 		ident := cast(^ast.Ident)expr
 		result_value = variable_value(ident.name, SCOPE_LOCAL)
@@ -335,14 +336,9 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 		case .Text:
 			text_raw := basic_lit.tok.content
 			result_value = text_value(text_raw[1:len(text_raw)-1], PARSING_LEGACY)
-		// case .True:
-		// case .False:
 		case:
 			fmt.printfln("[DEBUG] UNHANDLED BASIC LITERAL WITH TYPE %s", lexer.to_string(basic_lit.tok.kind))
 		}
-	// case ^ast.Func_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE Func_Stmt")
-	// case ^ast.Event_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE Event_Stmt")
-	// case ^ast.Unary_Expr: fmt.printfln("UNHANDLED EXPRESSION TYPE Unary_Expr")
 	case ^ast.Binary_Expr:
 		binary_expr := cast(^ast.Binary_Expr)expr
 		ops1, left_expr := ir_parse_expression(irb, binary_expr.left)
@@ -396,99 +392,184 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 		ops: [dynamic]Operation
 		ops, result_value = ir_parse_expression(irb, paren_expr.expr)
 		append_operations(&operations_list, ops)
-	// case ^ast.Member_Access_Expr: fmt.printfln("UNHANDLED EXPRESSION TYPE Member_Access_Expr")
-	// case ^ast.Index_Expr: fmt.printfln("UNHANDLED EXPRESSION TYPE Index_Expr")
 	case ^ast.Call_Expr:
 		call_expr := cast(^ast.Call_Expr)expr
-		args_handled := make([dynamic]Value, irb.alloc)
+
+		arg_names_handled := make([dynamic]string, irb.alloc)
+		arg_values_handled := make([dynamic]Value, irb.alloc)
+
 		for arg in call_expr.args {
-			opss, vall := ir_parse_expression(irb, arg)
-			append_operations(&operations_list, opss)
-			append(&args_handled, vall)
+			ops, value := ir_parse_expression(irb, arg.value)
+			append_operations(&operations_list, ops)
+			append(&arg_values_handled, value)
+			append(&arg_names_handled, arg.name)
 		}
-		#partial switch v in call_expr.expr.derived {
-		case ^ast.Ident:
-			ident_expr := cast(^ast.Ident)call_expr.expr
-			call_name := ident_expr.name
-			native_action, is_valid := assets.action_native_from_mapped(call_name)
-			if is_valid {
-				selection: Operation_Selection
-				if native_action.accept_selector && len(args_handled) > 0 {
-					selector_arg := args_handled[0]
-					#partial switch v in selector_arg {
-					case TextValue:
-						text_value := selector_arg.(TextValue)
-						switch text_value.text {
-						case "null", "current", "default_player", "killer_player", "damager_player", "shooter_player", "victim_player", "random_player", "all_players":
-							selection.type = text_value.text
-						case:
-							fmt.printfln("[DEBUG] Unknown selector '%s'!!!", text_value.text)
+
+		if ident, ok := call_expr.expr.derived.(^ast.Ident); ok {
+			call_name := ident.name
+
+			if action, is_native := assets.action_native_from_mapped(call_name); is_native {
+				if len(arg_values_handled) > len(action.slots) {
+					ir_add_error(irb, "Too much arguments")
+					break
+				}
+				slots_map := make(map[string]Value, len(action.slots), irb.alloc)
+				for arg_value, arg_value_index in arg_values_handled {
+					arg_name := arg_names_handled[arg_value_index]
+					slot_data := action.slots[arg_value_index]
+					if arg_name == "" {
+						slots_map[slot_data.name] = arg_value
+					} else {
+						found := false
+						for slot in action.slots {
+							if slot.name == arg_name {
+								found = true
+								break
+							}
 						}
-					case:
-						fmt.printfln("[DEBUG] Invalid argument type for selector!!!")
+						if found {
+							// maybe check if keyword argument overlap
+							// positional argument and warn user if so?
+							slots_map[arg_name] = arg_value
+						} else {
+							ir_add_error(irb, "Unknown keyword argument: no parameters matches")
+							break
+						}
 					}
-					remove_range(&args_handled, 0, 1)
 				}
-				fmt.printfln("[DEBUG] Native action found: %s", native_action.name)
 				values := make([dynamic]NamedValue, irb.alloc)
-				slots := native_action.slots
-				args_handled_length := len(args_handled)
-				for slot, slot_idx in slots {
-					if slot_idx > args_handled_length-1 {
-						fmt.printfln("[DEBUG] NOT ENOUGHT ARGS, just skipping!")
-						break
-					}
-					append(&values, named_value(slot.name, args_handled[slot_idx]))
+				for slot_key, slot_value in slots_map {
+					append(&values, named_value(slot_key, slot_value))
 				}
-				append(&operations_list, basic_operation(native_action.name, values, selection))
-				break
-			}
-			func_symb, exists := irb.symbols.global_scope.symbols[call_name]
-			if exists {
-				values := make([dynamic]NamedValue, irb.alloc)
-				append(&values, named_value("function_name", text_value(call_name, PARSING_LEGACY)))
-				append(&operations_list, basic_operation("call_function", values))
+				append(&operations_list, basic_operation(action.name, values))
 				break
 			}
 
-			if call_name == "get_player_count" {
-				result_value = game_value("player_count", "null")
+			if _, exists := irb.symbols.global_scope.symbols[call_name]; exists {
+				if len(call_expr.args) > 0 {
+					ir_add_warning(irb, "Function arguments are ignored because they're not implemented yet.")
+				}
+				values := make([dynamic]NamedValue, irb.alloc)
+				append(&values, named_value("function_name", text_value(call_name, PARSING_LEGACY)))
+				append(&operations_list, basic_operation("call_funct ion", values))
 				break
 			}
-			if call_name == "item" {
-				if len(args_handled) > 1 && len(args_handled) == 0 {
-					fmt.printfln("[DEBUG] Can't extract item id, too much or none arguments: %s", call_name)
-					break
+
+			switch call_name {
+			case "game_value":
+				fmt.println("[DEBUG] game_value fabric")
+				if len(arg_values_handled) == 0 {
+					ir_add_error(irb, "Can't generate game value from empty constructor")
+					break expr_type_switch
 				}
-				original_name := args_handled[0].(TextValue).text
-				if !strings.starts_with(original_name, "minecraft:") {
-					original_name = strings.concatenate([]string{"minecraft:", original_name}, irb.alloc)
+				ir_add_error(irb, "Not implemented")
+				break expr_type_switch
+			case "item": // item("item_name", 16)
+				fmt.println("[DEBUG] item fabric")
+				if len(arg_values_handled) == 0 {
+					ir_add_error(irb, "Can't generate item from empty constructor")
+					break expr_type_switch
 				}
-				nbt_result, success := generate_item(original_name, 1, irb.alloc)
+				item_name: string
+				item_count: f64
+
+				item_name_val: Value
+				item_count_val: Value
+				if slice.contains(arg_names_handled[:], "name") {
+					for arg_name, arg_index in arg_names_handled {
+						if arg_names_handled[arg_index] == "name" {
+							item_name_val = arg_values_handled[arg_index]
+						}
+					}
+				} else {
+					item_name_val = arg_values_handled[0]
+				}
+
+				if len(arg_values_handled) > 1 {
+					if slice.contains(arg_names_handled[:], "count") {
+						for arg_name, arg_index in arg_names_handled {
+							if arg_names_handled[arg_index] == "count" {
+								item_count_val = arg_values_handled[arg_index]
+							}
+						}
+					} else {
+						item_count_val = arg_values_handled[1]
+					}
+				}
+
+				if item_name_lit, is_text_lit := item_name_val.(TextValue); is_text_lit {
+					item_name_raw :=  item_name_lit.text
+					if !strings.starts_with(item_name_raw, "minecraft:") {
+						item_name_raw = strings.concatenate([]string{"minecraft:", item_name_raw}, irb.alloc)
+					}
+					item_name = item_name_raw
+				} else {
+					ir_add_error(irb, "Text literal expected")
+				}
+
+				if item_count_lit, is_number_lit := item_count_val.(NumberValue); is_number_lit {
+					item_count = item_count_lit.number
+				} else if len(arg_values_handled) > 1 {
+					ir_add_error(irb, "Number literal expected")
+				} else {
+					item_count = 1
+				}
+
+				nbt_result, success := generate_item(item_name, int(item_count), irb.alloc)
 				if !success {
 					fmt.printfln("[DEBUG] Can't compress item from raw to nbt format for some reason. Contact compiler devs pls")
-					break
+					break expr_type_switch
 				}
+
 				result_value = item_value(nbt_result)
-				break
+				break expr_type_switch
+			case "array":
+				fmt.println("[DEBUG] array fabric")
+				break expr_type_switch
+			case "dict":
+				fmt.println("[DEBUG] dict fabric")
+				break expr_type_switch
+			case "location":
+				fmt.println("[DEBUG] location fabric")
+				break expr_type_switch
+			case "vector":
+				fmt.println("[DEBUG] vector fabric")
+				break expr_type_switch
+			case "sound":
+				fmt.println("[DEBUG] sound fabric")
+				break expr_type_switch
+			case "particle":
+				fmt.println("[DEBUG] particle fabric")
+				break expr_type_switch
+			case "block":
+				fmt.println("[DEBUG] block fabric")
+				break expr_type_switch
+			case "int", "float":
+				fmt.println("[DEBUG] int/float fabric")
+				break expr_type_switch
+			case "text":
+				fmt.println("[DEBUG] text fabric")
+				break expr_type_switch
+			case "variable":
+				fmt.println("[DEBUG] variable fabric")
+				break expr_type_switch
+			case "enum":
+				fmt.println("[DEBUG] enum fabric")
+				break expr_type_switch
+			case "potion":
+				fmt.println("[DEBUG] potion fabric")
+				break expr_type_switch
+			case "__localized_text_value__":
+				fmt.println("[DEBUG] __localized_text_value__ fabric")
+				break expr_type_switch
 			}
-			fmt.printfln("[DEBUG] Unknown action: %s", call_name)
-		case:
-			fmt.printfln("[DEBUG] Unhandled and possibly shouldn't be allowed?")
+
+			ir_add_error(irb, fmt.tprintf("Unknown function: %s", call_name))
+		} else {
+			fmt.printfln("[DEBUG] Unhandled")
 		}
-	// case ^ast.Field_Value: fmt.printfln("UNHANDLED EXPRESSION TYPE Field_Value")
-	// case ^ast.Expr_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE Expr_Stmt")
-	// case ^ast.Assign_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE Assign_Stmt")
-	// case ^ast.Block_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE Block_Stmt")
-	// case ^ast.If_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE If_Stmt")
-	// case ^ast.Return_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE Return_Stmt")
-	// case ^ast.Defer_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE Defer_Stmt")
-	// case ^ast.For_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE For_Stmt")
-	// case ^ast.Range_Stmt: fmt.printfln("UNHANDLED EXPRESSION TYPE Range_Stmt")
-	// case ^ast.Value_Decl: fmt.printfln("UNHANDLED EXPRESSION TYPE Value_Decl")
-	// case ^ast.Field_Access: fmt.printfln("UNHANDLED EXPRESSION TYPE Field_Access")
-	// case ^ast.Param: fmt.printfln("UNHANDLED EXPRESSION TYPE Param")
-	// case ^ast.Param_List: fmt.printfln("UNHANDLED EXPRESSION TYPE Param_List")
+	case ^ast.Call_Expr_Argument:
+		fmt.printfln("UNHANDLED :: %v", v.pos)
 	case:
 		fmt.printfln("UNHANDLED :: %v", v)
 		result_value = variable_value(get_new_inner_name(irb), SCOPE_LOCAL)
@@ -504,7 +585,13 @@ ir_build :: proc(irb: ^IR_Builder) -> (string, [dynamic]IR_Builder_Error, [dynam
 	all_handlers := make([dynamic]^Handler, irb.alloc)
 	for handler in irb.handlers {
 		if len(handler.operations) == 0 {
-			ir_add_warning(irb, "Skipping empty handler")
+			handler_name: string
+			if handler.type == "event" {
+				handler_name = handler.event
+			} else {
+				handler_name = handler.name
+			}
+			ir_add_warning(irb, fmt.tprintf("Skipping empty handler: %s", handler_name))
 			continue
 		}
 		append(&all_handlers, handler)
