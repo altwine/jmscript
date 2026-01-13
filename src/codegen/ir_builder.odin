@@ -455,7 +455,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 				}
 				values := make([dynamic]NamedValue, irb.alloc)
 				append(&values, named_value("function_name", text_value(call_name, PARSING_LEGACY)))
-				append(&operations_list, basic_operation("call_funct ion", values))
+				append(&operations_list, basic_operation("call_function", values))
 				break
 			}
 
