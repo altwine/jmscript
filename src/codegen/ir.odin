@@ -61,9 +61,10 @@ text_value :: proc(text: string, parsing: string) -> TextValue {
 	return TextValue{type="text", text=text, parsing=parsing}
 }
 
-PARSING_LEGACY :: "legacy"
-PARSING_MINIMESSAGE :: "minimessage"
-PARSING_PLAIN :: "plain"
+PARSING_JSON     :: "json"
+PARSING_COLORED  :: "legacy"
+PARSING_STYLIZED :: "minimessage"
+PARSING_PLAIN    :: "plain"
 
 VariableValue :: struct {
 	using base: BaseValue,
@@ -75,9 +76,10 @@ variable_value :: proc(variable: string, scope: string) -> VariableValue {
 	return VariableValue{type="variable", variable=variable, scope=scope}
 }
 
+SCOPE_LINE  :: "line"
 SCOPE_LOCAL :: "local"
-SCOPE_GAME :: "game"
-SCOPE_SAVE :: "save"
+SCOPE_GAME  :: "game"
+SCOPE_SAVE  :: "save"
 
 ArrayValue :: struct {
 	using base: BaseValue,

@@ -335,7 +335,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			result_value = number_value(num)
 		case .Text:
 			text_raw := basic_lit.tok.content
-			result_value = text_value(text_raw[1:len(text_raw)-1], PARSING_LEGACY)
+			result_value = text_value(text_raw[1:len(text_raw)-1], PARSING_COLORED)
 		case .True:
 			result_value = number_value(1)
 		case .False:
@@ -454,7 +454,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 					ir_add_warning(irb, "Function arguments are ignored because they're not implemented yet.")
 				}
 				values := make([dynamic]NamedValue, irb.alloc)
-				append(&values, named_value("function_name", text_value(call_name, PARSING_LEGACY)))
+				append(&values, named_value("function_name", text_value(call_name, PARSING_COLORED)))
 				append(&operations_list, basic_operation("call_function", values))
 				break
 			}
