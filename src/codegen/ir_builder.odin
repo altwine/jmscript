@@ -336,6 +336,10 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 		case .Text:
 			text_raw := basic_lit.tok.content
 			result_value = text_value(text_raw[1:len(text_raw)-1], PARSING_LEGACY)
+		case .True:
+			result_value = number_value(1)
+		case .False:
+			result_value = number_value(0)
 		case:
 			fmt.printfln("[DEBUG] UNHANDLED BASIC LITERAL WITH TYPE %s", lexer.to_string(basic_lit.tok.kind))
 		}
