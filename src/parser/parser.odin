@@ -271,7 +271,7 @@ parse_variable_declaration :: proc(p: ^Parser, is_const: bool) -> ^ast.Value_Dec
 	name := current(p)
 	advance(p)
 	advance(p)
-	type := "any"
+	type := ""
 	if match(p, .Ident) {
 		type = current(p).content
 		advance(p)
