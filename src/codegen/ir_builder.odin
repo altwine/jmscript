@@ -732,7 +732,7 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 			number_string = number_string[:len(number_string)-1]
 		}
 		json_write_string(&irb.jb, "type", "number", true)
-		json_write_string(&irb.jb, "number", number_string, false)
+		json_write_string_unquoted(&irb.jb, "number", number_string, false)
 		json_end_object(&irb.jb, comma)
 	case TextValue:
 		if is_named {

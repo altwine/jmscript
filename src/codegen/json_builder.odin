@@ -108,6 +108,19 @@ json_write_string :: proc(jb: ^Json_Builder, key: string, value: string, comma: 
 	json_write_newline(jb)
 }
 
+json_write_string_unquoted :: proc(jb: ^Json_Builder, key: string, value: string, comma: bool) {
+	json_write_indent(jb)
+	json_write_quote(jb)
+	strings.write_string(&jb.builder, key)
+	json_write_quote(jb)
+	json_write_colon(jb)
+	strings.write_string(&jb.builder, value)
+	if comma {
+		strings.write_string(&jb.builder, ",")
+	}
+	json_write_newline(jb)
+}
+
 json_write_boolean :: proc(jb: ^Json_Builder, key: string, value: bool, comma: bool) {
 	json_write_indent(jb)
 	json_write_quote(jb)
