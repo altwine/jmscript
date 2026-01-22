@@ -82,17 +82,15 @@ scan :: proc(l: ^Lexer) -> Token {
 		case: kind = .Ident
 		}
 	case '0'..='9':
+		kind = .Number
 		for is_digit(l.ch) {
 			advance(l)
 		}
 		if l.ch == '.' && is_digit(peek(l)) {
-			kind = .Float
 			advance(l)
 			for is_digit(l.ch) {
 				advance(l)
 			}
-		} else {
-			kind = .Integer
 		}
 	case '`':
 		kind = .Ident

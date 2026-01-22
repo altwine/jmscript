@@ -326,11 +326,11 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 		case .Ident:
 			ident_raw := basic_lit.tok.content
 			result_value = variable_value(ident_raw, SCOPE_LOCAL)
-		case .Integer, .Float:
-			integer_raw := basic_lit.tok.content
-			num, ok := strconv.parse_f64(integer_raw)
+		case .Number:
+			number_raw := basic_lit.tok.content
+			num, ok := strconv.parse_f64(number_raw)
 			if !ok {
-				fmt.printfln("[DEBUG] INVALID FLOAT ??")
+				fmt.printfln("[DEBUG] INVALID NUMBER ??")
 			}
 			result_value = number_value(num)
 		case .Text:

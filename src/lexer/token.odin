@@ -20,12 +20,11 @@ Token_Kind :: enum {
 	File_Tag, // #+filetag
 
 	B_Literal_Begin,
-		Ident,   // identifier, `strange identifier 🥀`
-		Integer, // 12345
-		Float,   // 123.45
-		Text,    // "some text"
-		True,    // true
-		False,   // false
+		Ident,  // identifier, `strange identifier 🥀`
+		Number, // 12345, 123.45
+		Text,   // "some text"
+		True,   // true
+		False,  // false
 	B_Literal_End,
 
 	B_Keyword_Begin,
@@ -94,8 +93,7 @@ to_string :: proc(kind: Token_Kind) -> string {
 	case .Comment: return "comment"
 	case .File_Tag: return "file_tag"
 	case .Ident: return "identifier"
-	case .Integer: return "integer"
-	case .Float: return "float"
+	case .Number: return "number"
 	case .Text: return "text"
 	case .Package: return "package"
 	case .Func: return "func"

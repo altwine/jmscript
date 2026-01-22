@@ -13,7 +13,6 @@ unfiltered thoughts. I will clean it up later.
 - Implement array/dictionary literals;
 - Implement slices;
 - Make decompiler maybe?;
-- Merge integer and float because separation is useless;
 - Rework the memory management.
 
 ## Building

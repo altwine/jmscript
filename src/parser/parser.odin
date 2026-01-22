@@ -684,7 +684,7 @@ parse_primary :: proc(p: ^Parser) -> ^ast.Expr {
 
 		return ident_expr
 
-	case .Float, .Text, .Integer, .True, .False:
+	case .Text, .Number, .True, .False:
 		advance(p)
 		basic_lit := ast.new(ast.Basic_Lit, token.pos, token.pos, p.file.alloc)
 		basic_lit.tok = token
