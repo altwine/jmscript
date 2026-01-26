@@ -1,9 +1,9 @@
 package compiler
 
 import "core:mem"
-import "core:fmt"
 
 // import "../ast"
+import "../error"
 import "../parser"
 import "../checker"
 import "../codegen"
@@ -12,63 +12,41 @@ Compiler :: struct {
 	alloc: mem.Allocator,
 }
 
-Compiler_Error :: struct {
-	message: string,
-	offset_from: int,
-	offset_to: int,
-}
-
-Compiler_Warning :: struct {
-	message: string,
-	offset_from: int,
-	offset_to: int,
-}
-
 compiler_init :: proc(c: ^Compiler, allocator := context.allocator) {
 	c.alloc = allocator
 }
 
 compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string) -> (string, bool) {
-	files, parser_errs, parser_warns := parser.parse_dir(dir_path, c.alloc)
-	if len(parser_warns) > 0 {
-		for parser_warn in parser_warns {
-			fmt.printfln("Warning in parser: %s", parser_warn.message)
-		}
+	has_errors := false
+
+	files, parser_errs := parser.parse_dir(dir_path, c.alloc)
+	for parser_err in parser_errs {
+		has_errors ||= parser_err.severity == .Error
+		error.print(parser_err)
 	}
-	if len(parser_errs) > 0 {
-		for parser_err in parser_errs {
-			fmt.printfln("Error in parser: %s", parser_err.message)
-		}
+	if has_errors {
 		return "", false
 	}
 
 	ch: checker.Checker
 	checker.checker_init(&ch, c.alloc)
-	symbol_table, checker_errs, checker_warns := checker.checker_check(&ch, files)
-	if len(checker_warns) > 0 {
-		for checker_warn in checker_warns {
-			fmt.printfln("Warning in checker: %s", checker_warn.message)
-		}
+	symbol_table, checker_errs := checker.checker_check(&ch, files)
+	for checker_err in checker_errs {
+		has_errors ||= checker_err.severity == .Error
+		error.print(checker_err)
 	}
-	if len(checker_errs) > 0 {
-		for checker_err in checker_errs {
-			fmt.printfln("Error in checker: %s", checker_err.message)
-		}
+	if has_errors {
 		return "", false
 	}
 
 	cg: codegen.Codegen
 	codegen.codegen_init(&cg, c.alloc)
-	result, codegen_errs, codegen_warns := codegen.codegen_gen(&cg, files, symbol_table, minify, unique_id)
-	if len(codegen_warns) > 0 {
-		for codegen_warn in codegen_warns {
-			fmt.printfln("Warning in codegen: %s", codegen_warn.message)
-		}
+	result, codegen_errs := codegen.codegen_gen(&cg, files, symbol_table, minify, unique_id)
+	for codegen_err in codegen_errs {
+		has_errors ||= codegen_err.severity == .Error
+		error.print(codegen_err)
 	}
-	if len(codegen_errs) > 0 {
-		for codegen_err in codegen_errs {
-			fmt.printfln("Error in codegen: %s", codegen_err.message)
-		}
+	if has_errors {
 		return "", false
 	}
 

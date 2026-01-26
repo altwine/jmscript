@@ -9,11 +9,13 @@ import "core:strings"
 import "../ast"
 import "../lexer"
 import "../checker"
+import "../error"
 import "../../assets"
 
 IR_Builder :: struct {
 	jb: Json_Builder,
 	handlers: [dynamic]^Handler,
+	curr_file: ^ast.File,
 	entry_handler: ^Handler,
 	unique_id: string,
 	minify: bool,
@@ -21,25 +23,11 @@ IR_Builder :: struct {
 	handler_index: int,
 	inner_names_index: int,
 	alloc: mem.Allocator,
-	errs: [dynamic]IR_Builder_Error,
-	warns: [dynamic]IR_Builder_Warning,
-}
-
-IR_Builder_Error :: struct {
-	message: string,
-	offset_from: int,
-	offset_to: int,
-}
-
-IR_Builder_Warning :: struct {
-	message: string,
-	offset_from: int,
-	offset_to: int,
+	errs: [dynamic]error.Error,
 }
 
 ir_builder_init :: proc(irb: ^IR_Builder, minify: bool, unique_id: string, symbols: ^checker.Symbol_Table, allocator := context.allocator) {
-	irb.errs = make([dynamic]IR_Builder_Error, allocator)
-	irb.warns = make([dynamic]IR_Builder_Warning, allocator)
+	irb.errs = make([dynamic]error.Error, allocator)
 	irb.alloc = allocator
 	irb.unique_id = unique_id
 	irb.symbols = symbols
@@ -51,13 +39,13 @@ ir_builder_init :: proc(irb: ^IR_Builder, minify: bool, unique_id: string, symbo
 }
 
 ir_add_error :: proc(irb: ^IR_Builder, message: string) {
-	err := IR_Builder_Error{message=message}
+	err := error.Error{file=irb.curr_file, message=message}
 	append(&irb.errs, err)
 }
 
 ir_add_warning :: proc(irb: ^IR_Builder, message: string) {
-	warn := IR_Builder_Warning{message=message}
-	append(&irb.warns, warn)
+	warn := error.Error{file=irb.curr_file, message=message, severity=.Warning}
+	append(&irb.errs, warn)
 }
 
 ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
@@ -265,6 +253,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 }
 
 ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
+	irb.curr_file = file
 	for decl in file.decls {
 		#partial switch v in decl.derived {
 		case:
@@ -569,7 +558,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 	return operations_list, result_value
 }
 
-ir_build :: proc(irb: ^IR_Builder) -> (string, [dynamic]IR_Builder_Error, [dynamic]IR_Builder_Warning) {
+ir_build :: proc(irb: ^IR_Builder) -> (string, [dynamic]error.Error) {
 	json_begin_object(&irb.jb)
 	json_begin_array(&irb.jb, "handlers")
 
@@ -601,7 +590,7 @@ ir_build :: proc(irb: ^IR_Builder) -> (string, [dynamic]IR_Builder_Error, [dynam
 	json_end_object(&irb.jb, false)
 
 	result := strings.clone(strings.to_string(irb.jb.builder), irb.alloc)
-	return result, irb.errs, irb.warns
+	return result, irb.errs
 }
 
 get_new_position :: proc(irb: ^IR_Builder) -> int {

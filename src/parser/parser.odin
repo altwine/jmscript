@@ -1,40 +1,28 @@
 package parser
 
+import "core:os"
 import "core:fmt"
 import "core:mem"
 
 import "../lexer"
 import "../ast"
+import "../error"
 
 Parser :: struct {
 	alloc: mem.Allocator,
 	file: ^ast.File,
 	tokens: [dynamic]lexer.Token,
 	offset: int,
-	errs: [dynamic]Parse_Error,
-	warns: [dynamic]Parse_Warning,
-}
-
-Parse_Error :: struct {
-	message: string,
-	offset_from: int,
-	offset_to: int,
-}
-
-Parse_Warning :: struct {
-	message: string,
-	offset_from: int,
-	offset_to: int,
+	errs: [dynamic]error.Error,
 }
 
 parser_init :: proc(p: ^Parser, allocator := context.allocator) {
 	p.offset = 0
 	p.alloc = allocator
-	p.errs = make([dynamic]Parse_Error, allocator)
-	p.warns = make([dynamic]Parse_Warning, allocator)
+	p.errs = make([dynamic]error.Error, allocator)
 }
 
-parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [dynamic]Parse_Error, [dynamic]Parse_Warning) {
+parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [dynamic]error.Error) {
 	l: lexer.Lexer
 	lexer.lexer_init(&l, fullpath, p.alloc)
 	p.tokens = lexer.lex(&l)
@@ -44,10 +32,12 @@ parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [d
 	p.file.alloc = p.alloc
 	p.file.fullpath = fullpath
 	p.file.id = file_id
+	src, _ := os.read_entire_file_from_filename(fullpath, p.alloc)
+	p.file.src = cast(string)src // TODO: pass file src from lexer
 	p.file.tags = parse_file_tags(p)
 	p.file.pkg = parse_package(p)
 	p.file.decls = parse_top_level_stmt_list(p)
-	return p.file, p.errs, p.warns
+	return p.file, p.errs
 }
 
 parse_file_tags :: proc(p: ^Parser) -> [dynamic]string {
@@ -83,15 +73,11 @@ skip_optional_semicolon :: proc(p: ^Parser) {
 }
 
 add_error :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
-	offset_from := token_from.pos.offset
-	offset_to := token_to.pos.offset
-	append(&p.errs, Parse_Error{message, offset_from, offset_to})
+	append(&p.errs, error.Error{file=p.file, message=message})
 }
 
 add_warning :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
-	offset_from := token_from.pos.offset
-	offset_to := token_to.pos.offset
-	append(&p.warns, Parse_Warning{message, offset_from, offset_to})
+	append(&p.errs, error.Error{file=p.file, message=message, severity=.Warning})
 }
 
 match :: proc(p: ^Parser, kind: lexer.Token_Kind) -> bool {

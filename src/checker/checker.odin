@@ -6,6 +6,7 @@ import "core:strings"
 import "core:fmt"
 
 import "../ast"
+import "../error"
 import "../../assets"
 
 Type_Kind :: enum {
@@ -31,7 +32,7 @@ Type_Kind :: enum {
 	Event,
 }
 
-string_to_type_kind :: proc(c: ^Checker, type: string) -> Type_Kind {
+string_to_type_kind :: proc(c: ^Checker, type: string, origin: ^ast.Node) -> Type_Kind {
 	switch type {
 	case "any":        return .Any
 	case "number":     return .Number
@@ -49,17 +50,27 @@ string_to_type_kind :: proc(c: ^Checker, type: string) -> Type_Kind {
 	case "bool":       return .Boolean
 	case "array":      return .Array
 	case "dict":       return .Dict
+	case "void", "":   return .Void
 
-	case "vector", "vector3":  add_error(c, fmt.tprintf("invalid type %s, maybe 'vec3'?", type))
-	case "int", "float":       add_error(c, fmt.tprintf("invalid type %s, maybe 'number'?", type))
-	case "string":             add_error(c, fmt.tprintf("invalid type %s, maybe 'text'?", type))
-	case "vector2", "vec2":    add_error(c, fmt.tprintf("invalid type %s, two components vector isn't supported", type))
-	case "quat", "quaternion": add_error(c, fmt.tprintf("invalid type %s, quaternions isn't supported", type))
-	case "complex":            add_error(c, fmt.tprintf("invalid type %s, complex numbers isn't supported", type))
+	case "vector", "vector3":
+		add_error(c, fmt.tprintf("invalid type %s, maybe 'vec3'?", type), origin)
 
-	case "void", "": return .Void
+	case "int", "float":
+		add_error(c, fmt.tprintf("invalid type %s, maybe 'number'?", type), origin)
+
+	case "string":
+		add_error(c, fmt.tprintf("invalid type %s, maybe 'text'?", type), origin)
+
+	case "vector2", "vec2":
+		add_error(c, fmt.tprintf("invalid type %s, two components vector isn't supported", type), origin)
+
+	case "quat", "quaternion":
+		add_error(c, fmt.tprintf("invalid type %s, quaternions isn't supported", type), origin)
+
+	case "complex":
+		add_error(c, fmt.tprintf("invalid type %s, complex numbers isn't supported", type), origin)
 	}
-	add_error(c, fmt.tprintf("invalid type: %s", type))
+	add_error(c, fmt.tprintf("invalid type: %s", type), origin)
 	return .Invalid
 }
 
@@ -119,48 +130,39 @@ Scope :: struct {
 Checker :: struct {
 	alloc:        mem.Allocator,
 	symbol_table: ^Symbol_Table,
-	files:        map[string]^ast.File,
-	errs:         [dynamic]Checker_Error,
-	warns:        [dynamic]Checker_Warning,
+	files:        [dynamic]^ast.File,
+	errs:         [dynamic]error.Error,
 	current_file: ^ast.File,
-}
-
-Checker_Error :: struct {
-	message:     string,
-	offset_from: int,
-	offset_to:   int,
-}
-
-Checker_Warning :: struct {
-	message:     string,
-	offset_from: int,
-	offset_to:   int,
+	current_file_idx: int,
 }
 
 checker_init :: proc(c: ^Checker, allocator := context.allocator) {
 	c.alloc = allocator
-	c.errs = make([dynamic]Checker_Error, allocator)
-	c.warns = make([dynamic]Checker_Warning, allocator)
-	c.files = make(map[string]^ast.File, allocator)
+	c.errs = make([dynamic]error.Error, allocator)
 	c.symbol_table = new(Symbol_Table, allocator)
 	c.symbol_table.scope_level = -1
 }
 
-checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table, [dynamic]Checker_Error, [dynamic]Checker_Warning) {
+checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table, [dynamic]error.Error) {
+	c.files = files
 	enter_scope(c)
 	add_builtin_functions(c)
 	add_native_functions(c)
+	c.current_file_idx = 0
 	for file in files {
 		c.current_file = file
 		for decl in file.decls {
 			collect_handler(c, decl)
 		}
+		c.current_file_idx += 1
 	}
+	c.current_file_idx = 0
 	for file in files {
 		c.current_file = file
 		for decl in file.decls {
 			collect_stmt(c, decl)
 		}
+		c.current_file_idx += 1
 	}
 	exit_scope(c)
 
@@ -173,7 +175,7 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 	// 	}
 	// }
 
-	return c.symbol_table, c.errs, c.warns
+	return c.symbol_table, c.errs
 }
 
 collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
@@ -186,7 +188,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			param_name := param.name
 			param_type := param.type
 			type_info := new(Type_Info, c.alloc)
-			type_info.kind = string_to_type_kind(c, param_type)
+			type_info.kind = string_to_type_kind(c, param_type, param)
 			param_sym := make_symbol(c, param_name, type_info, stmt)
 			add_symbol(c, param_sym)
 			append(&symbol.type.param_names, param_sym.name)
@@ -198,7 +200,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		exit_scope(c)
 
 	case ^ast.Func_Stmt:
-		ret_type_kind := string_to_type_kind(c, typed_stmt.result)
+		ret_type_kind := string_to_type_kind(c, typed_stmt.result, typed_stmt)
 		ret_type := new(Type_Info, c.alloc)
 		ret_type.kind = ret_type_kind
 		symbol := make_symbol(c, typed_stmt.name, make_type_func(c, ret_type), stmt)
@@ -208,7 +210,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			param_name := param.name
 			param_type := param.type
 			type_info := new(Type_Info, c.alloc)
-			type_info.kind = string_to_type_kind(c, param_type)
+			type_info.kind = string_to_type_kind(c, param_type, param)
 			param_sym := make_symbol(c, param_name, type_info, stmt)
 			add_symbol(c, param_sym)
 			append(&symbol.type.param_names, param_sym.name)
@@ -222,23 +224,23 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 	case ^ast.Value_Decl:
 		_, is_already_defined := lookup_symbol(c, typed_stmt.name)
 		if is_already_defined {
-			add_error(c, fmt.tprintf("variable '%s' is already defined", typed_stmt.name))
+			add_error(c, fmt.tprintf("variable '%s' is already defined", typed_stmt.name), typed_stmt)
 			break
 		}
 
 		type_info := get_type_info_from_expression(c, typed_stmt.value)
 		type_info.is_const = typed_stmt.is_const
 		if type_info.kind != .Any && typed_stmt.type != "" {
-			provided_type_kind := string_to_type_kind(c, typed_stmt.type)
+			provided_type_kind := string_to_type_kind(c, typed_stmt.type, typed_stmt)
 			if type_info.kind != provided_type_kind {
-				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: '%s' != '%s'", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)))
+				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: '%s' != '%s'", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), typed_stmt)
 			}
 		}
 		symbol := make_symbol(c, typed_stmt.name, type_info, stmt)
 		add_symbol(c, symbol)
 
 	case ^ast.Defer_Stmt:
-		add_error(c, "top level defers isn't allowed")
+		add_error(c, "top level defers isn't allowed", typed_stmt)
 	}
 }
 
@@ -254,10 +256,10 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 	case ^ast.Assign_Stmt:
 		sym, is_exist := lookup_symbol(c, typed_stmt.name)
 		if !is_exist {
-			add_error(c, fmt.tprintf("variable '%s' is not declared", typed_stmt.name))
+			add_error(c, fmt.tprintf("variable '%s' is not declared", typed_stmt.name), typed_stmt)
 		}
 		if sym.type.is_const {
-			add_error(c, fmt.tprintf("can't assign to constant variable '%s'", typed_stmt.name))
+			add_error(c, fmt.tprintf("can't assign to constant variable '%s'", typed_stmt.name), typed_stmt)
 		}
 
 	case ^ast.Value_Decl:
@@ -268,9 +270,9 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		type_info := get_type_info_from_expression(c, typed_stmt.value)
 		type_info.is_const = typed_stmt.is_const
 		if type_info.kind != .Any && typed_stmt.type != "" {
-			provided_type_kind := string_to_type_kind(c, typed_stmt.type)
+			provided_type_kind := string_to_type_kind(c, typed_stmt.type, typed_stmt)
 			if type_info.kind != provided_type_kind {
-				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: %s != %s", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)))
+				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: %s != %s", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), typed_stmt)
 			}
 		}
 		symbol := make_symbol(c, typed_stmt.name, type_info, stmt)
@@ -278,12 +280,12 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 	case ^ast.Func_Stmt:
 		if c.symbol_table.scope_level > 0 {
-			add_error(c, "can't define function in nested scope")
+			add_error(c, "can't define function in nested scope", typed_stmt)
 		}
 
 	case ^ast.Event_Stmt:
 		if c.symbol_table.scope_level > 0 {
-			add_error(c, "can't define event in nested scope")
+			add_error(c, "can't define event in nested scope", typed_stmt)
 		}
 
 	case ^ast.Expr_Stmt:
@@ -300,7 +302,7 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 	case ^ast.Ident:
 		sym, is_exist := lookup_symbol(c, v.name)
 		if !is_exist {
-			add_error(c, fmt.tprintf("variable '%s' is not declared", v.name))
+			add_error(c, fmt.tprintf("variable '%s' is not declared", v.name), v)
 			type_info.kind = .Invalid
 			return type_info
 		}
@@ -326,7 +328,7 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 		if left_kind != right_kind {
 			left_kind_str := type_kind_to_string(c, left_kind)
 			right_kind_str := type_kind_to_string(c, right_kind)
-			add_error(c, fmt.tprintf("incompatible types: '%s' and '%s'", left_kind_str, right_kind_str))
+			add_error(c, fmt.tprintf("incompatible types: '%s' and '%s'", left_kind_str, right_kind_str), v)
 			type_info.kind = .Invalid
 			return type_info
 		}
@@ -343,7 +345,7 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 		if ident, is_ident := v.expr.derived.(^ast.Ident); is_ident {
 			if sym, sym_exists := lookup_symbol(c, ident.name); sym_exists {
 				if len(v.args) != len(sym.type.param_types) {
-					add_error(c, fmt.tprintf("invalid arguments count in function call: %d != %d", len(v.args), len(sym.type.param_types)))
+					add_error(c, fmt.tprintf("invalid arguments count in function call: %d != %d", len(v.args), len(sym.type.param_types)), v)
 					type_info.kind = .Invalid
 					return type_info
 				}
@@ -363,7 +365,7 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 						}
 						if real_index == -1 {
 							closest := _find_closest(c, arg.name, sym.type.param_names[:])
-							add_error(c, fmt.tprintf("invalid named argument: '%s', maybe '%s'?", arg.name, closest))
+							add_error(c, fmt.tprintf("invalid named argument: '%s', maybe '%s'?", arg.name, closest), v)
 							continue
 						}
 						arg_type = get_type_info_from_expression(c, arg.value)
@@ -374,7 +376,7 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 						// TODO: support enum for regular functions
 						action, action_exist := assets.action_native_from_mapped(ident.name)
 						if !action_exist {
-							add_error(c, "not implemented")
+							add_error(c, "not implemented", v)
 							continue
 						}
 						text_lit, is_text_lit := arg.value.derived.(^ast.Basic_Lit)
@@ -382,21 +384,21 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 							content := text_lit.tok.content[1:len(text_lit.tok.content)-1]
 							if !slice.contains(action.slots[real_index]._enum[:], content) {
 								closest := _find_closest(c, content, action.slots[real_index]._enum[:])
-								add_error(c, fmt.tprintf("invalid value for enum: '%s', maybe '%s'?", content, closest))
+								add_error(c, fmt.tprintf("invalid value for enum: '%s', maybe '%s'?", content, closest), text_lit)
 							}
 						} else {
-							add_error(c, fmt.tprintf("can't convert '%s' to 'enum'", type_kind_to_string(c, arg_type.kind)))
+							add_error(c, fmt.tprintf("can't convert '%s' to 'enum'", type_kind_to_string(c, arg_type.kind)), text_lit)
 						}
 						continue
 					}
 
 					if arg_type.kind != param_type.kind {
-						add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'", type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)))
+						add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'", type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), ident)
 					}
 				}
 				return sym.type.return_t
 			} else {
-				add_error(c, fmt.tprintf("function '%s' isn't defined", ident.name))
+				add_error(c, fmt.tprintf("function '%s' isn't defined", ident.name), ident)
 				type_info.kind = .Invalid
 				return type_info
 			}
@@ -567,7 +569,7 @@ add_native_functions :: proc(c: ^Checker) {
 		for slot in action_data.slots[:] {
 			append(&type_info.param_names, slot.name)
 			slot_type_info := new(Type_Info, c.alloc)
-			slot_type_info.kind = string_to_type_kind(c, slot.type)
+			slot_type_info.kind = string_to_type_kind(c, slot.type, nil)
 			append(&type_info.param_types, slot_type_info)
 		}
 		sym := make_symbol(c, action_name, type_info, nil)
@@ -599,12 +601,12 @@ exit_scope :: proc(c: ^Checker) {
 	}
 }
 
-add_error :: proc(c: ^Checker, message: string) {
-	append(&c.errs, Checker_Error{message=message})
+add_error :: proc(c: ^Checker, message: string, cause: ^ast.Node) {
+	append(&c.errs, error.Error{file=c.files[c.current_file_idx], cause=cause, message=message})
 }
 
-add_warning :: proc(c: ^Checker, message: string) {
-	append(&c.warns, Checker_Warning{message=message})
+add_warning :: proc(c: ^Checker, message: string, cause: ^ast.Node) {
+	append(&c.errs, error.Error{file=c.files[c.current_file_idx], cause=cause, message=message, severity=.Warning})
 }
 
 @(private="file")
