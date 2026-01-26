@@ -1,5 +1,6 @@
 package parser
 
+import "core:path/filepath"
 import "core:strings"
 import "core:os/os2"
 
@@ -17,6 +18,11 @@ parse_dir :: proc(dir_path: string, allocator := context.allocator) -> ([dynamic
 		if file_info.type != .Regular {
 			continue
 		}
+		switch filepath.ext(file_info.name) {
+		case ".jms", ".jmscript": // allow only these
+		case: continue
+		}
+
 		p: Parser
 		parser_init(&p, allocator)
 		file_path, _ := strings.clone(file_info.fullpath, p.alloc)
