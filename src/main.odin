@@ -212,7 +212,7 @@ upload_code :: proc(code: string, allocator := context.allocator) -> (string, bo
 	}
 
 	header_content_type := cstring("Content-Type: application/json")
-	headers := curl.slist_append(nil, cast([^]u8)header_content_type)
+	headers := curl.slist_append(nil, header_content_type)
 	defer curl.slist_free_all(headers)
 
 	opt6_res := curl.easy_setopt(ce, curl.option.HTTPHEADER, headers)
