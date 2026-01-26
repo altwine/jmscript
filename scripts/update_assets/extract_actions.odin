@@ -181,7 +181,14 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 		if len(action.args) > 0 {
 			fmt.fprintln(fd, "\t\t[dynamic]Slot{")
 			for slot in action.args {
-				fmt.fprintf(fd, "\t\t\tSlot{{\"%s\", \"%s", slot.name, slot.type)
+				slot_type_new := slot.type
+				switch slot_type_new {
+				case "variable": slot_type_new = "any" // temp
+				case "vector": slot_type_new = "vec3"
+				case "list": slot_type_new = "array"
+				case "dictionary": slot_type_new = "dict"
+				}
+				fmt.fprintf(fd, "\t\t\tSlot{{\"%s\", \"%s", slot.name, slot_type_new)
 				if slot.type == "enum" {
 					fmt.fprint(fd, "\", {")
 					values_count := len(slot.values)

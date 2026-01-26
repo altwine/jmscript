@@ -359,7 +359,7 @@ parse_func_stmt :: proc(p: ^Parser) -> ^ast.Func_Stmt {
 	params_list.list = params[:]
 
 	advance(p)
-	result_type := "void"
+	result_type := ""
 	if match(p, .Arrow_Right) {
 		result_type = advance(p).content
 		advance(p)

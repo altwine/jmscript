@@ -258,8 +258,6 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			append(&values, named_value("value", var))
 			append(&ops, basic_operation("set_variable_value", values))
 		}
-	case ^ast.Defer_Stmt:
-		ir_add_error(irb, "Top level defer stmts is disallowed")
 	case:
 		fmt.printfln("Unhandled %v", v)
 	}
@@ -328,10 +326,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			result_value = variable_value(ident_raw, SCOPE_LOCAL)
 		case .Number:
 			number_raw := basic_lit.tok.content
-			num, ok := strconv.parse_f64(number_raw)
-			if !ok {
-				fmt.printfln("[DEBUG] INVALID NUMBER ??")
-			}
+			num, _ := strconv.parse_f64(number_raw)
 			result_value = number_value(num)
 		case .Text:
 			text_raw := basic_lit.tok.content
@@ -536,8 +531,8 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			case "location":
 				fmt.println("[DEBUG] location fabric")
 				break expr_type_switch
-			case "vector":
-				fmt.println("[DEBUG] vector fabric")
+			case "vec3":
+				fmt.println("[DEBUG] vec3 fabric")
 				break expr_type_switch
 			case "sound":
 				fmt.println("[DEBUG] sound fabric")
@@ -548,14 +543,11 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			case "block":
 				fmt.println("[DEBUG] block fabric")
 				break expr_type_switch
-			case "int", "float":
-				fmt.println("[DEBUG] int/float fabric")
+			case "number":
+				fmt.println("[DEBUG] number fabric")
 				break expr_type_switch
 			case "text":
 				fmt.println("[DEBUG] text fabric")
-				break expr_type_switch
-			case "variable":
-				fmt.println("[DEBUG] variable fabric")
 				break expr_type_switch
 			case "enum":
 				fmt.println("[DEBUG] enum fabric")
@@ -563,12 +555,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			case "potion":
 				fmt.println("[DEBUG] potion fabric")
 				break expr_type_switch
-			case "__localized_text_value__":
-				fmt.println("[DEBUG] __localized_text_value__ fabric")
-				break expr_type_switch
 			}
-
-			ir_add_error(irb, fmt.tprintf("Unknown function: %s", call_name))
 		} else {
 			fmt.printfln("[DEBUG] Unhandled")
 		}

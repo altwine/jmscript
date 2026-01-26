@@ -59,7 +59,7 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 
 	cg: codegen.Codegen
 	codegen.codegen_init(&cg, c.alloc)
-	result, codegen_errs, codegen_warns := codegen.codegen_gen(&cg, files, &symbol_table, minify, unique_id)
+	result, codegen_errs, codegen_warns := codegen.codegen_gen(&cg, files, symbol_table, minify, unique_id)
 	if len(codegen_warns) > 0 {
 		for codegen_warn in codegen_warns {
 			fmt.printfln("Warning in codegen: %s", codegen_warn.message)

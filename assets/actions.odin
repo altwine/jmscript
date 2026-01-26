@@ -72,7 +72,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"exception_type", "enum", {"WARNING", "ERROR"}},
 		},
 	}
@@ -83,7 +83,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"duration", "enum", {"NANOSECONDS", "MICROSECONDS", "MILLISECONDS"}},
 		},
 	}
@@ -245,7 +245,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"name", "text", nil},
 			Slot{"default", "any", nil},
 		},
@@ -851,7 +851,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"axis_vector", "vector", nil},
+			Slot{"axis_vector", "vec3", nil},
 			Slot{"angle", "number", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
 			Slot{"input", "enum", {"DEGREES", "RADIANS"}},
@@ -880,7 +880,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"scale_vector", "vector", nil},
+			Slot{"scale_vector", "vec3", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
 		},
 	}
@@ -922,7 +922,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"translation_vector", "vector", nil},
+			Slot{"translation_vector", "vec3", nil},
 			Slot{"mode", "enum", {"SET", "ADD"}},
 		},
 	}
@@ -1504,7 +1504,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"vector", "vector", nil},
+			Slot{"vector", "vec3", nil},
 		},
 	}
 	actions["entity_set_sheep_sheared"] = Action{
@@ -1688,7 +1688,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"velocity", "vector", nil},
+			Slot{"velocity", "vec3", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -3674,7 +3674,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 		},
 	}
 	actions["if_variable_greater"] = Action{
@@ -3787,7 +3787,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"list", "list", nil},
+			Slot{"list", "array", nil},
 			Slot{"values", "any", nil},
 			Slot{"check_mode", "enum", {"ANY", "ALL"}},
 		},
@@ -3799,7 +3799,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"list", "list", nil},
+			Slot{"list", "array", nil},
 			Slot{"index", "number", nil},
 			Slot{"values", "any", nil},
 		},
@@ -3837,7 +3837,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"map", "dictionary", nil},
+			Slot{"map", "dict", nil},
 			Slot{"key", "any", nil},
 		},
 	}
@@ -3848,7 +3848,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"map", "dictionary", nil},
+			Slot{"map", "dict", nil},
 			Slot{"key", "any", nil},
 			Slot{"values", "any", nil},
 		},
@@ -4161,7 +4161,7 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"radius", "number", nil},
 			Slot{"points", "number", nil},
 			Slot{"start_angle", "number", nil},
-			Slot{"perpendicular", "vector", nil},
+			Slot{"perpendicular", "vec3", nil},
 			Slot{"angle_unit", "enum", {"DEGREES", "RADIANS"}},
 		},
 	}
@@ -4202,7 +4202,7 @@ init_actions :: proc(allocator := context.allocator) {
 		[dynamic]Slot{
 			Slot{"particle", "particle", nil},
 			Slot{"start", "location", nil},
-			Slot{"ray", "vector", nil},
+			Slot{"ray", "vec3", nil},
 			Slot{"divider", "number", nil},
 			Slot{"unit_of_measurement", "enum", {"POINTS", "DISTANCE"}},
 		},
@@ -5268,7 +5268,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"vector", "vector", nil},
+			Slot{"vector", "vec3", nil},
 		},
 	}
 	actions["player_set_saturation"] = Action{
@@ -5361,7 +5361,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"velocity", "vector", nil},
+			Slot{"velocity", "vec3", nil},
 			Slot{"increment", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -5534,7 +5534,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"origin", "location", nil},
 			Slot{"change_rotation", "enum", {"TRUE", "FALSE"}},
 			Slot{"include_self", "enum", {"TRUE", "FALSE"}},
@@ -5548,9 +5548,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"index_variable", "variable", nil},
-			Slot{"value_variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"index_variable", "any", nil},
+			Slot{"value_variable", "any", nil},
+			Slot{"list", "array", nil},
 		},
 	}
 	actions["repeat_for_each_map_entry"] = Action{
@@ -5560,9 +5560,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"key_variable", "variable", nil},
-			Slot{"value_variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"key_variable", "any", nil},
+			Slot{"value_variable", "any", nil},
+			Slot{"map", "dict", nil},
 		},
 	}
 	actions["repeat_forever"] = Action{
@@ -5580,7 +5580,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"amount", "number", nil},
 		},
 	}
@@ -5591,11 +5591,11 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"center", "location", nil},
 			Slot{"radius", "number", nil},
 			Slot{"circle_points", "number", nil},
-			Slot{"perpendicular_to_plane", "vector", nil},
+			Slot{"perpendicular_to_plane", "vec3", nil},
 			Slot{"start_angle", "number", nil},
 			Slot{"angle_unit", "enum", {"DEGREES", "RADIANS"}},
 		},
@@ -5607,7 +5607,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"start", "location", nil},
 			Slot{"end", "location", nil},
 		},
@@ -5619,7 +5619,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"step", "number", nil},
 			Slot{"locations", "location", nil},
 			Slot{"rotation", "enum", {"TRUE", "FALSE"}},
@@ -5632,7 +5632,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"start", "number", nil},
 			Slot{"end", "number", nil},
 			Slot{"interval", "number", nil},
@@ -5645,7 +5645,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.CONTAINER,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"center", "location", nil},
 			Slot{"radius", "number", nil},
 			Slot{"points", "number", nil},
@@ -5860,7 +5860,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"origin", "location", nil},
 			Slot{"max_distance", "number", nil},
 			Slot{"ray_size", "number", nil},
@@ -5971,7 +5971,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 		},
 	}
@@ -5982,7 +5982,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "any", nil},
 		},
 	}
@@ -5993,7 +5993,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "number", nil},
 		},
 	}
@@ -6004,7 +6004,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"enchantment", "text", nil},
 			Slot{"level", "number", nil},
@@ -6017,7 +6017,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"potions", "potion", nil},
 			Slot{"overwrite", "enum", {"TRUE", "FALSE"}},
@@ -6032,8 +6032,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vectors", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vectors", "vec3", nil},
 		},
 	}
 	actions["set_variable_align_location"] = Action{
@@ -6043,7 +6043,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"rotation_mode", "enum", {"KEEP", "REMOVE"}},
 			Slot{"coordinates_mode", "enum", {"ALL", "X_Z", "Y"}},
@@ -6057,8 +6057,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
 			Slot{"normalize", "enum", {"TRUE", "FALSE"}},
 		},
 	}
@@ -6069,7 +6069,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"components", "text", nil},
 			Slot{"merging", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
 		},
@@ -6081,9 +6081,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list_1", "list", nil},
-			Slot{"list_2", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list_1", "array", nil},
+			Slot{"list_2", "array", nil},
 		},
 	}
 	actions["set_variable_append_map"] = Action{
@@ -6093,9 +6093,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
-			Slot{"other_map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
+			Slot{"other_map", "dict", nil},
 		},
 	}
 	actions["set_variable_append_value"] = Action{
@@ -6105,7 +6105,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"values", "any", nil},
 		},
 	}
@@ -6116,7 +6116,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "number", nil},
 		},
 	}
@@ -6127,7 +6127,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"operand1", "number", nil},
 			Slot{"operand2", "number", nil},
 			Slot{"operator", "enum", {"OR", "AND", "NOT", "XOR", "LEFT_SHIFT", "RIGHT_SHIFT", "UNSIGNED_RIGHT_SHIFT"}},
@@ -6140,7 +6140,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"locations", "location", nil},
 		},
 	}
@@ -6151,7 +6151,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"parsing", "enum", {"PLAIN", "LEGACY", "MINIMESSAGE", "JSON"}},
 		},
@@ -6163,7 +6163,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"char", "text", nil},
 		},
 	}
@@ -6174,7 +6174,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"min", "number", nil},
 			Slot{"max", "number", nil},
@@ -6187,7 +6187,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 		},
 	}
@@ -6198,7 +6198,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"map", "variable", nil},
+			Slot{"map", "any", nil},
 		},
 	}
 	actions["set_variable_compact_component"] = Action{
@@ -6208,7 +6208,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 		},
 	}
@@ -6219,7 +6219,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"components", "text", nil},
 		},
 	}
@@ -6230,7 +6230,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"radix", "number", nil},
 		},
@@ -6242,7 +6242,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"radix", "number", nil},
 		},
@@ -6254,7 +6254,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"variant", "enum", {"COSINE", "ARCCOSINE", "HYPERBOLIC_COSINE"}},
 			Slot{"input", "enum", {"DEGREES", "RADIANS"}},
@@ -6267,7 +6267,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"variant", "enum", {"COTANGENT", "ARCCOTANGENT", "HYPERBOLIC_COTANGENT"}},
 			Slot{"input", "enum", {"DEGREES", "RADIANS"}},
@@ -6280,7 +6280,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"key", "text", nil},
 		},
 	}
@@ -6291,7 +6291,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"values", "any", nil},
 		},
 	}
@@ -6302,9 +6302,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"keys", "list", nil},
-			Slot{"values", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"keys", "array", nil},
+			Slot{"values", "array", nil},
 		},
 	}
 	actions["set_variable_create_map_from_values"] = Action{
@@ -6314,7 +6314,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"keys", "any", nil},
 			Slot{"values", "any", nil},
 		},
@@ -6326,7 +6326,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"key", "text", nil},
 			Slot{"args", "text", nil},
 		},
@@ -6338,9 +6338,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector_1", "vector", nil},
-			Slot{"vector_2", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector_1", "vec3", nil},
+			Slot{"vector_2", "vec3", nil},
 		},
 	}
 	actions["set_variable_decrement"] = Action{
@@ -6350,7 +6350,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 		},
 	}
@@ -6361,7 +6361,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "number", nil},
 			Slot{"division_mode", "enum", {"DEFAULT", "ROUND_TO_INT", "FLOOR", "CEIL"}},
 		},
@@ -6373,9 +6373,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
-			Slot{"divider", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
+			Slot{"divider", "vec3", nil},
 		},
 	}
 	actions["set_variable_vector_dot_product"] = Action{
@@ -6385,9 +6385,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector_1", "vector", nil},
-			Slot{"vector_2", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector_1", "vec3", nil},
+			Slot{"vector_2", "vec3", nil},
 		},
 	}
 	actions["set_variable_face_location"] = Action{
@@ -6397,7 +6397,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"target", "location", nil},
 		},
@@ -6409,8 +6409,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 		},
 	}
 	actions["set_variable_format_timestamp"] = Action{
@@ -6420,7 +6420,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"time", "number", nil},
 			Slot{"pattern", "text", nil},
 			Slot{"zone_id", "text", nil},
@@ -6435,7 +6435,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"deviant", "number", nil},
 			Slot{"mean", "number", nil},
 			Slot{"distribution", "enum", {"NORMAL", "FOLDER_NORMAL"}},
@@ -6448,7 +6448,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"hide_unspecified", "enum", {"TRUE", "FALSE"}},
 		},
@@ -6461,11 +6461,11 @@ init_actions :: proc(allocator := context.allocator) {
 		.BASIC,
 		[dynamic]Slot{
 			Slot{"location", "location", nil},
-			Slot{"x", "variable", nil},
-			Slot{"y", "variable", nil},
-			Slot{"z", "variable", nil},
-			Slot{"yaw", "variable", nil},
-			Slot{"pitch", "variable", nil},
+			Slot{"x", "any", nil},
+			Slot{"y", "any", nil},
+			Slot{"z", "any", nil},
+			Slot{"yaw", "any", nil},
+			Slot{"pitch", "any", nil},
 		},
 	}
 	actions["set_variable_get_angle_between_vectors"] = Action{
@@ -6475,9 +6475,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector_1", "vector", nil},
-			Slot{"vector_2", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector_1", "vec3", nil},
+			Slot{"vector_2", "vec3", nil},
 			Slot{"angle_units", "enum", {"DEGREES", "RADIANS"}},
 		},
 	}
@@ -6488,7 +6488,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"tag_name", "text", nil},
 			Slot{"tag_value", "text", nil},
@@ -6502,7 +6502,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"tag_name", "text", nil},
 		},
@@ -6514,7 +6514,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"growth_unit", "enum", {"GROWTH_STAGE", "GROWTH_PERCENTAGE"}},
 		},
@@ -6526,7 +6526,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"value_type", "enum", {"ID", "ID_WITH_DATA", "NAME", "ITEM"}},
 		},
@@ -6538,7 +6538,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"block", "block", nil},
 			Slot{"property", "enum", {"HARDNESS", "BLAST_RESISTANCE", "SLIPPERINESS"}},
 		},
@@ -6550,7 +6550,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 		},
 	}
@@ -6561,7 +6561,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"book", "item", nil},
 			Slot{"page", "number", nil},
 		},
@@ -6573,7 +6573,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 		},
 	}
@@ -6584,7 +6584,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"bundle", "item", nil},
 		},
 	}
@@ -6595,7 +6595,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"index", "number", nil},
 		},
@@ -6607,7 +6607,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"color", "text", nil},
 			Slot{"color_channels", "enum", {"RGB", "HSB", "HSL"}},
 		},
@@ -6619,7 +6619,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6630,7 +6630,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 		},
 	}
@@ -6641,7 +6641,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 		},
 	}
@@ -6652,7 +6652,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 		},
 	}
@@ -6663,7 +6663,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 		},
 	}
@@ -6674,7 +6674,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"ignore_empty_slots", "enum", {"TRUE", "FALSE"}},
 		},
@@ -6686,7 +6686,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 		},
 	}
@@ -6697,7 +6697,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 		},
 	}
@@ -6708,7 +6708,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"type", "enum", {"X", "Y", "Z", "YAW", "PITCH"}},
 		},
@@ -6720,7 +6720,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"side", "enum", {"BACK", "FRONT", "LEFT", "RIGHT"}},
 		},
@@ -6732,7 +6732,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"subtext", "text", nil},
 			Slot{"start_index", "number", nil},
@@ -6746,7 +6746,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6757,7 +6757,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"name", "text", nil},
 			Slot{"attribute", "enum", {"GENERIC_ARMOR", "GENERIC_ARMOR_TOUGHNESS", "GENERIC_ATTACK_DAMAGE", "GENERIC_ATTACK_KNOCKBACK", "GENERIC_ATTACK_SPEED", "GENERIC_FLYING_SPEED", "GENERIC_FOLLOW_RANGE", "GENERIC_KNOCKBACK_RESISTANCE", "GENERIC_LUCK", "GENERIC_MAX_HEALTH", "GENERIC_MOVEMENT_SPEED", "HORSE_JUMP_STRENGTH", "ZOMBIE_SPAWN_REINFORCEMENTS"}},
@@ -6772,7 +6772,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6783,7 +6783,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6794,7 +6794,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"tag_name", "text", nil},
 			Slot{"default_value", "any", nil},
@@ -6807,7 +6807,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6818,7 +6818,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6829,7 +6829,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"durability_type", "enum", {"DAMAGE", "DAMAGE_PERCENTAGE", "REMAINING", "REMAINING_PERCENTAGE", "MAXIMUM"}},
 		},
@@ -6841,7 +6841,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6852,7 +6852,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6863,7 +6863,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"line", "number", nil},
 		},
@@ -6875,7 +6875,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"type", "item", nil},
 			Slot{"value", "enum", {"ID", "NAME", "ITEM"}},
 		},
@@ -6887,7 +6887,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6898,7 +6898,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6909,7 +6909,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6920,7 +6920,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6931,7 +6931,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6942,7 +6942,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -6953,7 +6953,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 		},
 	}
@@ -6964,7 +6964,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 		},
 	}
@@ -6975,7 +6975,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"value_type", "enum", {"TOTAL", "SKY", "BLOCKS"}},
 		},
@@ -6987,8 +6987,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"value", "any", nil},
 			Slot{"search_mode", "enum", {"FIRST", "LAST"}},
 		},
@@ -7000,8 +7000,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 		},
 	}
 	actions["set_variable_get_list_random_value"] = Action{
@@ -7011,8 +7011,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 		},
 	}
 	actions["set_variable_get_list_value"] = Action{
@@ -7022,8 +7022,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"number", "number", nil},
 			Slot{"default_value", "any", nil},
 		},
@@ -7035,7 +7035,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"scope", "enum", {"GAME", "SAVE", "LOCAL"}},
 		},
 	}
@@ -7046,7 +7046,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 		},
 	}
@@ -7057,8 +7057,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 			Slot{"index", "number", nil},
 			Slot{"default_value", "any", nil},
 		},
@@ -7070,8 +7070,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 		},
 	}
 	actions["set_variable_get_map_keys_by_value"] = Action{
@@ -7081,8 +7081,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 			Slot{"value", "any", nil},
 			Slot{"default_value", "any", nil},
 			Slot{"find_mode", "enum", {"FIRST", "LAST", "ALL"}},
@@ -7095,8 +7095,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 		},
 	}
 	actions["set_variable_get_map_value"] = Action{
@@ -7106,8 +7106,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 			Slot{"key", "any", nil},
 			Slot{"default_value", "any", nil},
 		},
@@ -7119,8 +7119,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 			Slot{"index", "number", nil},
 			Slot{"default_value", "any", nil},
 		},
@@ -7132,8 +7132,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 		},
 	}
 	actions["set_variable_get_midpoint_between_vectors"] = Action{
@@ -7143,9 +7143,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector_1", "vector", nil},
-			Slot{"vector_2", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector_1", "vec3", nil},
+			Slot{"vector_2", "vec3", nil},
 		},
 	}
 	actions["set_variable_get_particle_amount"] = Action{
@@ -7155,7 +7155,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 		},
 	}
@@ -7166,7 +7166,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"color_type", "enum", {"COLOR", "TO_COLOR"}},
 		},
@@ -7178,7 +7178,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 		},
 	}
@@ -7189,7 +7189,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 		},
 	}
@@ -7200,7 +7200,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 		},
 	}
@@ -7211,7 +7211,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"type", "enum", {"VERTICAL", "HORIZONTAL"}},
 		},
@@ -7223,7 +7223,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 		},
 	}
@@ -7234,7 +7234,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"receive_type", "enum", {"NAME_OR_UUID", "VALUE"}},
 		},
@@ -7246,7 +7246,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"head", "item", nil},
 			Slot{"return_value", "enum", {"NAME", "UUID", "VALUE"}},
 		},
@@ -7258,7 +7258,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"return_value", "enum", {"NAME", "UUID", "VALUE"}},
 		},
@@ -7270,7 +7270,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"potion", "potion", nil},
 		},
 	}
@@ -7281,7 +7281,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"potion", "potion", nil},
 		},
 	}
@@ -7292,7 +7292,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"potion", "potion", nil},
 		},
 	}
@@ -7303,7 +7303,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 		},
 	}
@@ -7314,7 +7314,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"check_side", "enum", {"FRONT", "BACK", "ALL"}},
 			Slot{"sign_line", "enum", {"FIRST", "SECOND", "THIRD", "FOURTH", "ALL"}},
@@ -7327,7 +7327,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 		},
 	}
@@ -7338,7 +7338,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 		},
 	}
@@ -7349,7 +7349,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 		},
 	}
@@ -7360,7 +7360,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 		},
 	}
@@ -7371,7 +7371,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 		},
 	}
@@ -7382,7 +7382,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 		},
 	}
@@ -7393,7 +7393,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"template", "item", nil},
 			Slot{"return_type", "enum", {"TEXT", "MAP"}},
 		},
@@ -7405,7 +7405,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 		},
 	}
@@ -7416,7 +7416,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 		},
 	}
@@ -7427,10 +7427,10 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"vector", "vector", nil},
-			Slot{"x", "variable", nil},
-			Slot{"y", "variable", nil},
-			Slot{"z", "variable", nil},
+			Slot{"vector", "vec3", nil},
+			Slot{"x", "any", nil},
+			Slot{"y", "any", nil},
+			Slot{"z", "any", nil},
 		},
 	}
 	actions["set_variable_get_vector_between_locations"] = Action{
@@ -7440,7 +7440,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"start_location", "location", nil},
 			Slot{"end_location", "location", nil},
 		},
@@ -7452,8 +7452,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
 			Slot{"vector_component", "enum", {"X", "Y", "Z"}},
 		},
 	}
@@ -7464,7 +7464,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"block_face", "text", nil},
 		},
 	}
@@ -7475,8 +7475,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
 			Slot{"length_type", "enum", {"LENGTH", "LENGTH_SQUARED"}},
 		},
 	}
@@ -7487,7 +7487,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"algorithm", "enum", {"MD5", "SHA1", "SHA256"}},
 		},
@@ -7499,7 +7499,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 		},
 	}
@@ -7510,8 +7510,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"number", "number", nil},
 			Slot{"value", "any", nil},
 		},
@@ -7523,8 +7523,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"separator", "text", nil},
 			Slot{"prefix", "text", nil},
 			Slot{"postfix", "text", nil},
@@ -7539,7 +7539,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"start", "number", nil},
 			Slot{"stop", "number", nil},
 			Slot{"amount", "number", nil},
@@ -7552,7 +7552,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"distance", "number", nil},
 			Slot{"block_face", "enum", {"NORTH", "EAST", "SOUTH", "WEST", "UP", "DOWN", "NORTH_EAST", "NORTH_WEST", "SOUTH_EAST", "SOUTH_WEST"}},
@@ -7565,7 +7565,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location_1", "location", nil},
 			Slot{"location_2", "location", nil},
 			Slot{"type", "enum", {"THREE_D", "TWO_D", "Altitude"}},
@@ -7578,7 +7578,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"base", "number", nil},
 		},
@@ -7590,7 +7590,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"from_start", "number", nil},
 			Slot{"from_stop", "number", nil},
@@ -7605,7 +7605,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "number", nil},
 		},
 	}
@@ -7616,7 +7616,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "number", nil},
 		},
 	}
@@ -7627,7 +7627,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "number", nil},
 		},
 	}
@@ -7638,8 +7638,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
 			Slot{"multiplier", "number", nil},
 		},
 	}
@@ -7650,7 +7650,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"json", "text", nil},
 		},
 	}
@@ -7661,7 +7661,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"parsing", "enum", {"PLAIN", "LEGACY", "MINIMESSAGE", "JSON"}},
 		},
@@ -7673,7 +7673,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"seed", "number", nil},
 			Slot{"loc_frequency", "number", nil},
@@ -7691,7 +7691,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"base", "number", nil},
 			Slot{"power", "number", nil},
 		},
@@ -7716,7 +7716,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"values", "any", nil},
 		},
 	}
@@ -7727,8 +7727,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 		},
 	}
 	actions["set_variable_random_location"] = Action{
@@ -7738,7 +7738,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location_1", "location", nil},
 			Slot{"location_2", "location", nil},
 			Slot{"integer", "enum", {"TRUE", "FALSE"}},
@@ -7751,7 +7751,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"min", "number", nil},
 			Slot{"max", "number", nil},
 			Slot{"integer", "enum", {"TRUE", "FALSE"}},
@@ -7770,11 +7770,11 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"ray_collision_mode", "enum", {"ONLY_BLOCKS", "BLOCKS_AND_ENTITIES", "ONLY_ENTITIES"}},
 			Slot{"ignore_passable_blocks", "enum", {"TRUE", "FALSE"}},
 			Slot{"fluid_collision_mode", "enum", {"NEVER", "SOURCE_ONLY", "ALWAYS"}},
-			Slot{"variable_for_hit_location", "variable", nil},
-			Slot{"variable_for_hit_block_location", "variable", nil},
-			Slot{"variable_for_hit_block_face", "variable", nil},
-			Slot{"variable_for_hit_entity_uuid", "variable", nil},
-			Slot{"entities", "list", nil},
+			Slot{"variable_for_hit_location", "any", nil},
+			Slot{"variable_for_hit_block_location", "any", nil},
+			Slot{"variable_for_hit_block_face", "any", nil},
+			Slot{"variable_for_hit_entity_uuid", "any", nil},
+			Slot{"entities", "array", nil},
 		},
 	}
 	actions["set_variable_reflect_vector_product"] = Action{
@@ -7784,9 +7784,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector_1", "vector", nil},
-			Slot{"vector_2", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector_1", "vec3", nil},
+			Slot{"vector_2", "vec3", nil},
 			Slot{"bounce", "number", nil},
 		},
 	}
@@ -7797,7 +7797,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"regex", "text", nil},
 			Slot{"replacement", "text", nil},
@@ -7818,7 +7818,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"dividend", "number", nil},
 			Slot{"divisor", "number", nil},
 			Slot{"remainder_mode", "enum", {"REMAINDER", "MODULO"}},
@@ -7831,7 +7831,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -7842,7 +7842,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"name_or_uuid", "text", nil},
 			Slot{"attribute", "enum", {"GENERIC_ARMOR", "GENERIC_ARMOR_TOUGHNESS", "GENERIC_ATTACK_DAMAGE", "GENERIC_ATTACK_KNOCKBACK", "GENERIC_ATTACK_SPEED", "GENERIC_FLYING_SPEED", "GENERIC_FOLLOW_RANGE", "GENERIC_KNOCKBACK_RESISTANCE", "GENERIC_LUCK", "GENERIC_MAX_HEALTH", "GENERIC_MOVEMENT_SPEED", "HORSE_JUMP_STRENGTH", "ZOMBIE_SPAWN_REINFORCEMENTS"}},
@@ -7855,7 +7855,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 		},
 	}
@@ -7866,7 +7866,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"tag_name", "text", nil},
 		},
@@ -7878,7 +7878,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"enchantment", "text", nil},
 		},
@@ -7890,7 +7890,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"line", "number", nil},
 		},
@@ -7902,7 +7902,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"effects", "potion", nil},
 		},
@@ -7914,8 +7914,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 		},
 	}
 	actions["set_variable_remove_list_value"] = Action{
@@ -7925,8 +7925,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"value", "any", nil},
 			Slot{"remove_mode", "enum", {"FIRST", "LAST", "ALL"}},
 		},
@@ -7938,9 +7938,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"removed_value", "variable", nil},
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"removed_value", "any", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"index", "number", nil},
 		},
 	}
@@ -7951,9 +7951,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"removed_value", "variable", nil},
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"removed_value", "any", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 			Slot{"key", "any", nil},
 			Slot{"values", "any", nil},
 		},
@@ -7965,7 +7965,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"regex", "enum", {"TRUE", "FALSE"}},
 			Slot{"remove", "text", nil},
@@ -7978,7 +7978,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"repeat", "number", nil},
 		},
@@ -7990,7 +7990,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"replace", "text", nil},
 			Slot{"replacement", "text", nil},
@@ -8005,8 +8005,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 		},
 	}
 	actions["set_variable_root"] = Action{
@@ -8016,7 +8016,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"base", "number", nil},
 			Slot{"root", "number", nil},
 		},
@@ -8028,8 +8028,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
 			Slot{"angle", "number", nil},
 			Slot{"axis", "enum", {"X", "Y", "Z"}},
 			Slot{"angle_units", "enum", {"DEGREES", "RADIANS"}},
@@ -8042,9 +8042,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"rotating_vector", "vector", nil},
-			Slot{"axis_vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"rotating_vector", "vec3", nil},
+			Slot{"axis_vector", "vec3", nil},
 			Slot{"angle", "number", nil},
 			Slot{"angle_units", "enum", {"DEGREES", "RADIANS"}},
 		},
@@ -8056,7 +8056,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"precision", "number", nil},
 			Slot{"round_type", "enum", {"ROUND", "FLOOR", "CEIL"}},
@@ -8069,7 +8069,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"x", "number", nil},
 			Slot{"y", "number", nil},
 			Slot{"z", "number", nil},
@@ -8084,7 +8084,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"armor", "item", nil},
 			Slot{"material", "item", nil},
 			Slot{"pattern", "item", nil},
@@ -8097,7 +8097,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"book", "item", nil},
 			Slot{"text", "text", nil},
 			Slot{"page", "number", nil},
@@ -8111,7 +8111,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"book", "item", nil},
 			Slot{"text", "text", nil},
 		},
@@ -8123,7 +8123,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"bundle", "item", nil},
 			Slot{"items", "item", nil},
 			Slot{"setting_mode", "enum", {"ADD", "SET", "REMOVE"}},
@@ -8136,7 +8136,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"location", "location", nil},
 			Slot{"tracked", "enum", {"TRUE", "FALSE"}},
@@ -8149,7 +8149,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"children", "text", nil},
 		},
@@ -8161,7 +8161,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"value", "text", nil},
 			Slot{"click_action", "enum", {"COPY_TO_CLIPBOARD", "SUGGEST_COMMAND", "OPEN_URL", "CHANGE_PAGE"}},
@@ -8174,7 +8174,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"bold", "enum", {"FALSE", "NOT_SET", "TRUE"}},
 			Slot{"italic", "enum", {"FALSE", "NOT_SET", "TRUE"}},
@@ -8190,7 +8190,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"name_or_uuid", "text", nil},
 		},
@@ -8202,7 +8202,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"namespace", "text", nil},
 			Slot{"value", "text", nil},
@@ -8215,7 +8215,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"color", "text", nil},
 		},
@@ -8227,7 +8227,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"hover", "text", nil},
 		},
@@ -8239,7 +8239,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"insertion", "text", nil},
 		},
@@ -8251,7 +8251,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"component", "text", nil},
 			Slot{"hover", "item", nil},
 		},
@@ -8263,7 +8263,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"coordinate", "number", nil},
 			Slot{"type", "enum", {"X", "Y", "Z", "PITCH", "YAW"}},
@@ -8276,7 +8276,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"amount", "number", nil},
 		},
@@ -8288,7 +8288,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"amount", "number", nil},
 			Slot{"name", "text", nil},
@@ -8304,7 +8304,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"color", "text", nil},
 		},
@@ -8316,7 +8316,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"model", "number", nil},
 		},
@@ -8328,7 +8328,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"tag_name", "text", nil},
 			Slot{"tag_value", "text", nil},
@@ -8341,7 +8341,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"destroyable", "item", nil},
 		},
@@ -8353,7 +8353,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"durability", "number", nil},
 			Slot{"durability_type", "enum", {"DAMAGE", "DAMAGE_PERCENTAGE", "REMAINING", "REMAINING_PERCENTAGE"}},
@@ -8366,9 +8366,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
-			Slot{"enchantments", "dictionary", nil},
+			Slot{"enchantments", "dict", nil},
 		},
 	}
 	actions["set_variable_set_item_lore"] = Action{
@@ -8378,7 +8378,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"lore", "text", nil},
 			Slot{"item", "item", nil},
 		},
@@ -8390,7 +8390,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"text", "text", nil},
 			Slot{"line", "number", nil},
@@ -8404,7 +8404,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"type", "text", nil},
 		},
@@ -8416,7 +8416,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"text", "text", nil},
 		},
@@ -8428,7 +8428,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"placeable", "item", nil},
 		},
@@ -8440,7 +8440,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"unbreakable", "enum", {"TRUE", "FALSE"}},
 		},
@@ -8452,7 +8452,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"item", "item", nil},
 			Slot{"hide_dye", "enum", {"ON", "NO_CHANGE", "OFF"}},
 			Slot{"hide_enchantments", "enum", {"ON", "NO_CHANGE", "OFF"}},
@@ -8471,8 +8471,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"number", "number", nil},
 			Slot{"value", "any", nil},
 		},
@@ -8484,9 +8484,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"vector", "vec3", nil},
 		},
 	}
 	actions["set_variable_set_map_value"] = Action{
@@ -8496,8 +8496,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 			Slot{"key", "any", nil},
 			Slot{"value", "any", nil},
 		},
@@ -8509,7 +8509,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"amount", "number", nil},
 		},
@@ -8521,7 +8521,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"hex_color", "text", nil},
 			Slot{"color_type", "enum", {"COLOR", "TO_COLOR"}},
@@ -8534,7 +8534,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"material", "item", nil},
 		},
@@ -8546,9 +8546,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
-			Slot{"offset", "vector", nil},
+			Slot{"offset", "vec3", nil},
 		},
 	}
 	actions["set_variable_set_particle_size"] = Action{
@@ -8558,7 +8558,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"size", "number", nil},
 		},
@@ -8570,7 +8570,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"horizontal", "number", nil},
 			Slot{"vertical", "number", nil},
@@ -8583,7 +8583,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"particle", "particle", nil},
 			Slot{"type", "text", nil},
 		},
@@ -8595,7 +8595,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"potion", "potion", nil},
 			Slot{"amplifier", "number", nil},
 		},
@@ -8607,7 +8607,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"potion", "potion", nil},
 			Slot{"duration", "number", nil},
 		},
@@ -8619,7 +8619,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"potion", "potion", nil},
 			Slot{"effect_type", "text", nil},
 		},
@@ -8631,7 +8631,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"pitch", "number", nil},
 		},
@@ -8643,7 +8643,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"source", "enum", {"AMBIENT", "BLOCK", "HOSTILE", "MASTER", "MUSIC", "NEUTRAL", "PLAYER", "RECORD", "VOICE", "WEATHER"}},
 		},
@@ -8655,7 +8655,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"namespace", "text", nil},
 			Slot{"value", "text", nil},
@@ -8668,7 +8668,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"variation", "text", nil},
 		},
@@ -8680,7 +8680,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"sound", "sound", nil},
 			Slot{"volume", "number", nil},
 		},
@@ -8692,7 +8692,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"template", "item", nil},
 			Slot{"code", "any", nil},
 		},
@@ -8704,7 +8704,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"map", "item", nil},
 			Slot{"url", "text", nil},
 		},
@@ -8716,8 +8716,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
 			Slot{"value", "number", nil},
 			Slot{"vector_component", "enum", {"X", "Y", "Z"}},
 		},
@@ -8729,8 +8729,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
 			Slot{"length", "number", nil},
 		},
 	}
@@ -8741,7 +8741,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"x", "number", nil},
 			Slot{"y", "number", nil},
@@ -8757,7 +8757,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"distance", "number", nil},
 			Slot{"type", "enum", {"X", "Y", "Z", "PITCH", "YAW"}},
@@ -8770,7 +8770,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"shift", "number", nil},
 			Slot{"direction", "enum", {"FORWARD", "UPWARD", "SIDEWAYS"}},
@@ -8783,9 +8783,9 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"vector", "vec3", nil},
 			Slot{"length", "number", nil},
 		},
 	}
@@ -8796,7 +8796,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location_from", "location", nil},
 			Slot{"location_to", "location", nil},
 			Slot{"distance", "number", nil},
@@ -8809,7 +8809,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"seed", "number", nil},
 			Slot{"loc_frequency", "number", nil},
@@ -8827,7 +8827,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"variant", "enum", {"SINE", "ARCSINE", "HYPERBOLIC_SINE"}},
 			Slot{"input", "enum", {"DEGREES", "RADIANS"}},
@@ -8840,8 +8840,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"sort_mode", "enum", {"ASCENDING", "DESCENDING"}},
 		},
 	}
@@ -8852,8 +8852,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"map", "dictionary", nil},
+			Slot{"variable", "any", nil},
+			Slot{"map", "dict", nil},
 			Slot{"sort_order", "enum", {"ASCENDING", "DESCENDING"}},
 			Slot{"sort_type", "enum", {"KEYS", "VALUES"}},
 		},
@@ -8865,7 +8865,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"delimiter", "text", nil},
 		},
@@ -8877,7 +8877,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"strip_type", "enum", {"ALL", "START", "END", "INDENT"}},
 		},
@@ -8889,7 +8889,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "number", nil},
 		},
 	}
@@ -8900,8 +8900,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vectors", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vectors", "vec3", nil},
 		},
 	}
 	actions["set_variable_tangent"] = Action{
@@ -8911,7 +8911,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"variant", "enum", {"TANGENT", "ARCTANGENT", "HYPERBOLIC_TANGENT"}},
 			Slot{"input", "enum", {"DEGREES", "RADIANS"}},
@@ -8924,7 +8924,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"merging", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
 		},
@@ -8936,7 +8936,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"case_type", "enum", {"UPPER", "LOWER", "PROPER", "INVERT", "RANDOM"}},
 		},
@@ -8948,7 +8948,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 		},
 	}
@@ -8959,7 +8959,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"hue", "number", nil},
 			Slot{"saturation", "number", nil},
 			Slot{"brightness", "number", nil},
@@ -8972,7 +8972,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"hue", "number", nil},
 			Slot{"saturation", "number", nil},
 			Slot{"lightness", "number", nil},
@@ -8985,7 +8985,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"value", "any", nil},
 			Slot{"pretty_print", "enum", {"TRUE", "FALSE"}},
 		},
@@ -8997,7 +8997,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"red", "number", nil},
 			Slot{"green", "number", nil},
 			Slot{"blue", "number", nil},
@@ -9010,8 +9010,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"list", "list", nil},
+			Slot{"variable", "any", nil},
+			Slot{"list", "array", nil},
 			Slot{"start", "number", nil},
 			Slot{"end", "number", nil},
 		},
@@ -9023,7 +9023,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"text", "text", nil},
 			Slot{"start", "number", nil},
 			Slot{"end", "number", nil},
@@ -9036,7 +9036,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"x", "number", nil},
 			Slot{"y", "number", nil},
 			Slot{"z", "number", nil},
@@ -9049,8 +9049,8 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
-			Slot{"vector", "vector", nil},
+			Slot{"variable", "any", nil},
+			Slot{"vector", "vec3", nil},
 		},
 	}
 	actions["set_variable_voronoi_noise_3d"] = Action{
@@ -9060,7 +9060,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"location", "location", nil},
 			Slot{"seed", "number", nil},
 			Slot{"frequency", "number", nil},
@@ -9076,7 +9076,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "variable", nil},
+			Slot{"variable", "any", nil},
 			Slot{"number", "number", nil},
 			Slot{"min", "number", nil},
 			Slot{"max", "number", nil},
