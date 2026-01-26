@@ -1,36 +1,47 @@
-# jmscript 0.0.1
-**Right now this project is in beta, if you encounter any bug or undefined
-behaviour: write an issue or do a pull request.**
+# JMScript v0.0.1 [![Made with Odin](https://img.shields.io/badge/Made%20with%20Odin-3882d2?style=flat&logo=odin&logoColor=white)](https://odin-lang.org/) [![Made with Odin](https://img.shields.io/badge/Made%20For%20JustMC-ffffff.svg?style=flat&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNTAuNDQgMTExLjcyIiBjbGFzcz0iaC03IC1teS0yIG1yLTQiPjxwYXRoIHN0cm9rZT0iI2YzNTQ1NCIgc3Ryb2tlLXdpZHRoPSIxNy41IiBkPSJNNjQuODggMjguNjJjMzYuMjctMTMuOCA3MC4zMi0xMi44IDc2IDIuMjZNOS41NyA4MC44NGMtNS43Mi0xNSAxOS0zOC40MyA1NS4zLTUyLjIyIi8+PGNpcmNsZSBjeD0iNzUuMjUiIGN5PSI1NS44NiIgcj0iNTUuODYiIGZpbGw9IiMzYTZiZjIiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJtMzcuNjMgNjYuNDUgOC00LjZjMS4yNyAyLjI1IDIuNiAzLjQ1IDUuNyAzLjQ1IDQgMCA1LjI0LTIuMyA1LjI0LTQuNzdWMzMuMTdoOS4ydjI3LjM1YzAgOC44Ni02LjIgMTMuNzYtMTQuNSAxMy43Ni02LjQgMC0xMS0yLjctMTMuNjUtNy44M3ptNzUuMDcgNy4wMmgtOS4yVjUwTDkzLjA4IDY3LjE0SDkyTDgxLjYyIDUwdjIzLjQ3aC05LjJ2LTQwLjNoOS4ybDEwLjk0IDE3LjkgMTAuOTQtMTcuOWg5LjJ6Ii8+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjM1NDU0IiBzdHJva2Utd2lkdGg9IjE3LjUiIGQ9Ik0xNDAuODcgMzAuNzRjNS43MiAxNS0xOSAzOC41Ny01NS4yNiA1Mi4zNlMxNS4yNCA5NS43NCA5LjUyIDgwLjciLz48L3N2Zz4=)](https://justmc.ru/)
+> [!WARNING]
+> **This project is in beta, if you encounter any bug or undefined behaviour:**
+> **write an issue or do a pull request.**
 
-This readme is a mess, some is actual useful information and some is just my
-unfiltered thoughts. I will clean it up later.
+Scripting language for JustMC creative+
 
-## TODO
-- Actually FIX checker!!!
-- Move checker logic from codegen to checker;
-- Proper if-else chains handling;
-- Implement `switch` statements with pattern matching stuff;
-- Implement array/dictionary literals;
-- Implement slices;
-- Make decompiler maybe?;
-- Rework the memory management.
+## Language syntax
+```go
+package main;
 
-## Building
-**TL;DR**:
-1. Make sure you have `odin` available globally.
-2. Use `odin run ./scripts/update_assets` to update assets (mostly justmc & minecraft data).
-3. Use `odin run ./scripts/build_prod` to compile the binary.
+event player_join() {
+	player_send_message("Welcome to my world 🥰", "CONCATENATION")
+}
+```
 
-Before building, make sure you updated the assets, they're embedded into program at
-compile-time. They're needed to make sure you using correct names/ids for blocks,
-effects, enchantments, entities, items, particles, sounds.
-Use `odin run ./scripts/update_assets` to update assets.
+## Installation
+You can install latest ready-to-go binary from [releases](https://github.com/altwine/jmscript/releases/latest).
+Currently, **only windows amd64 is supported**.
 
-Use `odin run ./scripts/build_prod` to compile release-ready binary, or compile the debug
-build using `odin run ./scripts/build_debug`.
+Quick start:
+```bash
+$ jmscript-win.exe init new_project
+$ jmscript-win.exe compile new_project
+```
 
-## Generating docs
-Use `odin run ./scripts/generate_docs`.
+## Clone & build
+> [!NOTE]
+> Make sure you have [odin compiler](https://github.com/odin-lang/odin/releases/latest) available globally as `odin`.
+```bash
+$ git clone --recurse-submodules -j8 https://github.com/altwine/jmscript
+$ cd jmscript
+$ odin run ./scripts/update_assets # Update assets
+$ odin run ./scripts/build_prod    # Build executable
+$ odin run ./scripts/generate_docs # Generate docs
+```
+
+## Goals
+- `switch` statement with pattern matching;
+- `array`/`dict` literals;
+- Slices;
+- Decompiler;
+- `init` command;
+- Proper memory management system;
 
 # License
 Check the [LICENSE](./LICENSE) file.
