@@ -102,7 +102,6 @@ type_kind_to_string :: proc(c: ^Checker, kind: Type_Kind) -> string {
 
 Type_Info :: struct {
 	kind:        Type_Kind,
-	is_const:    bool,
 	return_t:    ^Type_Info,
 	param_names: [dynamic]string,
 	param_types: [dynamic]^Type_Info,
@@ -112,6 +111,7 @@ Symbol :: struct {
 	name:        string,
 	type:        ^Type_Info,
 	decl_node:   ^ast.Node,
+	is_const:    bool,
 }
 
 Symbol_Table :: struct {
@@ -296,7 +296,6 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		}
 
 		type_info := get_type_info_from_expression(c, t.value)
-		type_info.is_const = t.is_const
 		if type_info.kind != .Any && t.type != "" {
 			provided_type_kind := string_to_type_kind(c, t.type, t)
 			if type_info.kind != provided_type_kind {
@@ -304,6 +303,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			}
 		}
 		symbol := make_symbol(c, t.name, type_info, stmt)
+		symbol.is_const = t.is_const
 		add_symbol(c, symbol)
 
 	case ^ast.Defer_Stmt:
@@ -325,7 +325,7 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		if !is_exist {
 			add_error(c, fmt.tprintf("variable '%s' is not declared", t.name), t)
 		}
-		if sym.type.is_const {
+		if sym.is_const {
 			add_error(c, fmt.tprintf("can't assign to constant variable '%s'", t.name), t)
 		}
 
@@ -335,7 +335,6 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			return
 		}
 		type_info := get_type_info_from_expression(c, t.value)
-		type_info.is_const = t.is_const
 		if type_info.kind != .Any && t.type != "" {
 			provided_type_kind := string_to_type_kind(c, t.type, t)
 			if type_info.kind != provided_type_kind {
@@ -343,6 +342,7 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			}
 		}
 		symbol := make_symbol(c, t.name, type_info, stmt)
+		symbol.is_const = t.is_const
 		add_symbol(c, symbol)
 
 	case ^ast.Func_Stmt:
@@ -993,7 +993,7 @@ check_expression_is_pure :: proc(c: ^Checker, expr: ^ast.Expr) -> bool {
 			return false
 		}
 
-		if sym.type.is_const {
+		if sym.is_const {
 			return true
 		}
 
