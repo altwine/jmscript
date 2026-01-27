@@ -330,9 +330,13 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		}
 
 	case ^ast.Value_Decl:
-		// TODO: make sure it's not duplicated
 		if c.symbol_table.scope_level == 0 {
 			return
+		}
+		if _, is_already_defined := lookup_local_symbol(c.symbol_table.current_scope, t.name);
+				is_already_defined {
+			add_error(c, fmt.tprintf("variable '%s' is already defined", t.name), t)
+			break
 		}
 		type_info := get_type_info_from_expression(c, t.value)
 		type_info.is_const = t.is_const
@@ -514,7 +518,7 @@ add_symbol :: proc(c: ^Checker, symbol: ^Symbol) -> bool {
 		return false
 	}
 
-	if _, exists := lookup_symbol(c.symbol_table.current_scope, symbol.name); exists {
+	if _, exists := lookup_local_symbol(c.symbol_table.current_scope, symbol.name); exists {
 		return false
 	}
 
