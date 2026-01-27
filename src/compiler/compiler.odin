@@ -6,6 +6,7 @@ import "core:mem"
 import "../error"
 import "../parser"
 import "../checker"
+import "../optimizer"
 import "../codegen"
 
 Compiler :: struct {
@@ -34,6 +35,17 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 	for checker_err in checker_errs {
 		has_errors ||= checker_err.severity == .Error
 		error.print(checker_err)
+	}
+	if has_errors {
+		return "", false
+	}
+
+	op: optimizer.Optimizer
+	optimizer.optimizer_init(&op, c.alloc)
+	optimizer_errs := optimizer.optimizer_optimize(&op, files, symbol_table)
+	for optimizer_err in optimizer_errs {
+		has_errors ||= optimizer_err.severity == .Error
+		error.print(optimizer_err)
 	}
 	if has_errors {
 		return "", false
