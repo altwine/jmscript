@@ -106,12 +106,14 @@ Type_Info :: struct {
 	return_t:    ^Type_Info,
 	param_names: [dynamic]string,
 	param_types: [dynamic]^Type_Info,
+	metadata:    Metadata,
 }
 
 Symbol :: struct {
 	name:        string,
 	type:        ^Type_Info,
 	decl_node:   ^ast.Node,
+	metadata:    Metadata,
 }
 
 Symbol_Table :: struct {
@@ -175,12 +177,12 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 
 	exit_scope(c)
 
-	// for sym_name, sym_data in c.symbol_table.global_scope.symbols {
-	// 	fmt.printfln("[global] %s: %v", sym_name, sym_data.type)
+	// for sym in c.symbol_table.global_scope.symbols {
+	// 	fmt.printfln("[global] %s: %v", sym.name, sym.type)
 	// }
 	// for scope in c.symbol_table.global_scope.children {
-	// 	for sym_name, sym_data in scope.symbols {
-	// 		fmt.printfln("[local] %s: %v", sym_name, sym_data.type)
+	// 	for sym in scope.symbols {
+	// 		fmt.printfln("[local] %s: %v", sym.name, sym.type)
 	// 	}
 	// }
 
@@ -195,14 +197,46 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			check_stmt(c, item)
 		}
 
+		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if found && check_function_is_pure(c, t.name) {
+			if flags_field, has := sym.type.metadata["flags"]; has {
+				if flags, ok := flags_field.(Flags); ok {
+					flags += {.PURE}
+					sym.type.metadata["flags"] = flags
+				}
+			} else {
+				sym.type.metadata["flags"] = Flags{.PURE}
+			}
+		}
+
+		if anno_is_true(t, "pure") && !check_function_is_pure(c, t.name) {
+			add_error(c, fmt.tprintf("event '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
+		}
+
 	case ^ast.Func_Stmt:
 		check_anno(c, stmt)
 		for item in t.body.stmts {
 			check_stmt(c, item)
 		}
-		sym, _ := lookup_symbol(c.symbol_table.current_scope, t.name)
-		if anno_is_true(t, "pure") && !check_function_is_pure(c, t.name) {
-			add_error(c, fmt.tprintf("function '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
+
+		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if found {
+			pure := check_function_is_pure(c, t.name)
+
+			if pure {
+				if flags_field, has := sym.type.metadata["flags"]; has {
+					if flags, ok := flags_field.(Flags); ok {
+						flags += {.PURE}
+						sym.type.metadata["flags"] = flags
+					}
+				} else {
+					sym.type.metadata["flags"] = Flags{.PURE}
+				}
+			}
+
+			if anno_is_true(t, "pure") && !pure {
+				add_error(c, fmt.tprintf("function '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
+			}
 		}
 
 	case ^ast.Block_Stmt:
@@ -212,13 +246,42 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 	case ^ast.Value_Decl:
 		check_anno(c, stmt)
+
 		if t.is_const && !check_expression_is_pure(c, t.value) {
 			add_error(c, fmt.tprintf("cannot initialize constant '%s' with not constant value '%s'",
 				t.name, ast.expr_to_string(t.value, context.temp_allocator)), &stmt.stmt_base)
 		}
 
+		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if found && (t.is_const || anno_is_true(stmt, "pure")) {
+			if check_expression_is_pure(c, t.value) {
+				if flags_field, has := sym.type.metadata["flags"]; has {
+					if flags, ok := flags_field.(Flags); ok {
+						flags += {.PURE}
+						sym.type.metadata["flags"] = flags
+					}
+				} else {
+					sym.type.metadata["flags"] = Flags{.PURE}
+				}
+			} else if anno_is_true(stmt, "pure") {
+				add_error(c, fmt.tprintf("variable '%s' marked as @pure but initialized with non pure expression",
+					t.name), &stmt.stmt_base)
+			}
+		}
+
 	case ^ast.Assign_Stmt:
 		check_anno(c, stmt)
+
+		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if found {
+			if flags_field, has := sym.type.metadata["flags"]; has {
+				if flags, ok := flags_field.(Flags); ok && .PURE in flags {
+					if !check_expression_is_pure(c, t.expr) {
+						add_error(c, fmt.tprintf("cannot assign non pure value to pure variable '%s'", t.name), &stmt.stmt_base)
+					}
+				}
+			}
+		}
 
 	case ^ast.Expr_Stmt:
 		check_anno(c, stmt)
@@ -256,6 +319,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			param_type := param.type
 			type_info := new(Type_Info, c.alloc)
 			type_info.kind = string_to_type_kind(c, param_type, param)
+			type_info.metadata = make(Metadata, c.alloc)
 			param_sym := make_symbol(c, param_name, type_info, stmt)
 			add_symbol(c, param_sym)
 			append(&symbol.type.param_names, param_sym.name)
@@ -270,6 +334,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		ret_type_kind := string_to_type_kind(c, t.result, t)
 		ret_type := new(Type_Info, c.alloc)
 		ret_type.kind = ret_type_kind
+		ret_type.metadata = make(Metadata, c.alloc)
 		symbol := make_symbol(c, t.name, make_type_func(c, ret_type), stmt)
 		add_symbol(c, symbol)
 		enter_scope(c)
@@ -277,6 +342,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			param_name := param.name
 			param_type := param.type
 			type_info := new(Type_Info, c.alloc)
+			type_info.metadata = make(Metadata, c.alloc)
 			type_info.kind = string_to_type_kind(c, param_type, param)
 			param_sym := make_symbol(c, param_name, type_info, stmt)
 			add_symbol(c, param_sym)
@@ -369,6 +435,7 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Info {
 	type_info := new(Type_Info, c.alloc)
+	type_info.metadata = make(Metadata, c.alloc)
 	#partial switch v in expr.derived {
 	case ^ast.Ident:
 		sym, is_exist := lookup_symbol(c.symbol_table.current_scope, v.name)
@@ -491,6 +558,7 @@ make_type_event :: proc(c: ^Checker) -> ^Type_Info {
 	type_info_event.kind = .Event
 	type_info_event.param_types = make([dynamic]^Type_Info, c.alloc)
 	type_info_event.param_names = make([dynamic]string, c.alloc)
+	type_info_event.metadata =    make(Metadata, c.alloc)
 	return type_info_event
 }
 
@@ -499,6 +567,7 @@ make_type_func :: proc(c: ^Checker, ret_type: ^Type_Info) -> ^Type_Info {
 	type_info_func.kind = .Function
 	type_info_func.param_types = make([dynamic]^Type_Info, c.alloc)
 	type_info_func.param_names = make([dynamic]string, c.alloc)
+	type_info_func.metadata =    make(Metadata, c.alloc)
 	if ret_type != nil {
 		type_info_func.return_t = ret_type
 	}
@@ -555,14 +624,18 @@ create_builtin_type_info :: proc(c: ^Checker, kind: Type_Kind) -> ^Type_Info {
 	type_info.param_names = make([dynamic]string, c.alloc)
 	type_info.param_types = make([dynamic]^Type_Info, c.alloc)
 	return_type := new(Type_Info, c.alloc)
+	return_type.metadata = make(Metadata, c.alloc)
 	return_type.kind = kind
 	type_info.return_t = return_type
+	type_info.metadata = make(Metadata, c.alloc)
+	type_info.metadata["flags"] = Flags{.BUILTIN}
 	return type_info
 }
 
 make_type_info :: proc(kind: Type_Kind, allocator := context.allocator) -> ^Type_Info {
 	type_info := new(Type_Info, allocator)
 	type_info.kind = kind
+	type_info.metadata = make(Metadata, allocator)
 	return type_info
 }
 
@@ -642,9 +715,12 @@ add_native_functions :: proc(c: ^Checker) {
 		type_info.kind = .Function
 		type_info.param_names = make([dynamic]string, c.alloc)
 		type_info.param_types = make([dynamic]^Type_Info, c.alloc)
+		type_info.metadata = make(Metadata, c.alloc)
+		type_info.metadata["flags"] = Flags{.NATIVE}
 		for slot in action_data.slots[:] {
 			append(&type_info.param_names, slot.name)
 			slot_type_info := new(Type_Info, c.alloc)
+			slot_type_info.metadata = make(Metadata, c.alloc)
 			slot_type_info.kind = string_to_type_kind(c, slot.type, nil)
 			append(&type_info.param_types, slot_type_info)
 		}
@@ -671,7 +747,7 @@ check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 		return false
 	}
 
-	if is_value_factory(name) {
+	if is_value_factory(c, name) {
 		return true
 	}
 
@@ -686,26 +762,18 @@ check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 	return false
 }
 
-is_value_factory :: proc(name: string) -> bool {
-	switch name {
-	case
-		"game_value",
-		"item",
-		"array",
-		"dict",
-		"location",
-		"vec3",
-		"sound",
-		"particle",
-		"block",
-		"number",
-		"text",
-		"enum",
-		"potion":
-		return true
-	case:
+is_value_factory :: proc(c: ^Checker, name: string) -> bool {
+	sym, found := lookup_symbol(c.symbol_table.current_scope, name)
+	if !found {
 		return false
 	}
+
+	if flags_field, has := sym.type.metadata["flags"]; has {
+		if flags, ok := flags_field.(Flags); ok {
+			return .BUILTIN in flags
+		}
+	}
+	return false
 }
 
 check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool {
@@ -815,6 +883,7 @@ check_for_stmt_is_pure :: proc(c: ^Checker, for_stmt: ^ast.For_Stmt) -> bool {
 			for ident in for_stmt.init {
 				type_info := new(Type_Info, c.alloc)
 				type_info.kind = .Any
+				type_info.metadata = make(Metadata, c.alloc)
 				symbol := make_symbol(c, ident.name, type_info, cast(^ast.Node)ident)
 				add_symbol(c, symbol)
 			}
