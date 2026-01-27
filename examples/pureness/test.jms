@@ -1,7 +1,7 @@
 package test;
 
 func a() {
-	player_send_message("all_players", "SPACES");
+	// player_send_message("all_players", "SPACES");
 }
 
 @(test = a()) // pureness required
