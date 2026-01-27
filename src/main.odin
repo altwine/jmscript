@@ -259,10 +259,10 @@ command_init :: proc() {
 
 	err := os.make_directory(dir_name)
 	if err != os.ERROR_NONE {
-		fmt.printfln("Cannot create '%s' dirrectory, aborting...", dir_name)
+		fmt.printfln("Cannot create '%s' directory, aborting...", dir_name)
 		return
 	}
-	fmt.printfln("Directory '%s' succesfuly created!", dir_name)
+	fmt.printfln("Directory '%s' successfully created!", dir_name)
 
 	example_code :: #load("../resources/example.jms", string)
 	file_path := fmt.tprintf("%s/%s", dir_name, "main.jms")
@@ -279,7 +279,7 @@ command_init :: proc() {
 		return
 	}
 
-	fmt.println("Project created succesfuly!")
+	fmt.println("Project created successfully!")
 }
 
 print_help :: proc() {
