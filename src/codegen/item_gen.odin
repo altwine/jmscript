@@ -8,7 +8,13 @@ Minecraft_Item :: struct {
 	count:    nbt.Int    `nbt:"count"`,
 }
 
+AIR_ITEM_NBT_BASE64 :: "AAAAAAAAAAA="
+
 generate_item :: proc(id: string, count: int, allocator := context.allocator) -> (string, bool) #optional_ok {
+	// NOTE: shortcut for air item
+	if id == "minecraft:air" {
+		return AIR_ITEM_NBT_BASE64, true
+	}
 	w: nbt.Writer
 	nbt.writer_init(&w, allocator)
 	defer nbt.writer_destroy(&w)
