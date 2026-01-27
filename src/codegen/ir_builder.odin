@@ -437,16 +437,6 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 				break
 			}
 
-			if _, exists := checker.lookup_symbol(irb.symbols.global_scope, call_name); exists {
-				if len(call_expr.args) > 0 {
-					ir_add_warning(irb, "Function arguments are ignored because they're not implemented yet.")
-				}
-				values := make([dynamic]NamedValue, irb.alloc)
-				append(&values, named_value("function_name", text_value(call_name, PARSING_COLORED)))
-				append(&operations_list, basic_operation("call_function", values))
-				break
-			}
-
 			switch call_name {
 			case "game_value":
 				fmt.println("[DEBUG] game_value fabric")
@@ -457,7 +447,6 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 				ir_add_error(irb, "Not implemented")
 				break expr_type_switch
 			case "item": // item("item_name", 16)
-				fmt.println("[DEBUG] item fabric")
 				if len(arg_values_handled) == 0 {
 					ir_add_error(irb, "Can't generate item from empty constructor")
 					break expr_type_switch
@@ -548,6 +537,16 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			case "potion":
 				fmt.println("[DEBUG] potion fabric")
 				break expr_type_switch
+			}
+
+			if _, exists := checker.lookup_symbol(irb.symbols.global_scope, call_name); exists {
+				if len(call_expr.args) > 0 {
+					ir_add_warning(irb, "Function arguments are ignored because they're not implemented yet.")
+				}
+				values := make([dynamic]NamedValue, irb.alloc)
+				append(&values, named_value("function_name", text_value(call_name, PARSING_COLORED)))
+				append(&operations_list, basic_operation("call_function", values))
+				break
 			}
 		} else {
 			fmt.printfln("[DEBUG] Unhandled")
