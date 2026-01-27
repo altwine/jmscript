@@ -433,7 +433,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 				break
 			}
 
-			if _, exists := irb.symbols.global_scope.symbols[call_name]; exists {
+			if _, exists := checker.lookup_symbol(irb.symbols.global_scope, call_name); exists {
 				if len(call_expr.args) > 0 {
 					ir_add_warning(irb, "Function arguments are ignored because they're not implemented yet.")
 				}

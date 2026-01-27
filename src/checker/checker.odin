@@ -121,7 +121,7 @@ Symbol_Table :: struct {
 }
 
 Scope :: struct {
-	symbols:  map[string]^Symbol,
+	symbols:  [dynamic]^Symbol,
 	parent:   ^Scope,
 	level:    int,
 	children: [dynamic]^Scope,
@@ -222,7 +222,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		exit_scope(c)
 
 	case ^ast.Value_Decl:
-		_, is_already_defined := lookup_symbol(c, typed_stmt.name)
+		_, is_already_defined := lookup_symbol(c.symbol_table.current_scope, typed_stmt.name)
 		if is_already_defined {
 			add_error(c, fmt.tprintf("variable '%s' is already defined", typed_stmt.name), typed_stmt)
 			break
@@ -254,7 +254,7 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		exit_scope(c)
 
 	case ^ast.Assign_Stmt:
-		sym, is_exist := lookup_symbol(c, typed_stmt.name)
+		sym, is_exist := lookup_symbol(c.symbol_table.current_scope, typed_stmt.name)
 		if !is_exist {
 			add_error(c, fmt.tprintf("variable '%s' is not declared", typed_stmt.name), typed_stmt)
 		}
@@ -300,7 +300,7 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 	type_info := new(Type_Info, c.alloc)
 	#partial switch v in expr.derived {
 	case ^ast.Ident:
-		sym, is_exist := lookup_symbol(c, v.name)
+		sym, is_exist := lookup_symbol(c.symbol_table.current_scope, v.name)
 		if !is_exist {
 			add_error(c, fmt.tprintf("variable '%s' is not declared", v.name), v)
 			type_info.kind = .Invalid
@@ -343,7 +343,7 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 
 	case ^ast.Call_Expr:
 		if ident, is_ident := v.expr.derived.(^ast.Ident); is_ident {
-			if sym, sym_exists := lookup_symbol(c, ident.name); sym_exists {
+			if sym, sym_exists := lookup_symbol(c.symbol_table.current_scope, ident.name); sym_exists {
 				if len(v.args) != len(sym.type.param_types) {
 					add_error(c, fmt.tprintf("invalid arguments count in function call: %d != %d", len(v.args), len(sym.type.param_types)), v)
 					type_info.kind = .Invalid
@@ -447,32 +447,37 @@ add_symbol :: proc(c: ^Checker, symbol: ^Symbol) -> bool {
 		return false
 	}
 
-	if _, exists := c.symbol_table.current_scope.symbols[symbol.name]; exists {
+	if _, exists := lookup_symbol(c.symbol_table.current_scope, symbol.name); exists {
 		return false
 	}
 
-	c.symbol_table.current_scope.symbols[symbol.name] = symbol
+	append(&c.symbol_table.current_scope.symbols, symbol)
 	return true
 }
 
-lookup_symbol :: proc(c: ^Checker, name: string) -> (^Symbol, bool) {
-	scope := c.symbol_table.current_scope
+lookup_symbol :: proc(scope: ^Scope, name: string) -> (^Symbol, bool) {
+	scope := scope
 	for scope != nil {
-		if symbol, exists := scope.symbols[name]; exists {
-			return symbol, true
+		for symbol in scope.symbols {
+			if symbol.name == name {
+				return symbol, true
+			}
 		}
 		scope = scope.parent
 	}
 	return nil, false
 }
 
-lookup_local_symbol :: proc(c: ^Checker, name: string) -> ^Symbol {
-	if c.symbol_table.current_scope == nil {
-		return nil
+lookup_local_symbol :: proc(scope: ^Scope, name: string) -> (^Symbol, bool) {
+	if scope != nil {
+		for symbol in scope.symbols {
+			if symbol.name == name {
+				return symbol, true
+			}
+		}
 	}
-	return c.symbol_table.current_scope.symbols[name]
+	return nil, false
 }
-
 
 create_builtin_type_info :: proc(c: ^Checker, kind: Type_Kind) -> ^Type_Info {
 	type_info := new(Type_Info, c.alloc)
@@ -579,7 +584,7 @@ add_native_functions :: proc(c: ^Checker) {
 
 enter_scope :: proc(c: ^Checker) {
 	new_scope := new(Scope, c.alloc)
-	new_scope.symbols = make(map[string]^Symbol, c.alloc)
+	new_scope.symbols = make([dynamic]^Symbol, c.alloc)
 	new_scope.parent = c.symbol_table.current_scope
 	new_scope.level = c.symbol_table.scope_level + 1
 	new_scope.children = make([dynamic]^Scope, 0, c.alloc)
