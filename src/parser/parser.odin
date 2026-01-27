@@ -57,10 +57,10 @@ parse_package :: proc(p: ^Parser) -> string {
 			pkg_name = current(p).content
 			advance(p)
 		} else {
-			add_error(p, "Package name should be identifier, fallback to '_'", current(p), peek(p))
+			add_error(p, "package name should be identifier, fallback to '_'", current(p), peek(p))
 		}
 	} else {
-		add_error(p, "Package not declared, fallback to '_'", current(p), peek(p))
+		add_error(p, "package not declared, fallback to '_'", current(p), peek(p))
 	}
 	skip_optional_semicolon(p)
 	return pkg_name
@@ -383,7 +383,7 @@ parse_block_stmt :: proc(p: ^Parser) -> ^ast.Block_Stmt {
 	}
 
 	if !match(p, .Close_Brace) {
-		add_error(p, "Expected '}'", current(p), current(p))
+		add_error(p, "expected '}'", current(p), current(p))
 		return nil
 	}
 
@@ -414,7 +414,7 @@ parse_logical_or :: proc(p: ^Parser) -> ^ast.Expr {
 		advance(p)
 		right := parse_logical_and(p)
 		if right == nil {
-			add_error(p, "Expected expression after '||'", current(p), current(p))
+			add_error(p, "expected expression after '||'", current(p), current(p))
 			return left
 		}
 
@@ -438,7 +438,7 @@ parse_logical_and :: proc(p: ^Parser) -> ^ast.Expr {
 		advance(p)
 		right := parse_comparison(p)
 		if right == nil {
-			add_error(p, "Expected expression after '&&'", current(p), current(p))
+			add_error(p, "expected expression after '&&'", current(p), current(p))
 			return left
 		}
 
@@ -464,7 +464,7 @@ parse_comparison :: proc(p: ^Parser) -> ^ast.Expr {
 			advance(p)
 			right := parse_addition(p)
 			if right == nil {
-				add_error(p, "Expected expression after operator", current(p), current(p))
+				add_error(p, "expected expression after operator", current(p), current(p))
 				return left
 			}
 
@@ -492,7 +492,7 @@ parse_addition :: proc(p: ^Parser) -> ^ast.Expr {
 			advance(p)
 			right := parse_multiplication(p)
 			if right == nil {
-				add_error(p, "Expected expression after operator", current(p), current(p))
+				add_error(p, "expected expression after operator", current(p), current(p))
 				return left
 			}
 
@@ -520,7 +520,7 @@ parse_multiplication :: proc(p: ^Parser) -> ^ast.Expr {
 			advance(p)
 			right := parse_unary(p)
 			if right == nil {
-				add_error(p, "Expected expression after operator", current(p), current(p))
+				add_error(p, "expected expression after operator", current(p), current(p))
 				return left
 			}
 
@@ -552,11 +552,11 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 				advance(p)
 			} else if positional_args_started {
 				fmt.printfln("%v", current(p))
-				add_error(p, "Normal arguments not allowed after positional arguments in function call", current(p), current(p))
+				add_error(p, "positional arguments not allowed after keyword arguments in function call", current(p), current(p))
 			}
 			arg := parse_expression(p)
 			if arg == nil {
-				add_error(p, "Expected expression in function call argument", current(p), current(p))
+				add_error(p, "expected expression in function call argument", current(p), current(p))
 				break
 			}
 			pos_arg := ast.new(ast.Call_Expr_Argument, arg.pos, arg.end, p.file.alloc)
@@ -572,7 +572,7 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 	}
 
 	if !match(p, .Close_Paren) {
-		add_error(p, "Expected ')' after function call arguments", current(p), current(p))
+		add_error(p, "expected ')' after function call arguments", current(p), current(p))
 		return func_expr
 	}
 	close_paren := advance(p)
@@ -614,7 +614,7 @@ parse_access_chain :: proc(p: ^Parser) -> ^ast.Expr {
 			dot_token := current(p)
 			advance(p)
 			if !match(p, .Ident) {
-				add_error(p, "Expected identifier after '.'", current(p), current(p))
+				add_error(p, "expected identifier after '.'", current(p), current(p))
 				return expr
 			}
 			field_token := current(p)
@@ -630,11 +630,11 @@ parse_access_chain :: proc(p: ^Parser) -> ^ast.Expr {
 			advance(p)
 			index_expr := parse_expression(p)
 			if index_expr == nil {
-				add_error(p, "Expected expression inside brackets", current(p), current(p))
+				add_error(p, "expected expression inside brackets", current(p), current(p))
 				return expr
 			}
 			if !match(p, .Close_Bracket) {
-				add_error(p, "Expected ']'", current(p), current(p))
+				add_error(p, "expected ']'", current(p), current(p))
 				return expr
 			}
 			close_bracket := current(p)
@@ -681,11 +681,11 @@ parse_primary :: proc(p: ^Parser) -> ^ast.Expr {
 		advance(p)
 		expr := parse_expression(p)
 		if expr == nil {
-			add_error(p, "Expected expression after '('", token, current(p))
+			add_error(p, "expected expression after '('", token, current(p))
 			return nil
 		}
 		if !match(p, .Close_Paren) {
-			add_error(p, "Expected ')'", current(p), current(p))
+			add_error(p, "expected ')'", current(p), current(p))
 			return nil
 		}
 		close_token := current(p)

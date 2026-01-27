@@ -152,7 +152,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			values := make([dynamic]NamedValue, irb.alloc)
 			append(&ops, container_operation("repeat_forever", values, ops3))
 		} else {
-			ir_add_error(irb, "Repeats are temporarily disabled")
+			ir_add_error(irb, "repeats are temporarily disabled")
 			// if for_stmt.init != nil && for_stmt.cond != nil && for_stmt.post == nil && for_stmt.second_cond == nil {
 			// 	init_ident := for_stmt.init
 			// 	cond_expr := for_stmt.cond
@@ -398,7 +398,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 
 			if action, is_native := assets.action_native_from_mapped(call_name); is_native {
 				if len(arg_values_handled) > len(action.slots) {
-					ir_add_error(irb, "Too much arguments")
+					ir_add_error(irb, "too much arguments")
 					break
 				}
 				slots_map := make(map[string]Value, len(action.slots), irb.alloc)
@@ -424,7 +424,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 							// positional argument and warn user if so?
 							slots_map[arg_name] = new_arg_value
 						} else {
-							ir_add_error(irb, "Unknown keyword argument: no parameters matches")
+							ir_add_error(irb, "unknown keyword argument: no parameters matches")
 							break
 						}
 					}
@@ -441,14 +441,14 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			case "game_value":
 				fmt.println("[DEBUG] game_value fabric")
 				if len(arg_values_handled) == 0 {
-					ir_add_error(irb, "Can't generate game value from empty constructor")
+					ir_add_error(irb, "can't generate game value from empty constructor")
 					break expr_type_switch
 				}
-				ir_add_error(irb, "Not implemented")
+				ir_add_error(irb, "not implemented")
 				break expr_type_switch
 			case "item": // item("item_name", 16)
 				if len(arg_values_handled) == 0 {
-					ir_add_error(irb, "Can't generate item from empty constructor")
+					ir_add_error(irb, "can't generate item from empty constructor")
 					break expr_type_switch
 				}
 				item_name: string
@@ -485,13 +485,13 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 					}
 					item_name = item_name_raw
 				} else {
-					ir_add_error(irb, "Text literal expected")
+					ir_add_error(irb, "text literal expected")
 				}
 
 				if item_count_lit, is_number_lit := item_count_val.(NumberValue); is_number_lit {
 					item_count = item_count_lit.number
 				} else if len(arg_values_handled) > 1 {
-					ir_add_error(irb, "Number literal expected")
+					ir_add_error(irb, "number literal expected")
 				} else {
 					item_count = 1
 				}
