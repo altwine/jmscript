@@ -24,12 +24,10 @@ File :: struct {
 
 Expr :: struct {
 	using expr_base: Node,
-	derived_expr: Any_Expr,
 }
 
 Stmt :: struct {
 	using stmt_base: Node,
-	derived_stmt: Any_Stmt,
 }
 
 Decl :: struct {
