@@ -73,11 +73,11 @@ skip_optional_semicolon :: proc(p: ^Parser) {
 }
 
 add_error :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
-	append(&p.errs, error.Error{file=p.file, message=message})
+	append(&p.errs, error.Error{file=p.file, cause_pos=token_from.pos, cause_end=token_to.pos, message=message})
 }
 
 add_warning :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
-	append(&p.errs, error.Error{file=p.file, message=message, severity=.Warning})
+	append(&p.errs, error.Error{file=p.file, cause_pos=token_from.pos, cause_end=token_to.pos, message=message, severity=.Warning})
 }
 
 match :: proc(p: ^Parser, kind: lexer.Token_Kind) -> bool {

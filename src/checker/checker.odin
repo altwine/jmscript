@@ -1095,11 +1095,11 @@ exit_scope :: proc(c: ^Checker) {
 }
 
 add_error :: proc(c: ^Checker, message: string, cause: ^ast.Node) {
-	append(&c.errs, error.Error{file=c.files[c.current_file_idx], cause=cause, message=message})
+	append(&c.errs, error.Error{file=c.files[c.current_file_idx], cause_pos=cause.pos, cause_end=cause.end, message=message})
 }
 
 add_warning :: proc(c: ^Checker, message: string, cause: ^ast.Node) {
-	append(&c.errs, error.Error{file=c.files[c.current_file_idx], cause=cause, message=message, severity=.Warning})
+	append(&c.errs, error.Error{file=c.files[c.current_file_idx], cause_pos=cause.pos, cause_end=cause.end, message=message, severity=.Warning})
 }
 
 @(private="file")
