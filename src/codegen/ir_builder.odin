@@ -405,8 +405,12 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 				for arg_value, arg_value_index in arg_values_handled {
 					arg_name := arg_names_handled[arg_value_index]
 					slot_data := action.slots[arg_value_index]
+					new_arg_value := arg_value
+					if slot_data.type == "enum" {
+						new_arg_value = enum_value(arg_value.(TextValue).text)
+					}
 					if arg_name == "" {
-						slots_map[slot_data.name] = arg_value
+						slots_map[slot_data.name] = new_arg_value
 					} else {
 						found := false
 						for slot in action.slots {
@@ -418,7 +422,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 						if found {
 							// maybe check if keyword argument overlap
 							// positional argument and warn user if so?
-							slots_map[arg_name] = arg_value
+							slots_map[arg_name] = new_arg_value
 						} else {
 							ir_add_error(irb, "Unknown keyword argument: no parameters matches")
 							break
