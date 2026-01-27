@@ -14,6 +14,10 @@ main :: proc() {
     src_dir := filepath.join([]string{exe_dir, "src"})
     assets_dir := filepath.join([]string{exe_dir, "assets"})
     examples_dir := filepath.join([]string{exe_dir, "examples"})
+    resources_dir := filepath.join([]string{exe_dir, "resources"})
+
+    resources_file_path := filepath.join([]string{resources_dir, "resources.rc"})
+    compiled_resources_file_path := filepath.join([]string{resources_dir, "resources.res"})
 
     if !os.exists(bin_dir) {
     	os.make_directory(bin_dir)
@@ -42,6 +46,7 @@ main :: proc() {
 	append(&build_prod_cmd, "-strict-style")
 	append(&build_prod_cmd, "-disallow-do")
 	append(&build_prod_cmd, "-warnings-as-errors")
+	append(&build_prod_cmd, strings.concatenate([]string{"-resource:", resources_file_path}))
 	append(&build_prod_cmd, strings.concatenate([]string{"-out:", output_file_path}))
 
 	proc_state, stdout, stderr, err := os2.process_exec(
@@ -55,6 +60,9 @@ main :: proc() {
 	if len(stderr) > 0 {
 		fmt.eprintfln("%s", stderr)
 		os.exit(1)
+	}
+	if os.exists(compiled_resources_file_path) {
+		os.remove(compiled_resources_file_path)
 	}
 	fmt.printfln("%s", stdout)
 }
