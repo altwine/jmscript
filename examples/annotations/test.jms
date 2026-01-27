@@ -1,0 +1,29 @@
+package test;
+
+A :: 1
+B :: A + 2
+
+@test
+func a() {}
+
+@(test)
+func b() {}
+
+@(test, another)
+func c() {}
+
+@(test = 1)
+func d() {}
+
+@(test = "text")
+func e() {}
+
+@(test = "one", another)
+func f() {}
+
+@(test = B)
+func g() {}
+
+@test
+@another
+func h() {}
