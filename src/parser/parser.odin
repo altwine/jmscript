@@ -124,33 +124,138 @@ parse_top_level_stmt_list :: proc(p: ^Parser) -> [dynamic]^ast.Stmt {
 }
 
 parse_stmt :: proc(p: ^Parser) -> ^ast.Stmt {
+	annos := parse_annotations(p)
+
 	stmt: ^ast.Stmt
 	switch {
 	case match(p, .For):
-		stmt =  parse_for_stmt(p)
+		stmt = parse_for_stmt(p)
 	case match(p, .If):
-		stmt =  parse_if_stmt(p)
+		stmt = parse_if_stmt(p)
 	case match(p, .Defer):
-		stmt =  parse_defer_stmt(p)
+		stmt = parse_defer_stmt(p)
 	case match(p, .Return):
-		stmt =  parse_return_stmt(p)
+		stmt = parse_return_stmt(p)
 	case match(p, .Func):
-		stmt =  parse_func_stmt(p)
+		stmt = parse_func_stmt(p)
 	case match(p, .Event):
-		stmt =  parse_event_stmt(p)
+		stmt = parse_event_stmt(p)
 	case match(p, .Ident) && (peek(p).kind == .Eq || lexer.is_assignment(peek(p).kind)):
-		stmt =  parse_assignment_stmt(p)
+		stmt = parse_assignment_stmt(p)
 	case match(p, .Ident) && peek(p).kind == .Colon && (peek(p, 2).kind == .Eq || (peek(p, 2).kind == .Ident && peek(p, 3).kind == .Eq)):
-		stmt =  parse_variable_declaration(p, false)
+		stmt = parse_variable_declaration(p, false)
 	case match(p, .Ident) && peek(p).kind == .Colon && (peek(p, 2).kind == .Colon || (peek(p, 2).kind == .Ident && peek(p, 3).kind == .Colon)):
-		stmt =  parse_variable_declaration(p, true)
+		stmt = parse_variable_declaration(p, true)
 	case match(p, .Open_Brace):
 		stmt = parse_block_stmt(p)
 	case:
 		stmt = parse_expr_stmt(p)
 	}
+
+	if stmt != nil && len(annos) > 0 {
+		stmt.annotations = annos
+	}
+
 	skip_optional_semicolon(p)
 	return stmt
+}
+
+parse_annotations :: proc(p: ^Parser) -> [dynamic]ast.Annotation {
+	annos := make([dynamic]ast.Annotation, p.file.alloc)
+
+	for match(p, .At) {
+		parse_annotation_or_list(p, &annos)
+	}
+
+	return annos
+}
+
+parse_annotation_or_list :: proc(p: ^Parser, annos: ^[dynamic]ast.Annotation) {
+	at_tok := current(p)
+	start_pos := at_tok.pos
+	advance(p)
+
+	if match(p, .Open_Paren) {
+		advance(p)
+
+		for !match(p, .Close_Paren) && !match(p, .EOF) {
+			parse_single_annotation_in_paren(p, start_pos, annos)
+
+			if match(p, .Comma) {
+				advance(p)
+				continue
+			} else {
+				break
+			}
+		}
+
+		if !match(p, .Close_Paren) {
+			add_error(p, "Expected ')' after annotation list", current(p), current(p))
+			skip_to_close_paren(p)
+			return
+		}
+		advance(p)
+
+	} else {
+		parse_single_anno_without_paren(p, start_pos, annos)
+	}
+}
+
+parse_single_annotation_in_paren :: proc(p: ^Parser, start_pos: lexer.Pos, annos: ^[dynamic]ast.Annotation) {
+	if !match(p, .Ident) {
+		add_error(p, "Expected annotation name", current(p), current(p))
+		return
+	}
+
+	name := current(p).content
+	advance(p)
+
+	value: ^ast.Expr = nil
+
+	if match(p, .Eq) {
+		advance(p)
+		value = parse_expression(p)
+		if value == nil {
+			add_error(p, "Expected expression after '='", current(p), current(p))
+		}
+	}
+
+	anno := ast.new(ast.Annotation, start_pos, current(p).pos, p.file.alloc)
+	anno.name = name
+	anno.value = value
+	append(annos, anno^)
+}
+
+parse_single_anno_without_paren :: proc(p: ^Parser, start_pos: lexer.Pos, annos: ^[dynamic]ast.Annotation) {
+	if !match(p, .Ident) {
+		add_error(p, "Expected annotation name after '@'", current(p), current(p))
+		return
+	}
+
+	name := current(p).content
+	end_pos := current(p).pos
+	advance(p)
+
+	anno := ast.new(ast.Annotation, start_pos, end_pos, p.file.alloc)
+	anno.name = name
+	anno.value = nil
+	append(annos, anno^)
+}
+
+skip_to_close_paren :: proc(p: ^Parser) {
+	depth := 1
+	for !match(p, .EOF) {
+		if match(p, .Open_Paren) {
+			depth += 1
+		} else if match(p, .Close_Paren) {
+			depth -= 1
+			if depth == 0 {
+				advance(p)
+				break
+			}
+		}
+		advance(p)
+	}
 }
 
 parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {

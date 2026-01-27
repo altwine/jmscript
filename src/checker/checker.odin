@@ -164,6 +164,15 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 		}
 		c.current_file_idx += 1
 	}
+
+	c.current_file_idx = 0
+	for file in files {
+		c.current_file = file
+		for decl in file.decls {
+			check_stmt(c, decl)
+		}
+	}
+
 	exit_scope(c)
 
 	// for sym_name, sym_data in c.symbol_table.global_scope.symbols {
@@ -178,13 +187,71 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 	return c.symbol_table, c.errs
 }
 
-collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
-	#partial switch typed_stmt in stmt.derived {
+check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
+	#partial switch t in stmt.derived {
 	case ^ast.Event_Stmt:
-		symbol := make_symbol(c, typed_stmt.name, make_type_event(c), stmt)
+		check_anno(c, stmt)
+		for item in t.body.stmts {
+			check_stmt(c, item)
+		}
+
+	case ^ast.Func_Stmt:
+		check_anno(c, stmt)
+		for item in t.body.stmts {
+			check_stmt(c, item)
+		}
+		sym, _ := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if anno_is_true(t, "pure") && !check_function_is_pure(c, t.name) {
+			add_error(c, fmt.tprintf("function '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
+		}
+
+	case ^ast.Block_Stmt:
+		for body_stmt in t.stmts {
+			check_stmt(c, body_stmt)
+		}
+
+	case ^ast.Value_Decl:
+		check_anno(c, stmt)
+		if t.is_const && !check_expression_is_pure(c, t.value) {
+			add_error(c, fmt.tprintf("cannot initialize constant '%s' with not constant value '%s'",
+				t.name, ast.expr_to_string(t.value, context.temp_allocator)), &stmt.stmt_base)
+		}
+
+	case ^ast.Assign_Stmt:
+		check_anno(c, stmt)
+
+	case ^ast.Expr_Stmt:
+		check_anno(c, stmt)
+
+	case ^ast.Defer_Stmt:
+		check_anno(c, stmt)
+
+	case ^ast.Return_Stmt:
+		check_anno(c, stmt)
+
+	case ^ast.If_Stmt:
+		check_anno(c, stmt)
+		check_stmt(c, t.body)
+		if t.else_stmt != nil {
+			check_stmt(c, t.else_stmt)
+		}
+
+	case ^ast.For_Stmt:
+		check_anno(c, stmt)
+		check_stmt(c, t.body)
+
+	case:
+		check_anno(c, stmt)
+	}
+}
+
+collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
+	#partial switch t in stmt.derived {
+	case ^ast.Event_Stmt:
+		symbol := make_symbol(c, t.name, make_type_event(c), stmt)
 		add_symbol(c, symbol)
 		enter_scope(c)
-		for param in typed_stmt.params.list {
+		for param in t.params.list {
 			param_name := param.name
 			param_type := param.type
 			type_info := new(Type_Info, c.alloc)
@@ -194,19 +261,19 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			append(&symbol.type.param_names, param_sym.name)
 			append(&symbol.type.param_types, type_info)
 		}
-		for item in typed_stmt.body.stmts {
+		for item in t.body.stmts {
 			collect_stmt(c, item)
 		}
 		exit_scope(c)
 
 	case ^ast.Func_Stmt:
-		ret_type_kind := string_to_type_kind(c, typed_stmt.result, typed_stmt)
+		ret_type_kind := string_to_type_kind(c, t.result, t)
 		ret_type := new(Type_Info, c.alloc)
 		ret_type.kind = ret_type_kind
-		symbol := make_symbol(c, typed_stmt.name, make_type_func(c, ret_type), stmt)
+		symbol := make_symbol(c, t.name, make_type_func(c, ret_type), stmt)
 		add_symbol(c, symbol)
 		enter_scope(c)
-		for param in typed_stmt.params.list {
+		for param in t.params.list {
 			param_name := param.name
 			param_type := param.type
 			type_info := new(Type_Info, c.alloc)
@@ -216,50 +283,50 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			append(&symbol.type.param_names, param_sym.name)
 			append(&symbol.type.param_types, type_info)
 		}
-		for item in typed_stmt.body.stmts {
+		for item in t.body.stmts {
 			collect_stmt(c, item)
 		}
 		exit_scope(c)
 
 	case ^ast.Value_Decl:
-		_, is_already_defined := lookup_symbol(c.symbol_table.current_scope, typed_stmt.name)
+		_, is_already_defined := lookup_symbol(c.symbol_table.current_scope, t.name)
 		if is_already_defined {
-			add_error(c, fmt.tprintf("variable '%s' is already defined", typed_stmt.name), typed_stmt)
+			add_error(c, fmt.tprintf("variable '%s' is already defined", t.name), t)
 			break
 		}
 
-		type_info := get_type_info_from_expression(c, typed_stmt.value)
-		type_info.is_const = typed_stmt.is_const
-		if type_info.kind != .Any && typed_stmt.type != "" {
-			provided_type_kind := string_to_type_kind(c, typed_stmt.type, typed_stmt)
+		type_info := get_type_info_from_expression(c, t.value)
+		type_info.is_const = t.is_const
+		if type_info.kind != .Any && t.type != "" {
+			provided_type_kind := string_to_type_kind(c, t.type, t)
 			if type_info.kind != provided_type_kind {
-				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: '%s' != '%s'", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), typed_stmt)
+				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: '%s' != '%s'", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), t)
 			}
 		}
-		symbol := make_symbol(c, typed_stmt.name, type_info, stmt)
+		symbol := make_symbol(c, t.name, type_info, stmt)
 		add_symbol(c, symbol)
 
 	case ^ast.Defer_Stmt:
-		add_error(c, "top level defers isn't allowed", typed_stmt)
+		add_error(c, "top level defers isn't allowed", t)
 	}
 }
 
 collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
-	#partial switch typed_stmt in stmt.derived {
+	#partial switch t in stmt.derived {
 	case ^ast.Block_Stmt:
 		enter_scope(c)
-		for body_stmt in typed_stmt.stmts {
+		for body_stmt in t.stmts {
 			collect_stmt(c, body_stmt)
 		}
 		exit_scope(c)
 
 	case ^ast.Assign_Stmt:
-		sym, is_exist := lookup_symbol(c.symbol_table.current_scope, typed_stmt.name)
+		sym, is_exist := lookup_symbol(c.symbol_table.current_scope, t.name)
 		if !is_exist {
-			add_error(c, fmt.tprintf("variable '%s' is not declared", typed_stmt.name), typed_stmt)
+			add_error(c, fmt.tprintf("variable '%s' is not declared", t.name), t)
 		}
 		if sym.type.is_const {
-			add_error(c, fmt.tprintf("can't assign to constant variable '%s'", typed_stmt.name), typed_stmt)
+			add_error(c, fmt.tprintf("can't assign to constant variable '%s'", t.name), t)
 		}
 
 	case ^ast.Value_Decl:
@@ -267,32 +334,32 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		if c.symbol_table.scope_level == 0 {
 			return
 		}
-		type_info := get_type_info_from_expression(c, typed_stmt.value)
-		type_info.is_const = typed_stmt.is_const
-		if type_info.kind != .Any && typed_stmt.type != "" {
-			provided_type_kind := string_to_type_kind(c, typed_stmt.type, typed_stmt)
+		type_info := get_type_info_from_expression(c, t.value)
+		type_info.is_const = t.is_const
+		if type_info.kind != .Any && t.type != "" {
+			provided_type_kind := string_to_type_kind(c, t.type, t)
 			if type_info.kind != provided_type_kind {
-				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: %s != %s", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), typed_stmt)
+				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: %s != %s", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), t)
 			}
 		}
-		symbol := make_symbol(c, typed_stmt.name, type_info, stmt)
+		symbol := make_symbol(c, t.name, type_info, stmt)
 		add_symbol(c, symbol)
 
 	case ^ast.Func_Stmt:
 		if c.symbol_table.scope_level > 0 {
-			add_error(c, "can't define function in nested scope", typed_stmt)
+			add_error(c, "can't define function in nested scope", t)
 		}
 
 	case ^ast.Event_Stmt:
 		if c.symbol_table.scope_level > 0 {
-			add_error(c, "can't define event in nested scope", typed_stmt)
+			add_error(c, "can't define event in nested scope", t)
 		}
 
 	case ^ast.Expr_Stmt:
-		get_type_info_from_expression(c, typed_stmt.expr)
+		get_type_info_from_expression(c, t.expr)
 
 	case:
-		fmt.printfln("unhandled stmt: %v", typed_stmt)
+		fmt.printfln("unhandled stmt: %v", t)
 	}
 }
 
@@ -314,7 +381,7 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 		case .Number: type_info.kind = .Number
 		case .True, .False: type_info.kind = .Boolean
 		case:
-			fmt.printfln("Got UNHANDLED literal type")
+			fmt.printfln("got UNHANDLED literal type")
 		}
 		return type_info
 
@@ -403,13 +470,13 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 				return type_info
 			}
 		} else {
-			fmt.printfln("Invalid call expression: %v", v)
+			fmt.printfln("invalid call expression: %v", v)
 			type_info.kind = .Invalid
 			return type_info
 		}
 
 	case:
-		fmt.printfln("Got UNHANDLED expr: %v", v)
+		fmt.printfln("got UNHANDLED expr: %v", v)
 	}
 	type_info.kind = .Invalid
 	return type_info
@@ -579,6 +646,427 @@ add_native_functions :: proc(c: ^Checker) {
 		}
 		sym := make_symbol(c, action_name, type_info, nil)
 		add_symbol(c, sym)
+	}
+}
+
+check_anno :: proc(c: ^Checker, stmt: ^ast.Stmt) {
+	for &anno in stmt.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+}
+
+check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
+	sym, exists := lookup_symbol(c.symbol_table.current_scope, name)
+	if !exists {
+		return false
+	}
+
+	if sym.type.kind != .Function {
+		return false
+	}
+
+	if is_value_factory(name) {
+		return true
+	}
+
+	if _, action_exists := assets.action_native_from_mapped(name); action_exists {
+		return false
+	}
+
+	if func_stmt, is_func_stmt := sym.decl_node.derived.(^ast.Func_Stmt); is_func_stmt {
+		return check_function_body_is_pure(c, func_stmt.body)
+	}
+
+	return false
+}
+
+is_value_factory :: proc(name: string) -> bool {
+	switch name {
+	case
+		"game_value",
+		"item",
+		"array",
+		"dict",
+		"location",
+		"vec3",
+		"sound",
+		"particle",
+		"block",
+		"number",
+		"text",
+		"enum",
+		"potion":
+		return true
+	case:
+		return false
+	}
+}
+
+check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool {
+	if body == nil {
+		return true
+	}
+
+	for stmt in body.stmts {
+		#partial switch s in stmt.derived {
+		case ^ast.Expr_Stmt:
+			if !check_expression_is_pure(c, s.expr) {
+				return false
+			}
+
+		case ^ast.Value_Decl:
+			if t, is_value_decl := s.derived.(^ast.Value_Decl); is_value_decl {
+				if !check_expression_is_pure(c, t.value) {
+					return false
+				}
+			}
+
+		case ^ast.Assign_Stmt:
+			if !check_expression_is_pure(c, s.expr) {
+				return false
+			}
+
+		case ^ast.Return_Stmt:
+			if s.result != nil && !check_expression_is_pure(c, s.result) {
+				return false
+			}
+
+		case ^ast.If_Stmt:
+			if !check_expression_is_pure(c, s.cond) {
+				return false
+			}
+			if !check_function_body_is_pure(c, s.body) {
+				return false
+			}
+			if s.else_stmt != nil && !check_function_body_is_pure(c, s.else_stmt) {
+				return false
+			}
+
+		case ^ast.For_Stmt:
+			if !check_for_stmt_is_pure(c, s) {
+				return false
+			}
+
+		case ^ast.Block_Stmt:
+			if !check_function_body_is_pure(c, s) {
+				return false
+			}
+
+		case ^ast.Defer_Stmt:
+			#partial switch d in s.stmt.derived {
+			case ^ast.Expr_Stmt:
+				if !check_expression_is_pure(c, d.expr) {
+					return false
+				}
+			case:
+				return false
+			}
+
+		case:
+			return false
+		}
+	}
+
+	return true
+}
+
+check_for_stmt_is_pure :: proc(c: ^Checker, for_stmt: ^ast.For_Stmt) -> bool {
+	if for_stmt.init != nil {
+		for ident in for_stmt.init {
+			if sym, exists := lookup_symbol(c.symbol_table.current_scope, ident.name); !exists {
+				return false
+			}
+		}
+	}
+
+	if for_stmt.cond != nil && !check_expression_is_pure(c, for_stmt.cond) {
+		return false
+	}
+	if for_stmt.second_cond != nil && !check_expression_is_pure(c, for_stmt.second_cond) {
+		return false
+	}
+
+	if for_stmt.post != nil {
+		#partial switch post_stmt in for_stmt.post.derived {
+		case ^ast.Expr_Stmt:
+			if !check_expression_is_pure(c, post_stmt.expr) {
+				return false
+			}
+		case ^ast.Assign_Stmt:
+			if !check_expression_is_pure(c, post_stmt.expr) {
+				return false
+			}
+		case:
+			return false
+		}
+	}
+
+	if for_stmt.body != nil {
+		enter_scope(c)
+		defer exit_scope(c)
+
+		if for_stmt.init != nil {
+			for ident in for_stmt.init {
+				type_info := new(Type_Info, c.alloc)
+				type_info.kind = .Any
+				symbol := make_symbol(c, ident.name, type_info, cast(^ast.Node)ident)
+				add_symbol(c, symbol)
+			}
+		}
+
+		if !check_function_body_is_pure(c, for_stmt.body) {
+			return false
+		}
+	}
+
+	return !contains_notpure_calls_in_for_body(c, for_stmt.body)
+}
+
+contains_notpure_calls_in_for_body :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool {
+	if body == nil {
+		return false
+	}
+
+	for stmt in body.stmts {
+		#partial switch s in stmt.derived {
+		case ^ast.Expr_Stmt:
+			if contains_notpure_calls_in_expr(c, s.expr) {
+				return true
+			}
+
+		case ^ast.Value_Decl:
+			if t, is_value_decl := s.derived.(^ast.Value_Decl); is_value_decl {
+				if contains_notpure_calls_in_expr(c, t.value) {
+					return true
+				}
+			}
+
+		case ^ast.Assign_Stmt:
+			if contains_notpure_calls_in_expr(c, s.expr) {
+				return true
+			}
+
+		case ^ast.If_Stmt:
+			if contains_notpure_calls_in_expr(c, s.cond) {
+				return true
+			}
+			if contains_notpure_calls_in_body(c, s.body) {
+				return true
+			}
+			if s.else_stmt != nil && contains_notpure_calls_in_body(c, s.else_stmt) {
+				return true
+			}
+
+		case ^ast.For_Stmt:
+			if contains_notpure_calls_in_for_body(c, s.body) {
+				return true
+			}
+
+		case ^ast.Block_Stmt:
+			if contains_notpure_calls_in_body(c, s) {
+				return true
+			}
+
+		case ^ast.Defer_Stmt:
+			#partial switch d in s.stmt.derived {
+			case ^ast.Expr_Stmt:
+				if contains_notpure_calls_in_expr(c, d.expr) {
+					return true
+				}
+			case:
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+contains_notpure_calls_in_expr :: proc(c: ^Checker, expr: ^ast.Expr) -> bool {
+	if expr == nil {
+		return false
+	}
+
+	#partial switch e in expr.derived {
+	case ^ast.Call_Expr:
+		if ident, is_ident := e.expr.derived.(^ast.Ident); is_ident {
+			return !check_function_is_pure(c, ident.name)
+		}
+
+		return true
+
+	case ^ast.Binary_Expr:
+		return contains_notpure_calls_in_expr(c, e.left) ||
+			   contains_notpure_calls_in_expr(c, e.right)
+
+	case ^ast.Unary_Expr:
+		return contains_notpure_calls_in_expr(c, e.expr)
+
+	case ^ast.Paren_Expr:
+		return contains_notpure_calls_in_expr(c, e.expr)
+
+	case ^ast.Index_Expr:
+		return contains_notpure_calls_in_expr(c, e.expr) ||
+			   contains_notpure_calls_in_expr(c, e.index)
+
+	case ^ast.Member_Access_Expr:
+		return contains_notpure_calls_in_expr(c, e.expr)
+
+	case ^ast.Field_Value:
+		return contains_notpure_calls_in_expr(c, e.field) ||
+			   contains_notpure_calls_in_expr(c, e.value)
+	}
+
+	return false
+}
+
+contains_notpure_calls_in_body :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool {
+	if body == nil {
+		return false
+	}
+
+	for stmt in body.stmts {
+		#partial switch s in stmt.derived {
+		case ^ast.Expr_Stmt:
+			if contains_notpure_calls_in_expr(c, s.expr) {
+				return true
+			}
+
+		case ^ast.Value_Decl:
+			if t, is_value_decl := s.derived.(^ast.Value_Decl); is_value_decl {
+				if contains_notpure_calls_in_expr(c, t.value) {
+					return true
+				}
+			}
+
+		case ^ast.Assign_Stmt:
+			if contains_notpure_calls_in_expr(c, s.expr) {
+				return true
+			}
+
+		case ^ast.If_Stmt:
+			if contains_notpure_calls_in_expr(c, s.cond) {
+				return true
+			}
+			if contains_notpure_calls_in_body(c, s.body) {
+				return true
+			}
+			if s.else_stmt != nil && contains_notpure_calls_in_body(c, s.else_stmt) {
+				return true
+			}
+
+		case ^ast.For_Stmt:
+			if contains_notpure_calls_in_for_body(c, s.body) {
+				return true
+			}
+
+		case ^ast.Block_Stmt:
+			if contains_notpure_calls_in_body(c, s) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+check_expression_is_pure :: proc(c: ^Checker, expr: ^ast.Expr) -> bool {
+	if expr == nil {
+		return false
+	}
+
+	#partial switch t in expr.derived {
+	case ^ast.Basic_Lit:
+		return true
+	case ^ast.Binary_Expr:
+		return check_expression_is_pure(c, t.left) && check_expression_is_pure(c, t.right)
+	case ^ast.Unary_Expr:
+		return check_expression_is_pure(c, t.expr)
+	case ^ast.Paren_Expr:
+		return check_expression_is_pure(c, t.expr)
+	case ^ast.Ident:
+		sym, exists := lookup_symbol(c.symbol_table.current_scope, t.name)
+
+		if !exists {
+			return false
+		}
+
+		if sym.type.is_const {
+			return true
+		}
+
+		if value_decl, is_value_decl := sym.decl_node.derived.(^ast.Value_Decl); is_value_decl {
+			if value_decl.is_const {
+				return check_expression_is_pure(c, value_decl.value)
+			}
+		}
+
+		return false
+	case ^ast.Call_Expr:
+		if ident, is_ident := t.expr.derived.(^ast.Ident); is_ident {
+			if !check_function_is_pure(c, ident.name) {
+				return false
+			}
+
+			for arg in t.args {
+				if !check_expression_is_pure(c, arg.value) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	case ^ast.Index_Expr:
+		return check_expression_is_pure(c, t.expr) && check_expression_is_pure(c, t.index)
+	case ^ast.Member_Access_Expr:
+		return check_expression_is_pure(c, t.expr)
+	case ^ast.Field_Value:
+		return check_expression_is_pure(c, t.field) && check_expression_is_pure(c, t.value)
+	case:
+		return false
+	}
+}
+
+get_anno :: proc(stmt: ^ast.Stmt, name: string) -> ^ast.Annotation {
+	for &anno in stmt.annotations {
+		if strings.equal_fold(anno.name, name) {
+			return &anno
+		}
+	}
+	return nil
+}
+
+has_anno :: proc(stmt: ^ast.Stmt, name: string) -> bool {
+	return get_anno(stmt, name) != nil
+}
+
+anno_is_true :: proc(stmt: ^ast.Stmt, name: string) -> bool {
+	anno := get_anno(stmt, name)
+	if anno == nil {
+		return false
+	}
+
+	if anno.value == nil {
+		return true
+	}
+
+	#partial switch v in anno.value.derived {
+	case ^ast.Basic_Lit:
+		if v.tok.kind == .True {
+			return true
+		}
+		return false
+
+	case ^ast.Ident:
+		if v.name == "true" {
+			return true
+		}
+		return false
+
+	case:
+		return false
 	}
 }
 
