@@ -199,13 +199,13 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
 		if found && check_function_is_pure(c, t.name) {
-			if flags_field, has := sym.type.metadata["flags"]; has {
+			if flags_field, has := sym.metadata["flags"]; has {
 				if flags, ok := flags_field.(Flags); ok {
 					flags += {.PURE}
-					sym.type.metadata["flags"] = flags
+					sym.metadata["flags"] = flags
 				}
 			} else {
-				sym.type.metadata["flags"] = Flags{.PURE}
+				sym.metadata["flags"] = Flags{.PURE}
 			}
 		}
 
@@ -224,13 +224,13 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			pure := check_function_is_pure(c, t.name)
 
 			if pure {
-				if flags_field, has := sym.type.metadata["flags"]; has {
+				if flags_field, has := sym.metadata["flags"]; has {
 					if flags, ok := flags_field.(Flags); ok {
 						flags += {.PURE}
-						sym.type.metadata["flags"] = flags
+						sym.metadata["flags"] = flags
 					}
 				} else {
-					sym.type.metadata["flags"] = Flags{.PURE}
+					sym.metadata["flags"] = Flags{.PURE}
 				}
 			}
 
@@ -255,13 +255,13 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
 		if found && (t.is_const || anno_is_true(stmt, "pure")) {
 			if check_expression_is_pure(c, t.value) {
-				if flags_field, has := sym.type.metadata["flags"]; has {
+				if flags_field, has := sym.metadata["flags"]; has {
 					if flags, ok := flags_field.(Flags); ok {
 						flags += {.PURE}
-						sym.type.metadata["flags"] = flags
+						sym.metadata["flags"] = flags
 					}
 				} else {
-					sym.type.metadata["flags"] = Flags{.PURE}
+					sym.metadata["flags"] = Flags{.PURE}
 				}
 			} else if anno_is_true(stmt, "pure") {
 				add_error(c, fmt.tprintf("variable '%s' marked as @pure but initialized with non pure expression",
@@ -274,7 +274,7 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
 		if found {
-			if flags_field, has := sym.type.metadata["flags"]; has {
+			if flags_field, has := sym.metadata["flags"]; has {
 				if flags, ok := flags_field.(Flags); ok && .PURE in flags {
 					if !check_expression_is_pure(c, t.expr) {
 						add_error(c, fmt.tprintf("cannot assign non pure value to pure variable '%s'", t.name), &stmt.stmt_base)
@@ -531,7 +531,9 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 					}
 
 					if arg_type.kind != param_type.kind {
-						add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'", type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), ident)
+						if !can_casted(arg_type.kind, param_type.kind) {
+							add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'", type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), ident)
+						}
 					}
 				}
 				return sym.type.return_t
@@ -579,6 +581,7 @@ make_symbol :: proc(c: ^Checker, name: string, type: ^Type_Info, node: ^ast.Node
 	symbol.name = name
 	symbol.type = type
 	symbol.decl_node = node
+	symbol.metadata = make(Metadata, c.alloc)
 	return symbol
 }
 
@@ -598,7 +601,7 @@ add_symbol :: proc(c: ^Checker, symbol: ^Symbol) -> bool {
 lookup_symbol :: proc(scope: ^Scope, name: string) -> (^Symbol, bool) {
 	scope := scope
 	for scope != nil {
-		for symbol in scope.symbols {
+		for &symbol in scope.symbols {
 			if symbol.name == name {
 				return symbol, true
 			}
@@ -628,7 +631,6 @@ create_builtin_type_info :: proc(c: ^Checker, kind: Type_Kind) -> ^Type_Info {
 	return_type.kind = kind
 	type_info.return_t = return_type
 	type_info.metadata = make(Metadata, c.alloc)
-	type_info.metadata["flags"] = Flags{.BUILTIN}
 	return type_info
 }
 
@@ -641,28 +643,41 @@ make_type_info :: proc(kind: Type_Kind, allocator := context.allocator) -> ^Type
 
 add_builtin_functions :: proc(c: ^Checker) {
 	game_value_type := create_builtin_type_info(c, .GameValue)
+	game_value_type.kind = .Function
 	append(&game_value_type.param_names, "value")
 	append(&game_value_type.param_names, "selection")
 	append(&game_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&game_value_type.param_types, make_type_info(.Text, c.alloc))
-	add_symbol(c, make_symbol(c, "game_value", game_value_type, nil))
+	symbol := make_symbol(c, "game_value", game_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	item_value_type := create_builtin_type_info(c, .Item)
+	item_value_type.kind = .Function
 	append(&item_value_type.param_names, "id")
 	append(&item_value_type.param_names, "count")
 	append(&item_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&item_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "item", item_value_type, nil))
+	symbol = make_symbol(c, "item", item_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	array_value_type := create_builtin_type_info(c, .Array)
+	array_value_type.kind = .Function
 	// ...
-	add_symbol(c, make_symbol(c, "array", array_value_type, nil))
+	symbol = make_symbol(c, "array", array_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	dict_value_type := create_builtin_type_info(c, .Dict)
+	dict_value_type.kind = .Function
 	// ...
-	add_symbol(c, make_symbol(c, "dict", dict_value_type, nil))
+	symbol = make_symbol(c, "dict", dict_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	location_value_type := create_builtin_type_info(c, .Location)
+	location_value_type.kind = .Function
 	append(&location_value_type.param_names, "x")
 	append(&location_value_type.param_names, "y")
 	append(&location_value_type.param_names, "z")
@@ -673,18 +688,24 @@ add_builtin_functions :: proc(c: ^Checker) {
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "location", location_value_type, nil))
+	symbol = make_symbol(c, "location", location_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	vec3_value_type := create_builtin_type_info(c, .Vector)
+	vec3_value_type.kind = .Function
 	append(&vec3_value_type.param_names, "x")
 	append(&vec3_value_type.param_names, "y")
 	append(&vec3_value_type.param_names, "z")
 	append(&vec3_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&vec3_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&vec3_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "vec3", vec3_value_type, nil))
+	symbol = make_symbol(c, "vec3", vec3_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	sound_value_type := create_builtin_type_info(c, .Sound)
+	sound_value_type.kind = .Function
 	append(&sound_value_type.param_names, "sound")
 	append(&sound_value_type.param_names, "pitch")
 	append(&sound_value_type.param_names, "volume")
@@ -695,9 +716,12 @@ add_builtin_functions :: proc(c: ^Checker) {
 	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&sound_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&sound_value_type.param_types, make_type_info(.Text, c.alloc))
-	add_symbol(c, make_symbol(c, "sound", sound_value_type, nil))
+	symbol = make_symbol(c, "sound", sound_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	particle_value_type := create_builtin_type_info(c, .Particle)
+	particle_value_type.kind = .Function
 	append(&particle_value_type.param_names, "particle_type")
 	append(&particle_value_type.param_names, "count")
 	append(&particle_value_type.param_names, "first_spread")
@@ -716,36 +740,53 @@ add_builtin_functions :: proc(c: ^Checker) {
 	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "particle", particle_value_type, nil))
+	symbol = make_symbol(c, "particle", particle_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	block_value_type := create_builtin_type_info(c, .Block)
+	block_value_type.kind = .Function
 	append(&block_value_type.param_names, "id")
 	append(&block_value_type.param_types, make_type_info(.Text, c.alloc))
-	add_symbol(c, make_symbol(c, "block", block_value_type, nil))
+	symbol = make_symbol(c, "block", block_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	number_value_type := create_builtin_type_info(c, .Number)
+	number_value_type.kind = .Function
 	append(&number_value_type.param_names, "value")
 	append(&number_value_type.param_types, make_type_info(.Any, c.alloc))
-	add_symbol(c, make_symbol(c, "number", number_value_type, nil))
+	symbol = make_symbol(c, "number", number_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	text_value_type := create_builtin_type_info(c, .Text)
+	text_value_type.kind = .Function
 	append(&text_value_type.param_names, "value")
 	append(&text_value_type.param_types, make_type_info(.Any, c.alloc))
-	add_symbol(c, make_symbol(c, "text", text_value_type, nil))
+	symbol = make_symbol(c, "text", text_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	enum_value_type := create_builtin_type_info(c, .Enum)
+	enum_value_type.kind = .Function
 	append(&enum_value_type.param_names, "value")
 	append(&enum_value_type.param_types, make_type_info(.Text, c.alloc))
-	add_symbol(c, make_symbol(c, "enum", enum_value_type, nil))
+	symbol = make_symbol(c, "enum", enum_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	potion_value_type := create_builtin_type_info(c, .Potion)
+	particle_value_type.kind = .Function
 	append(&enum_value_type.param_names, "potion")
 	append(&enum_value_type.param_names, "amplifier")
 	append(&enum_value_type.param_names, "duration")
 	append(&enum_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&enum_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&enum_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "potion", potion_value_type, nil))
+	symbol = make_symbol(c, "potion", potion_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 }
 
 add_native_functions :: proc(c: ^Checker) {
@@ -758,7 +799,6 @@ add_native_functions :: proc(c: ^Checker) {
 		type_info.param_names = make([dynamic]string, c.alloc)
 		type_info.param_types = make([dynamic]^Type_Info, c.alloc)
 		type_info.metadata = make(Metadata, c.alloc)
-		type_info.metadata["flags"] = Flags{.NATIVE}
 		for slot in action_data.slots[:] {
 			append(&type_info.param_names, slot.name)
 			slot_type_info := new(Type_Info, c.alloc)
@@ -767,8 +807,21 @@ add_native_functions :: proc(c: ^Checker) {
 			append(&type_info.param_types, slot_type_info)
 		}
 		sym := make_symbol(c, action_name, type_info, nil)
+		sym.metadata["flags"] = Flags{.NATIVE}
 		add_symbol(c, sym)
 	}
+}
+
+can_casted :: proc(first, second: Type_Kind) -> bool {
+	if first == .Any || second == .Any {
+		return true
+	}
+
+	if first == second {
+		return true
+	}
+
+	return false
 }
 
 check_anno :: proc(c: ^Checker, stmt: ^ast.Stmt) {
@@ -781,6 +834,7 @@ check_anno :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 	sym, exists := lookup_symbol(c.symbol_table.current_scope, name)
+
 	if !exists {
 		return false
 	}
@@ -810,7 +864,7 @@ is_value_factory :: proc(c: ^Checker, name: string) -> bool {
 		return false
 	}
 
-	if flags_field, has := sym.type.metadata["flags"]; has {
+	if flags_field, has := sym.metadata["flags"]; has {
 		if flags, ok := flags_field.(Flags); ok {
 			return .BUILTIN in flags
 		}
