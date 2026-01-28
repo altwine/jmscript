@@ -98,11 +98,11 @@ Member_Access_Expr :: struct {
 Call_Expr :: struct {
 	using node: Expr,
 	expr:     ^Expr,
-	args:     []^Call_Expr_Argument,
+	args:     []^Argument,
 	ellipsis: lexer.Token,
 }
 
-Call_Expr_Argument :: struct {
+Argument :: struct {
 	using node: Expr,
 	name:  string,
 	value: ^Expr,
@@ -221,7 +221,7 @@ Any_Node :: union {
 	^Field_Access,
 	^Param,
 	^Param_List,
-	^Call_Expr_Argument,
+	^Argument,
 }
 
 Any_Expr :: union {
@@ -280,7 +280,7 @@ print_tree :: proc(node: ^Node, indent := 0) {
 
 	case ^Field_Access:
 		fmt.println("Field_Access")
-	case ^Call_Expr_Argument:
+	case ^Argument:
 		fmt.println("Positional_Arg '%s':", n.name)
 		print_inline_expr(n.value)
 	case ^Ident:
@@ -596,7 +596,7 @@ print_inline_expr_to_builder :: proc(sb: ^strings.Builder, expr: ^Expr) {
 			}
 
 			#partial switch a in arg.derived {
-			case ^Call_Expr_Argument:
+			case ^Argument:
 				if a.name != "" {
 					strings.write_string(sb, a.name)
 					strings.write_string(sb, ": ")

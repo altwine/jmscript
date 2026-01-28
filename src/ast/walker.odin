@@ -32,7 +32,7 @@ Visitor_VTable :: struct {
 
 	visit_param:			  proc(v: ^Visitor, node: ^Param),
 	visit_param_list:	      proc(v: ^Visitor, node: ^Param_List),
-	visit_call_expr_arg:	  proc(v: ^Visitor, node: ^Call_Expr_Argument),
+	visit_argument:	          proc(v: ^Visitor, node: ^Argument),
 	visit_annotation:	      proc(v: ^Visitor, node: ^Annotation),
 	visit_file:			      proc(v: ^Visitor, node: ^File),
 
@@ -247,9 +247,9 @@ walk_node :: proc(w: ^Walker, node: ^Node) {
 			walk_child_node(w, node, param)
 		}
 
-	case ^Call_Expr_Argument:
-		if w.vtable.visit_call_expr_arg != nil {
-			w.vtable.visit_call_expr_arg(&w.visitor, n)
+	case ^Argument:
+		if w.vtable.visit_argument != nil {
+			w.vtable.visit_argument(&w.visitor, n)
 		}
 		walk_child_expr(w, node, n.value)
 

@@ -551,7 +551,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 		} else {
 			fmt.printfln("[DEBUG] Unhandled")
 		}
-	case ^ast.Call_Expr_Argument:
+	case ^ast.Argument:
 		fmt.printfln("UNHANDLED :: %v", v.pos)
 	case:
 		fmt.printfln("UNHANDLED :: %v", v)

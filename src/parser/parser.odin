@@ -661,7 +661,7 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 	open_paren := current(p)
 	advance(p)
 
-	args := make([dynamic]^ast.Call_Expr_Argument, p.file.alloc)
+	args := make([dynamic]^ast.Argument, p.file.alloc)
 	positional_args_started := false
 
 	if !match(p, .Close_Paren) {
@@ -681,7 +681,7 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 				add_error(p, "expected expression in function call argument", current(p), current(p))
 				break
 			}
-			pos_arg := ast.new(ast.Call_Expr_Argument, arg.pos, arg.end, p.file.alloc)
+			pos_arg := ast.new(ast.Argument, arg.pos, arg.end, p.file.alloc)
 			pos_arg.name = pos_arg_name
 			pos_arg.value = arg
 			append(&args, pos_arg)
