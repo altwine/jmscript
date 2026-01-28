@@ -565,6 +565,8 @@ make_type_info :: proc(kind: Type_Kind, allocator := context.allocator) -> ^Type
 add_builtin_functions :: proc(c: ^Checker) {
 	game_value_type := create_builtin_type_info(c, .GameValue)
 	append(&game_value_type.param_names, "value")
+	append(&game_value_type.param_names, "selection")
+	append(&game_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&game_value_type.param_types, make_type_info(.Text, c.alloc))
 	add_symbol(c, make_symbol(c, "game_value", game_value_type, nil))
 
@@ -576,15 +578,21 @@ add_builtin_functions :: proc(c: ^Checker) {
 	add_symbol(c, make_symbol(c, "item", item_value_type, nil))
 
 	array_value_type := create_builtin_type_info(c, .Array)
+	// ...
 	add_symbol(c, make_symbol(c, "array", array_value_type, nil))
 
 	dict_value_type := create_builtin_type_info(c, .Dict)
+	// ...
 	add_symbol(c, make_symbol(c, "dict", dict_value_type, nil))
 
 	location_value_type := create_builtin_type_info(c, .Location)
 	append(&location_value_type.param_names, "x")
 	append(&location_value_type.param_names, "y")
 	append(&location_value_type.param_names, "z")
+	append(&location_value_type.param_names, "yaw")
+	append(&location_value_type.param_names, "pitch")
+	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
@@ -600,23 +608,52 @@ add_builtin_functions :: proc(c: ^Checker) {
 	add_symbol(c, make_symbol(c, "vec3", vec3_value_type, nil))
 
 	sound_value_type := create_builtin_type_info(c, .Sound)
-	// TODO
+	append(&sound_value_type.param_names, "sound")
+	append(&sound_value_type.param_names, "pitch")
+	append(&sound_value_type.param_names, "volume")
+	append(&sound_value_type.param_names, "variation")
+	append(&sound_value_type.param_names, "source")
+	append(&sound_value_type.param_types, make_type_info(.Text, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Text, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Text, c.alloc))
 	add_symbol(c, make_symbol(c, "sound", sound_value_type, nil))
 
 	particle_value_type := create_builtin_type_info(c, .Particle)
-	// TODO
+	append(&particle_value_type.param_names, "particle_type")
+	append(&particle_value_type.param_names, "count")
+	append(&particle_value_type.param_names, "first_spread")
+	append(&particle_value_type.param_names, "second_spread")
+	append(&particle_value_type.param_names, "x_motion")
+	append(&particle_value_type.param_names, "y_motion")
+	append(&particle_value_type.param_names, "z_motion")
+	append(&particle_value_type.param_names, "color")
+	append(&particle_value_type.param_names, "size")
+	append(&sound_value_type.param_types, make_type_info(.Text, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
 	add_symbol(c, make_symbol(c, "particle", particle_value_type, nil))
 
 	block_value_type := create_builtin_type_info(c, .Block)
-	// TODO
+	append(&block_value_type.param_names, "id")
+	append(&block_value_type.param_types, make_type_info(.Text, c.alloc))
 	add_symbol(c, make_symbol(c, "block", block_value_type, nil))
 
 	number_value_type := create_builtin_type_info(c, .Number)
-	// TODO
+	append(&number_value_type.param_names, "value")
+	append(&number_value_type.param_types, make_type_info(.Any, c.alloc))
 	add_symbol(c, make_symbol(c, "number", number_value_type, nil))
 
 	text_value_type := create_builtin_type_info(c, .Text)
-	// TODO
+	append(&text_value_type.param_names, "value")
+	append(&text_value_type.param_types, make_type_info(.Any, c.alloc))
 	add_symbol(c, make_symbol(c, "text", text_value_type, nil))
 
 	enum_value_type := create_builtin_type_info(c, .Enum)
@@ -625,7 +662,12 @@ add_builtin_functions :: proc(c: ^Checker) {
 	add_symbol(c, make_symbol(c, "enum", enum_value_type, nil))
 
 	potion_value_type := create_builtin_type_info(c, .Potion)
-	// TODO
+	append(&enum_value_type.param_names, "potion")
+	append(&enum_value_type.param_names, "amplifier")
+	append(&enum_value_type.param_names, "duration")
+	append(&enum_value_type.param_types, make_type_info(.Text, c.alloc))
+	append(&enum_value_type.param_types, make_type_info(.Number, c.alloc))
+	append(&enum_value_type.param_types, make_type_info(.Number, c.alloc))
 	add_symbol(c, make_symbol(c, "potion", potion_value_type, nil))
 }
 
