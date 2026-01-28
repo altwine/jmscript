@@ -16,7 +16,7 @@ event player_join() {
 
 ## Installation
 You can install latest ready-to-go binary from [releases](https://github.com/altwine/jmscript/releases/latest).
-Currently, **only windows amd64 is supported**.
+Currently, **only windows x64 is supported**.
 
 Quick start:
 ```bash

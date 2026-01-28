@@ -22,7 +22,7 @@ parser_init :: proc(p: ^Parser, allocator := context.allocator) {
 	p.errs = make([dynamic]error.Error, allocator)
 }
 
-parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [dynamic]error.Error) {
+parse_file :: proc(p: ^Parser, fullpath: string) -> (^ast.File, [dynamic]error.Error) {
 	l: lexer.Lexer
 	lexer.lexer_init(&l, fullpath, p.alloc)
 	p.tokens = lexer.lex(&l)
@@ -31,7 +31,6 @@ parse_file :: proc(p: ^Parser, fullpath: string, file_id: int) -> (^ast.File, [d
 	p.file = ast.new(ast.File, first_token.pos, last_token.pos, p.alloc)
 	p.file.alloc = p.alloc
 	p.file.fullpath = fullpath
-	p.file.id = file_id
 	src, _ := os.read_entire_file_from_filename(fullpath, p.alloc)
 	p.file.src = cast(string)src // TODO: pass file src from lexer
 	p.file.tags = parse_file_tags(p)
@@ -73,11 +72,11 @@ skip_optional_semicolon :: proc(p: ^Parser) {
 }
 
 add_error :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
-	append(&p.errs, error.Error{file=p.file, message=message})
+	append(&p.errs, error.Error{file=p.file, cause_pos=token_from.pos, cause_end=token_to.pos, message=message})
 }
 
 add_warning :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
-	append(&p.errs, error.Error{file=p.file, message=message, severity=.Warning})
+	append(&p.errs, error.Error{file=p.file, cause_pos=token_from.pos, cause_end=token_to.pos, message=message, severity=.Warning})
 }
 
 match :: proc(p: ^Parser, kind: lexer.Token_Kind) -> bool {

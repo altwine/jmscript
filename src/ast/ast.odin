@@ -1,5 +1,6 @@
 package ast
 
+import "core:sync"
 import "core:mem"
 import "core:fmt"
 import "core:strings"
@@ -10,12 +11,12 @@ Node :: struct {
 	pos:     lexer.Pos,
 	end:     lexer.Pos,
 	derived: Any_Node,
+	id:      int,
 }
 
 File :: struct {
 	using node: Node,
 	alloc:    mem.Allocator,
-	id:       int,
 	pkg:      string,
 	fullpath: string,
 	src:      string,
@@ -249,11 +250,13 @@ Any_Stmt :: union {
 	^Value_Decl,
 }
 
+node_id := 0
 new :: proc($T: typeid, pos, end: lexer.Pos, allocator := context.allocator) -> ^T {
 	n, _ := mem.new(T, allocator)
 	n.pos = pos
 	n.end = end
 	n.derived = n
+	n.id = sync.atomic_add(&node_id, 1)
 	return n
 }
 
@@ -270,7 +273,7 @@ print_tree :: proc(node: ^Node, indent := 0) {
 
 	switch n in node.derived {
 	case ^File:
-		fmt.printfln("File (id: %d, pkg: '%s', path: '%s')", n.id, n.pkg, n.fullpath)
+		fmt.printfln("File (pkg: '%s', path: '%s')", n.pkg, n.fullpath)
 		for decl in n.decls {
 			print_tree(decl, indent + 1)
 		}
@@ -562,31 +565,31 @@ print_inline_expr_to_builder :: proc(sb: ^strings.Builder, expr: ^Expr) {
 		strings.write_string(sb, n.tok.content)
 	case ^Field_Access:
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, '.')
+		strings.write_rune(sb, '.')
 		strings.write_string(sb, n.field)
 	case ^Unary_Expr:
-		strings.write_byte(sb, '(')
+		strings.write_rune(sb, '(')
 		strings.write_string(sb, n.op.content)
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, ')')
+		strings.write_rune(sb, ')')
 	case ^Binary_Expr:
-		strings.write_byte(sb, '(')
+		strings.write_rune(sb, '(')
 		print_inline_expr_to_builder(sb, n.left)
-		strings.write_byte(sb, ' ')
+		strings.write_rune(sb, ' ')
 		strings.write_string(sb, n.op.content)
-		strings.write_byte(sb, ' ')
+		strings.write_rune(sb, ' ')
 		print_inline_expr_to_builder(sb, n.right)
-		strings.write_byte(sb, ')')
+		strings.write_rune(sb, ')')
 	case ^Paren_Expr:
 		print_inline_expr_to_builder(sb, n.expr)
 	case ^Index_Expr:
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, '[')
+		strings.write_rune(sb, '[')
 		print_inline_expr_to_builder(sb, n.index)
-		strings.write_byte(sb, ']')
+		strings.write_rune(sb, ']')
 	case ^Call_Expr:
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, '(')
+		strings.write_rune(sb, '(')
 		for arg, i in n.args {
 			if i > 0 {
 				strings.write_string(sb, ", ")
@@ -603,16 +606,16 @@ print_inline_expr_to_builder :: proc(sb: ^strings.Builder, expr: ^Expr) {
 				print_inline_expr_to_builder(sb, arg)
 			}
 		}
-		strings.write_byte(sb, ')')
+		strings.write_rune(sb, ')')
 	case ^Field_Value:
-		strings.write_byte(sb, '(')
+		strings.write_rune(sb, '(')
 		print_inline_expr_to_builder(sb, n.field)
 		strings.write_string(sb, ": ")
 		print_inline_expr_to_builder(sb, n.value)
-		strings.write_byte(sb, ')')
+		strings.write_rune(sb, ')')
 	case ^Member_Access_Expr:
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, '.')
+		strings.write_rune(sb, '.')
 		print_inline_expr_to_builder(sb, n.field)
 	}
 }

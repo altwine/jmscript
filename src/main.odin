@@ -68,6 +68,8 @@ main :: proc() {
 		command_compile()
 	case "version":
 		command_version()
+	case "init":
+		command_init()
 	case "report":
 		command_report()
 	case "help":
@@ -82,12 +84,12 @@ command_compile :: proc() {
 		thread_count := max(1, os.processor_core_count())
 		fmt.printfln("[DEBUG] [Threading] Supported. Available threads: %d", thread_count)
 	} else {
-		fmt.printfln("[DEBUG] [Threading] Not supported.")
+		fmt.println("[DEBUG] [Threading] Not supported.")
 	}
-	fmt.printfln("[DEBUG] [Threading] Not implemented right now.")
+	fmt.println("[DEBUG] [Threading] Not implemented right now.")
 
 	if len(os.args) < 3 {
-		fmt.printfln("Not enough arguments: path to dir is expected!")
+		fmt.println("Not enough arguments: path to dir is expected!")
 		print_help()
 		return
 	}
@@ -133,7 +135,7 @@ command_compile :: proc() {
 	if slice.contains(os.args, "-u") {
 		code_url, ok := upload_code(result_code, alloc)
 		if !ok {
-			fmt.printfln("Code not uploaded for some reason!!!!!")
+			fmt.println("Code not uploaded for some reason!!!!!")
 			return
 		}
 		fmt.printfln("Your code is uploaded: /module loadUrl force %s", code_url)
@@ -242,12 +244,51 @@ upload_code :: proc(code: string, allocator := context.allocator) -> (string, bo
 	return code_url, true
 }
 
+command_init :: proc() {
+	if len(os.args) < 3 {
+		fmt.println("Not enough arguments: name of dir is expected!")
+		print_help()
+		return
+	}
+
+	dir_name := os.args[2]
+	if os.exists(dir_name) {
+		fmt.printfln("Path '%s' already exists, aborting...", dir_name)
+		return
+	}
+
+	err := os.make_directory(dir_name)
+	if err != os.ERROR_NONE {
+		fmt.printfln("Cannot create '%s' directory, aborting...", dir_name)
+		return
+	}
+	fmt.printfln("Directory '%s' successfully created!", dir_name)
+
+	example_code :: #load("../resources/example.jms", string)
+	file_path := fmt.tprintf("%s/%s", dir_name, "main.jms")
+
+	fd, err2 := os.open(file_path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	if err2 != os.ERROR_NONE {
+		fmt.printfln("Cannot create '%s' file, aborting...", file_path)
+		return
+	}
+
+	_, err3 := os.write_string(fd, example_code)
+	if err3 != os.ERROR_NONE {
+		fmt.printfln("Cannot write to file '%s', aborting...", file_path)
+		return
+	}
+
+	fmt.println("Project created successfully!")
+}
+
 print_help :: proc() {
 	fmt.println("Usage:")
 	fmt.printfln("\t%s command [arguments]", os.args[0])
 	fmt.println("Commands:")
 	fmt.println("\tcompile   Compiles directory. All .jms files in the directory must have same package.")
 	fmt.println("\tversion   Prints version.")
+	fmt.println("\tinit      Initialize project.")
 	fmt.println("\treport    Prints system information for bug report.")
 	fmt.println("\thelp      Prints help message.")
 	fmt.println("\t...       Everything else prints this message.")
