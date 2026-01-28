@@ -40,7 +40,6 @@ $ odin run ./scripts/generate_docs # Generate docs
 - `array`/`dict` literals;
 - Slices;
 - Decompiler;
-- `init` command;
 - Proper memory management system;
 
 # License
