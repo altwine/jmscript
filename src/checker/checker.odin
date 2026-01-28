@@ -32,24 +32,74 @@ Type_Kind :: enum {
 	Event,
 }
 
+Type_Info :: struct {
+	kind:		Type_Kind,
+	return_t:	^Type_Info,
+	param_names: [dynamic]string,
+	param_types: [dynamic]^Type_Info,
+	metadata:	Metadata,
+}
+
+Symbol :: struct {
+	name:		string,
+	type:		^Type_Info,
+	decl_node:   ^ast.Node,
+	metadata:	Metadata,
+	is_const:	bool,
+}
+
+Symbol_Table :: struct {
+	global_scope:  ^Scope,
+	current_scope: ^Scope,
+	scope_level:   int,
+}
+
+Scope :: struct {
+	symbols:  [dynamic]^Symbol,
+	parent:   ^Scope,
+	level:	int,
+	children: [dynamic]^Scope,
+}
+
+Checker :: struct {
+	alloc:		mem.Allocator,
+	symbol_table: ^Symbol_Table,
+	files:		[dynamic]^ast.File,
+	errs:		 [dynamic]error.Error,
+	current_file: ^ast.File,
+	current_file_idx: int,
+
+	collector_walker:	 ^ast.Walker,
+	type_checker_walker: ^ast.Walker,
+
+	collector_vtable:	ast.Visitor_VTable,
+	type_checker_vtable: ast.Visitor_VTable,
+}
+
+CheckerContext :: struct {
+	in_function: string,
+	current_return_type: ^Type_Info,
+	is_checking_purity: bool,
+}
+
 string_to_type_kind :: proc(c: ^Checker, type: string, origin: ^ast.Node) -> Type_Kind {
 	switch type {
 	case "any":        return .Any
-	case "number":     return .Number
-	case "text":       return .Text
+	case "number":	   return .Number
+	case "text":	   return .Text
 	case "particle":   return .Particle
-	case "sound":      return .Sound
-	case "potion":     return .Potion
-	case "block":      return .Block
-	case "item":       return .Item
-	case "enum":       return .Enum
+	case "sound":	   return .Sound
+	case "potion":	   return .Potion
+	case "block":	   return .Block
+	case "item":	   return .Item
+	case "enum":	   return .Enum
 	case "game_value": return .GameValue
 	case "location":   return .Location
-	case "vec3":       return .Vector
+	case "vec3":	   return .Vector
 	case "loc_text":   return .LocalizedText
-	case "bool":       return .Boolean
-	case "array":      return .Array
-	case "dict":       return .Dict
+	case "bool":	   return .Boolean
+	case "array":	   return .Array
+	case "dict":	   return .Dict
 	case "void", "":   return .Void
 
 	case "vector", "vector3":
@@ -80,8 +130,8 @@ type_kind_to_string :: proc(c: ^Checker, kind: Type_Kind) -> string {
 	case .Any:           return "any"
 	case .Number:        return "number"
 	case .Text:          return "text"
-	case .Particle:      return "particle"
-	case .Sound:         return "sound"
+	case .Particle:	     return "particle"
+	case .Sound:	     return "sound"
 	case .Potion:        return "potion"
 	case .Block:         return "block"
 	case .Item:          return "item"
@@ -90,7 +140,7 @@ type_kind_to_string :: proc(c: ^Checker, kind: Type_Kind) -> string {
 	case .Location:      return "location"
 	case .Vector:        return "vec3"
 	case .LocalizedText: return "loc_text"
-	case .Boolean:       return "bool"
+	case .Boolean:	     return "bool"
 	case .Array:         return "array"
 	case .Dict:          return "dict"
 	case .Function:      return "function"
@@ -100,105 +150,318 @@ type_kind_to_string :: proc(c: ^Checker, kind: Type_Kind) -> string {
 	return "invalid"
 }
 
-Type_Info :: struct {
-	kind:        Type_Kind,
-	return_t:    ^Type_Info,
-	param_names: [dynamic]string,
-	param_types: [dynamic]^Type_Info,
-	metadata:    Metadata,
-}
-
-Symbol :: struct {
-	name:        string,
-	type:        ^Type_Info,
-	decl_node:   ^ast.Node,
-	metadata:    Metadata,
-	is_const:    bool,
-}
-
-Symbol_Table :: struct {
-	global_scope:  ^Scope,
-	current_scope: ^Scope,
-	scope_level:   int,
-}
-
-Scope :: struct {
-	symbols:  [dynamic]^Symbol,
-	parent:   ^Scope,
-	level:    int,
-	children: [dynamic]^Scope,
-}
-
-Checker :: struct {
-	alloc:        mem.Allocator,
-	symbol_table: ^Symbol_Table,
-	files:        [dynamic]^ast.File,
-	errs:         [dynamic]error.Error,
-	current_file: ^ast.File,
-	current_file_idx: int,
-}
-
 checker_init :: proc(c: ^Checker, allocator := context.allocator) {
 	c.alloc = allocator
 	c.errs = make([dynamic]error.Error, allocator)
 	c.symbol_table = new(Symbol_Table, allocator)
 	c.symbol_table.scope_level = -1
+
+	c.collector_vtable = ast.Visitor_VTable{}
+	c.type_checker_vtable = ast.Visitor_VTable{}
+
+	c.collector_vtable.visit_func_stmt = _collect_visit_func_stmt
+	c.collector_vtable.visit_event_stmt = _collect_visit_event_stmt
+	c.collector_vtable.visit_value_decl = _collect_visit_value_decl
+	c.collector_vtable.before_visit_child = _collect_before_visit_child
+	c.collector_vtable.after_visit_child = _collect_after_visit_child
+
+	c.type_checker_vtable.visit_func_stmt = _type_check_visit_func_stmt
+	c.type_checker_vtable.visit_event_stmt = _type_check_visit_event_stmt
+	c.type_checker_vtable.visit_value_decl = _type_check_visit_value_decl
+	c.type_checker_vtable.visit_assign_stmt = _type_check_visit_assign_stmt
+	c.type_checker_vtable.visit_expr_stmt = _type_check_visit_expr_stmt
+	c.type_checker_vtable.visit_if_stmt = _type_check_visit_if_stmt
+	c.type_checker_vtable.visit_for_stmt = _type_check_visit_for_stmt
+	c.type_checker_vtable.visit_return_stmt = _type_check_visit_return_stmt
+	c.type_checker_vtable.visit_defer_stmt = _type_check_visit_defer_stmt
+	c.type_checker_vtable.visit_ident = _type_check_visit_ident
+	c.type_checker_vtable.visit_call_expr = _type_check_visit_call_expr
+	c.type_checker_vtable.visit_binary_expr = _type_check_visit_binary_expr
+	c.type_checker_vtable.before_visit_child = _type_check_before_visit_child
+	c.type_checker_vtable.after_visit_child = _type_check_after_visit_child
+
+	c.collector_walker = new(ast.Walker, allocator)
+	c.type_checker_walker = new(ast.Walker, allocator)
+
+	ast.walker_init(c.collector_walker, &c.collector_vtable, allocator)
+	ast.walker_init(c.type_checker_walker, &c.type_checker_vtable, allocator)
+
+	c.collector_walker.user_data = c
+	c.type_checker_walker.user_data = c
+}
+
+@(private="file")
+_collect_enter_scope :: proc(c: ^Checker, node: ^ast.Node) -> bool {
+	#partial switch n in node.derived {
+	case ^ast.Block_Stmt:
+		enter_scope(c)
+		return true
+	case ^ast.Func_Stmt, ^ast.Event_Stmt:
+		return true
+	}
+	return false
+}
+
+@(private="file")
+_collect_exit_scope :: proc(c: ^Checker, node: ^ast.Node) {
+	#partial switch n in node.derived {
+	case ^ast.Block_Stmt, ^ast.Func_Stmt, ^ast.Event_Stmt:
+		exit_scope(c)
+	}
+}
+
+@(private="file")
+_type_check_enter_scope :: proc(c: ^Checker, node: ^ast.Node) -> bool {
+	#partial switch n in node.derived {
+	case ^ast.Block_Stmt:
+		enter_scope(c)
+		return true
+	}
+	return false
+}
+
+@(private="file")
+_type_check_exit_scope :: proc(c: ^Checker, node: ^ast.Node) {
+	#partial switch n in node.derived {
+	case ^ast.Block_Stmt:
+		exit_scope(c)
+	}
+}
+
+@(private="file")
+_type_check_before_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) -> bool {
+	c := cast(^Checker)v.user_data
+	if parent != nil {
+		_type_check_enter_scope(c, child)
+	}
+	return true
+}
+
+@(private="file")
+_type_check_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
+	c := cast(^Checker)v.user_data
+	if parent != nil && child != nil {
+		_type_check_exit_scope(c, child)
+	}
 }
 
 checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table, [dynamic]error.Error) {
 	c.files = files
+
 	enter_scope(c)
 	add_builtin_functions(c)
 	add_native_functions(c)
-	c.current_file_idx = 0
-	for file in files {
+
+	for file, idx in files {
 		c.current_file = file
-		for decl in file.decls {
-			collect_handler(c, decl)
-		}
-		c.current_file_idx += 1
-	}
-	c.current_file_idx = 0
-	for file in files {
-		c.current_file = file
-		for decl in file.decls {
-			collect_stmt(c, decl)
-		}
-		c.current_file_idx += 1
+		c.current_file_idx = idx
+		ast.walk_file(c.collector_walker, file)
 	}
 
 	c.current_file_idx = 0
 	for file in files {
 		c.current_file = file
-		for decl in file.decls {
-			check_stmt(c, decl)
-		}
+		ast.walk_file(c.type_checker_walker, file)
+		c.current_file_idx += 1
 	}
 
 	exit_scope(c)
-
-	// for sym in c.symbol_table.global_scope.symbols {
-	// 	fmt.printfln("[global] %s: %v", sym.name, sym.type)
-	// }
-	// for scope in c.symbol_table.global_scope.children {
-	// 	for sym in scope.symbols {
-	// 		fmt.printfln("[local] %s: %v", sym.name, sym.type)
-	// 	}
-	// }
-
 	return c.symbol_table, c.errs
 }
 
-check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
-	#partial switch t in stmt.derived {
-	case ^ast.Event_Stmt:
-		check_anno(c, stmt)
-		for item in t.body.stmts {
-			check_stmt(c, item)
-		}
+@(private="file")
+_collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
+	c := cast(^Checker)v.user_data
 
-		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
-		if found && check_function_is_pure(c, t.name) {
+	if c.symbol_table.scope_level > 0 {
+		add_error(c, "can't define function in nested scope", node)
+		return
+	}
+
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+
+	ret_type_kind := string_to_type_kind(c, node.result, node)
+	ret_type := new(Type_Info, c.alloc)
+	ret_type.kind = ret_type_kind
+	ret_type.metadata = make(Metadata, c.alloc)
+
+	symbol := make_symbol(c, node.name, make_type_func(c, ret_type), node)
+
+	if !add_symbol(c, symbol) {
+		add_error(c, fmt.tprintf("function '%s' is already defined", node.name), node)
+		return
+	}
+
+	enter_scope(c)
+
+	if node.params != nil {
+		for param in node.params.list {
+			type_info := new(Type_Info, c.alloc)
+			type_info.kind = string_to_type_kind(c, param.type, param)
+			type_info.metadata = make(Metadata, c.alloc)
+
+			param_sym := make_symbol(c, param.name, type_info, node)
+			add_symbol(c, param_sym)
+
+			append(&symbol.type.param_names, param_sym.name)
+			append(&symbol.type.param_types, type_info)
+		}
+	}
+
+	if node.body != nil {
+		ast.walk_node(c.collector_walker, node.body)
+	}
+}
+
+@(private="file")
+_collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
+	c := cast(^Checker)v.user_data
+
+	if c.symbol_table.scope_level > 0 {
+		add_error(c, "can't define event in nested scope", node)
+		return
+	}
+
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+
+	symbol := make_symbol(c, node.name, make_type_event(c), node)
+
+	if !add_symbol(c, symbol) {
+		add_error(c, fmt.tprintf("event '%s' is already defined", node.name), node)
+		return
+	}
+
+	enter_scope(c)
+
+	if node.params != nil {
+		for param in node.params.list {
+			type_info := new(Type_Info, c.alloc)
+			type_info.kind = string_to_type_kind(c, param.type, param)
+			type_info.metadata = make(Metadata, c.alloc)
+
+			param_sym := make_symbol(c, param.name, type_info, node)
+			add_symbol(c, param_sym)
+
+			append(&symbol.type.param_names, param_sym.name)
+			append(&symbol.type.param_types, type_info)
+		}
+	}
+
+	if node.body != nil {
+		ast.walk_node(c.collector_walker, node.body)
+	}
+}
+
+@(private="file")
+_collect_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
+	c := cast(^Checker)v.user_data
+
+	if _, already_defined := lookup_local_symbol(c.symbol_table.current_scope, node.name);
+		already_defined {
+		add_error(c, fmt.tprintf("variable '%s' is already defined", node.name), node)
+		return
+	}
+
+	type_info := get_type_info_from_expression(c, node.value)
+
+	if node.type != "" && type_info.kind != .Any {
+		provided_type_kind := string_to_type_kind(c, node.type, node)
+		if type_info.kind != provided_type_kind {
+			add_error(c, fmt.tprintf("explicitly stated type doesn't match variable content: '%s' != '%s'",
+				type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), node)
+		}
+	}
+
+	symbol := make_symbol(c, node.name, type_info, node)
+	symbol.is_const = node.is_const
+	add_symbol(c, symbol)
+}
+
+@(private="file")
+_collect_before_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) -> bool {
+	c := cast(^Checker)v.user_data
+	if parent != nil {
+		_collect_enter_scope(c, child)
+	}
+	return true
+}
+
+@(private="file")
+_collect_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
+	c := cast(^Checker)v.user_data
+	if parent != nil && child != nil {
+		_collect_exit_scope(c, child)
+	}
+}
+
+@(private="file")
+_type_check_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
+	c := cast(^Checker)v.user_data
+
+	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
+	if found && check_function_is_pure(c, node.name) {
+		if flags_field, has := sym.metadata["flags"]; has {
+			if flags, ok := flags_field.(Flags); ok {
+				flags += {.PURE}
+				sym.metadata["flags"] = flags
+			}
+		} else {
+			sym.metadata["flags"] = Flags{.PURE}
+		}
+	}
+
+	if anno_is_true(cast(^ast.Stmt)node, "pure") && !check_function_is_pure(c, node.name) {
+		add_error(c, fmt.tprintf("function '%s' marked as @pure but has non-pure content", node.name), &node.stmt_base)
+	}
+}
+
+@(private="file")
+_type_check_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
+	c := cast(^Checker)v.user_data
+
+	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
+	if found && check_function_is_pure(c, node.name) {
+		if flags_field, has := sym.metadata["flags"]; has {
+			if flags, ok := flags_field.(Flags); ok {
+				flags += {.PURE}
+				sym.metadata["flags"] = flags
+			}
+		} else {
+			sym.metadata["flags"] = Flags{.PURE}
+		}
+	}
+
+	if anno_is_true(cast(^ast.Stmt)node, "pure") && !check_function_is_pure(c, node.name) {
+		add_error(c, fmt.tprintf("event '%s' marked as @pure but has non-pure content", node.name), &node.stmt_base)
+	}
+}
+
+@(private="file")
+_type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
+	c := cast(^Checker)v.user_data
+
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+
+	if node.is_const && !check_expression_is_pure(c, node.value) {
+		add_error(c, fmt.tprintf("cannot initialize constant '%s' with non-constant value '%s'",
+			node.name, ast.expr_to_string(node.value, context.temp_allocator)), &node.stmt_base)
+	}
+
+	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
+	if found && (node.is_const || anno_is_true(cast(^ast.Stmt)node, "pure")) {
+		if check_expression_is_pure(c, node.value) {
 			if flags_field, has := sym.metadata["flags"]; has {
 				if flags, ok := flags_field.(Flags); ok {
 					flags += {.PURE}
@@ -207,239 +470,238 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			} else {
 				sym.metadata["flags"] = Flags{.PURE}
 			}
+		} else if anno_is_true(cast(^ast.Stmt)node, "pure") {
+			add_error(c, fmt.tprintf("variable '%s' marked as @pure but initialized with non-pure expression",
+				node.name), &node.stmt_base)
 		}
-
-		if anno_is_true(t, "pure") && !check_function_is_pure(c, t.name) {
-			add_error(c, fmt.tprintf("event '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
-		}
-
-	case ^ast.Func_Stmt:
-		check_anno(c, stmt)
-		for item in t.body.stmts {
-			check_stmt(c, item)
-		}
-
-		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
-		if found {
-			pure := check_function_is_pure(c, t.name)
-
-			if pure {
-				if flags_field, has := sym.metadata["flags"]; has {
-					if flags, ok := flags_field.(Flags); ok {
-						flags += {.PURE}
-						sym.metadata["flags"] = flags
-					}
-				} else {
-					sym.metadata["flags"] = Flags{.PURE}
-				}
-			}
-
-			if anno_is_true(t, "pure") && !pure {
-				add_error(c, fmt.tprintf("function '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
-			}
-		}
-
-	case ^ast.Block_Stmt:
-		for body_stmt in t.stmts {
-			check_stmt(c, body_stmt)
-		}
-
-	case ^ast.Value_Decl:
-		check_anno(c, stmt)
-
-		if t.is_const && !check_expression_is_pure(c, t.value) {
-			add_error(c, fmt.tprintf("cannot initialize constant '%s' with not constant value '%s'",
-				t.name, ast.expr_to_string(t.value, context.temp_allocator)), &stmt.stmt_base)
-		}
-
-		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
-		if found && (t.is_const || anno_is_true(stmt, "pure")) {
-			if check_expression_is_pure(c, t.value) {
-				if flags_field, has := sym.metadata["flags"]; has {
-					if flags, ok := flags_field.(Flags); ok {
-						flags += {.PURE}
-						sym.metadata["flags"] = flags
-					}
-				} else {
-					sym.metadata["flags"] = Flags{.PURE}
-				}
-			} else if anno_is_true(stmt, "pure") {
-				add_error(c, fmt.tprintf("variable '%s' marked as @pure but initialized with non pure expression",
-					t.name), &stmt.stmt_base)
-			}
-		}
-
-	case ^ast.Assign_Stmt:
-		check_anno(c, stmt)
-
-		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
-		if found {
-			if flags_field, has := sym.metadata["flags"]; has {
-				if flags, ok := flags_field.(Flags); ok && .PURE in flags {
-					if !check_expression_is_pure(c, t.expr) {
-						add_error(c, fmt.tprintf("cannot assign non pure value to pure variable '%s'", t.name), &stmt.stmt_base)
-					}
-				}
-			}
-		}
-
-	case ^ast.Expr_Stmt:
-		check_anno(c, stmt)
-
-	case ^ast.Defer_Stmt:
-		check_anno(c, stmt)
-
-	case ^ast.Return_Stmt:
-		check_anno(c, stmt)
-
-	case ^ast.If_Stmt:
-		check_anno(c, stmt)
-		check_stmt(c, t.body)
-		if t.else_stmt != nil {
-			check_stmt(c, t.else_stmt)
-		}
-
-	case ^ast.For_Stmt:
-		check_anno(c, stmt)
-		check_stmt(c, t.body)
-
-	case:
-		check_anno(c, stmt)
 	}
 }
 
-collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
-	#partial switch t in stmt.derived {
-	case ^ast.Event_Stmt:
-		symbol := make_symbol(c, t.name, make_type_event(c), stmt)
-		add_symbol(c, symbol)
-		enter_scope(c)
-		for param in t.params.list {
-			param_name := param.name
-			param_type := param.type
-			type_info := new(Type_Info, c.alloc)
-			type_info.kind = string_to_type_kind(c, param_type, param)
-			type_info.metadata = make(Metadata, c.alloc)
-			param_sym := make_symbol(c, param_name, type_info, stmt)
-			add_symbol(c, param_sym)
-			append(&symbol.type.param_names, param_sym.name)
-			append(&symbol.type.param_types, type_info)
-		}
-		for item in t.body.stmts {
-			collect_stmt(c, item)
-		}
-		exit_scope(c)
+@(private="file")
+_type_check_visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
+	c := cast(^Checker)v.user_data
 
-	case ^ast.Func_Stmt:
-		ret_type_kind := string_to_type_kind(c, t.result, t)
-		ret_type := new(Type_Info, c.alloc)
-		ret_type.kind = ret_type_kind
-		ret_type.metadata = make(Metadata, c.alloc)
-		symbol := make_symbol(c, t.name, make_type_func(c, ret_type), stmt)
-		add_symbol(c, symbol)
-		enter_scope(c)
-		for param in t.params.list {
-			param_name := param.name
-			param_type := param.type
-			type_info := new(Type_Info, c.alloc)
-			type_info.metadata = make(Metadata, c.alloc)
-			type_info.kind = string_to_type_kind(c, param_type, param)
-			param_sym := make_symbol(c, param_name, type_info, stmt)
-			add_symbol(c, param_sym)
-			append(&symbol.type.param_names, param_sym.name)
-			append(&symbol.type.param_types, type_info)
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
 		}
-		for item in t.body.stmts {
-			collect_stmt(c, item)
-		}
-		exit_scope(c)
-
-	case ^ast.Value_Decl:
-		_, is_already_defined := lookup_symbol(c.symbol_table.current_scope, t.name)
-		if is_already_defined {
-			add_error(c, fmt.tprintf("variable '%s' is already defined", t.name), t)
-			break
-		}
-
-		type_info := get_type_info_from_expression(c, t.value)
-		if type_info.kind != .Any && t.type != "" {
-			provided_type_kind := string_to_type_kind(c, t.type, t)
-			if type_info.kind != provided_type_kind {
-				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: '%s' != '%s'", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), t)
-			}
-		}
-		symbol := make_symbol(c, t.name, type_info, stmt)
-		symbol.is_const = t.is_const
-		add_symbol(c, symbol)
-
-	case ^ast.Defer_Stmt:
-		add_error(c, "top level defers isn't allowed", t)
 	}
-}
 
-collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
-	#partial switch t in stmt.derived {
-	case ^ast.Block_Stmt:
-		enter_scope(c)
-		for body_stmt in t.stmts {
-			collect_stmt(c, body_stmt)
-		}
-		exit_scope(c)
-
-	case ^ast.Assign_Stmt:
-		sym, is_exist := lookup_symbol(c.symbol_table.current_scope, t.name)
-		if !is_exist {
-			add_error(c, fmt.tprintf("variable '%s' is not declared", t.name), t)
-		}
+	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
+	if found {
 		if sym.is_const {
-			add_error(c, fmt.tprintf("can't assign to constant variable '%s'", t.name), t)
+			add_error(c, fmt.tprintf("cannot assign to constant variable '%s'", node.name), node)
 		}
 
-	case ^ast.Value_Decl:
-		if c.symbol_table.scope_level == 0 {
+		if flags_field, has := sym.metadata["flags"]; has {
+			if flags, ok := flags_field.(Flags); ok && .PURE in flags {
+				if !check_expression_is_pure(c, node.expr) {
+					add_error(c, fmt.tprintf("cannot assign non-pure value to pure variable '%s'", node.name), &node.stmt_base)
+				}
+			}
+		}
+	} else {
+		add_error(c, fmt.tprintf("variable '%s' is not declared", node.name), node)
+	}
+}
+
+@(private="file")
+_type_check_visit_ident :: proc(v: ^ast.Visitor, node: ^ast.Ident) {
+	c := cast(^Checker)v.user_data
+
+	sym, exists := lookup_symbol(c.symbol_table.current_scope, node.name)
+	if !exists {
+		add_error(c, fmt.tprintf("variable '%s' is not declared", node.name), node)
+	}
+}
+
+@(private="file")
+_type_check_visit_call_expr :: proc(v: ^ast.Visitor, node: ^ast.Call_Expr) {
+	c := cast(^Checker)v.user_data
+
+	if ident, is_ident := node.expr.derived.(^ast.Ident); is_ident {
+		sym, exists := lookup_symbol(c.symbol_table.current_scope, ident.name)
+		if !exists {
+			add_error(c, fmt.tprintf("function '%s' is not defined", ident.name), ident)
 			return
 		}
-		if _, is_already_defined := lookup_local_symbol(c.symbol_table.current_scope, t.name);
-				is_already_defined {
-			add_error(c, fmt.tprintf("variable '%s' is already defined", t.name), t)
-			break
+
+		if len(node.args) != len(sym.type.param_types) {
+			add_error(c, fmt.tprintf("invalid arguments count in function call: %d != %d",
+				len(node.args), len(sym.type.param_types)), node)
 		}
-		type_info := get_type_info_from_expression(c, t.value)
-		if type_info.kind != .Any && t.type != "" {
-			provided_type_kind := string_to_type_kind(c, t.type, t)
-			if type_info.kind != provided_type_kind {
-				add_error(c, fmt.tprintf("exlicitly stated type don't match variable content: %s != %s", type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), t)
+
+		for arg, i in node.args {
+			real_index := i
+			arg_type, param_type: ^Type_Info
+
+			if arg.name == "" {
+				arg_type = get_type_info_from_expression(c, arg.value)
+				param_type = sym.type.param_types[i]
+			} else {
+				real_index = -1
+				for param_name, arg_i in sym.type.param_names {
+					if param_name == arg.name {
+						real_index = arg_i
+						break
+					}
+				}
+
+				if real_index == -1 {
+					closest := _find_closest(c, arg.name, sym.type.param_names[:])
+					add_error(c, fmt.tprintf("invalid named argument: '%s', maybe '%s'?", arg.name, closest), node)
+					continue
+				}
+
+				arg_type = get_type_info_from_expression(c, arg.value)
+				param_type = sym.type.param_types[real_index]
+			}
+
+			if arg_type.kind == .Text && param_type.kind == .Enum {
+				action, action_exists := assets.action_native_from_mapped(ident.name)
+				if !action_exists {
+					add_error(c, "enum validation not implemented for this function", node)
+					continue
+				}
+
+				if text_lit, is_text_lit := arg.value.derived.(^ast.Basic_Lit); is_text_lit {
+					content := text_lit.tok.content[1:len(text_lit.tok.content)-1]
+					if !slice.contains(action.slots[real_index]._enum[:], content) {
+						closest := _find_closest(c, content, action.slots[real_index]._enum[:])
+						add_error(c, fmt.tprintf("invalid value for enum: '%s', maybe '%s'?", content, closest), text_lit)
+					}
+				}
+			} else if arg_type.kind != param_type.kind && !can_casted(arg_type.kind, param_type.kind) {
+				add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'",
+					type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), ident)
 			}
 		}
-		symbol := make_symbol(c, t.name, type_info, stmt)
-		symbol.is_const = t.is_const
-		add_symbol(c, symbol)
+	}
+}
 
+@(private="file")
+_type_check_visit_binary_expr :: proc(v: ^ast.Visitor, node: ^ast.Binary_Expr) {
+	c := cast(^Checker)v.user_data
+
+	left_kind := get_type_info_from_expression(c, node.left).kind
+	right_kind := get_type_info_from_expression(c, node.right).kind
+
+	if left_kind == .Any || right_kind == .Any {
+		return
+	}
+
+	if left_kind != right_kind {
+		left_str := type_kind_to_string(c, left_kind)
+		right_str := type_kind_to_string(c, right_kind)
+		add_error(c, fmt.tprintf("incompatible types: '%s' and '%s'", left_str, right_str), node)
+	}
+}
+
+@(private="file")
+_check_annotations :: proc(c: ^Checker, node: ^ast.Node) {
+	#partial switch n in node.derived {
 	case ^ast.Func_Stmt:
-		if c.symbol_table.scope_level > 0 {
-			add_error(c, "can't define function in nested scope", t)
-		}
-
+		_check_annotations_internal(c, n.annotations)
 	case ^ast.Event_Stmt:
-		if c.symbol_table.scope_level > 0 {
-			add_error(c, "can't define event in nested scope", t)
-		}
-
+		_check_annotations_internal(c, n.annotations)
+	case ^ast.Value_Decl:
+		_check_annotations_internal(c, n.annotations)
+	case ^ast.Assign_Stmt:
+		_check_annotations_internal(c, n.annotations)
 	case ^ast.Expr_Stmt:
-		get_type_info_from_expression(c, t.expr)
+		_check_annotations_internal(c, n.annotations)
+	case ^ast.If_Stmt:
+		_check_annotations_internal(c, n.annotations)
+	case ^ast.For_Stmt:
+		_check_annotations_internal(c, n.annotations)
+	case ^ast.Return_Stmt:
+		_check_annotations_internal(c, n.annotations)
+	case ^ast.Defer_Stmt:
+		_check_annotations_internal(c, n.annotations)
+	case ^ast.Block_Stmt:
+		_check_annotations_internal(c, n.annotations)
+	}
+}
 
-	case:
-		fmt.printfln("unhandled stmt: %v", t)
+@(private="file")
+_check_annotations_internal :: proc(c: ^Checker, annotations: [dynamic]ast.Annotation) {
+	for &anno in annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+}
+
+@(private="file")
+_type_check_before_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) -> bool {
+	c := cast(^Checker)v.user_data
+	_check_annotations(c, node)
+	return true
+}
+
+@(private="file")
+_type_check_visit_expr_stmt :: proc(v: ^ast.Visitor, node: ^ast.Expr_Stmt) {
+	c := cast(^Checker)v.user_data
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+}
+
+@(private="file")
+_type_check_visit_if_stmt :: proc(v: ^ast.Visitor, node: ^ast.If_Stmt) {
+	c := cast(^Checker)v.user_data
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+}
+
+@(private="file")
+_type_check_visit_for_stmt :: proc(v: ^ast.Visitor, node: ^ast.For_Stmt) {
+	c := cast(^Checker)v.user_data
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+}
+
+@(private="file")
+_type_check_visit_return_stmt :: proc(v: ^ast.Visitor, node: ^ast.Return_Stmt) {
+	c := cast(^Checker)v.user_data
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
+	}
+}
+
+@(private="file")
+_type_check_visit_defer_stmt :: proc(v: ^ast.Visitor, node: ^ast.Defer_Stmt) {
+	c := cast(^Checker)v.user_data
+	for &anno in node.annotations {
+		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+		}
 	}
 }
 
 get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Info {
 	type_info := new(Type_Info, c.alloc)
 	type_info.metadata = make(Metadata, c.alloc)
+
+	if expr == nil {
+		type_info.kind = .Invalid
+		return type_info
+	}
+
 	#partial switch v in expr.derived {
 	case ^ast.Ident:
-		sym, is_exist := lookup_symbol(c.symbol_table.current_scope, v.name)
-		if !is_exist {
+		sym, exists := lookup_symbol(c.symbol_table.current_scope, v.name)
+		if !exists {
 			add_error(c, fmt.tprintf("variable '%s' is not declared", v.name), v)
 			type_info.kind = .Invalid
 			return type_info
@@ -452,107 +714,41 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 		case .Number: type_info.kind = .Number
 		case .True, .False: type_info.kind = .Boolean
 		case:
-			fmt.printfln("got UNHANDLED literal type")
+			type_info.kind = .Invalid
 		}
 		return type_info
 
 	case ^ast.Binary_Expr:
-		left_kind := get_type_info_from_expression(c, v.left).kind
-		right_kind := get_type_info_from_expression(c, v.right).kind
-		if left_kind == .Any || right_kind == .Any {
+		left := get_type_info_from_expression(c, v.left)
+		right := get_type_info_from_expression(c, v.right)
+
+		if left.kind == .Any || right.kind == .Any {
 			type_info.kind = .Any
 			return type_info
 		}
-		if left_kind != right_kind {
-			left_kind_str := type_kind_to_string(c, left_kind)
-			right_kind_str := type_kind_to_string(c, right_kind)
-			add_error(c, fmt.tprintf("incompatible types: '%s' and '%s'", left_kind_str, right_kind_str), v)
+
+		if left.kind != right.kind {
 			type_info.kind = .Invalid
 			return type_info
 		}
-		type_info.kind = left_kind
+
+		type_info.kind = left.kind
 		return type_info
-
-	case ^ast.Paren_Expr:
-		return get_type_info_from_expression(c, v.expr)
-
-	case ^ast.Unary_Expr:
-		return get_type_info_from_expression(c, v.expr)
 
 	case ^ast.Call_Expr:
 		if ident, is_ident := v.expr.derived.(^ast.Ident); is_ident {
-			if sym, sym_exists := lookup_symbol(c.symbol_table.current_scope, ident.name); sym_exists {
-				if len(v.args) != len(sym.type.param_types) {
-					add_error(c, fmt.tprintf("invalid arguments count in function call: %d != %d", len(v.args), len(sym.type.param_types)), v)
-					type_info.kind = .Invalid
-					return type_info
-				}
-				for arg, i in v.args {
-					real_index := i
-					arg_type, param_type: ^Type_Info
-					if arg.name == "" {
-						arg_type = get_type_info_from_expression(c, arg.value)
-						param_type = sym.type.param_types[i]
-					} else {
-						real_index = -1
-						for param_name, arg_i in sym.type.param_names {
-							if param_name == arg.name {
-								real_index = arg_i
-								break
-							}
-						}
-						if real_index == -1 {
-							closest := _find_closest(c, arg.name, sym.type.param_names[:])
-							add_error(c, fmt.tprintf("invalid named argument: '%s', maybe '%s'?", arg.name, closest), v)
-							continue
-						}
-						arg_type = get_type_info_from_expression(c, arg.value)
-						param_type = sym.type.param_types[real_index]
-					}
-
-					if arg_type.kind == .Text && param_type.kind == .Enum {
-						// TODO: support enum for regular functions
-						action, action_exist := assets.action_native_from_mapped(ident.name)
-						if !action_exist {
-							add_error(c, "not implemented", v)
-							continue
-						}
-						text_lit, is_text_lit := arg.value.derived.(^ast.Basic_Lit)
-						if is_text_lit {
-							content := text_lit.tok.content[1:len(text_lit.tok.content)-1]
-							if !slice.contains(action.slots[real_index]._enum[:], content) {
-								closest := _find_closest(c, content, action.slots[real_index]._enum[:])
-								add_error(c, fmt.tprintf("invalid value for enum: '%s', maybe '%s'?", content, closest), text_lit)
-							}
-						} else {
-							add_error(c, fmt.tprintf("can't convert '%s' to 'enum'", type_kind_to_string(c, arg_type.kind)), text_lit)
-						}
-						continue
-					}
-
-					if arg_type.kind != param_type.kind {
-						if !can_casted(arg_type.kind, param_type.kind) {
-							add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'", type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), ident)
-						}
-					}
-				}
+			sym, exists := lookup_symbol(c.symbol_table.current_scope, ident.name)
+			if exists && sym.type != nil {
 				return sym.type.return_t
-			} else {
-				add_error(c, fmt.tprintf("function '%s' isn't defined", ident.name), ident)
-				type_info.kind = .Invalid
-				return type_info
 			}
-		} else {
-			fmt.printfln("invalid call expression: %v", v)
-			type_info.kind = .Invalid
-			return type_info
 		}
+		type_info.kind = .Invalid
+		return type_info
 
 	case:
-		fmt.printfln("got UNHANDLED expr: %v", v)
+		type_info.kind = .Invalid
+		return type_info
 	}
-	type_info.kind = .Invalid
-	return type_info
 }
 
 make_type_event :: proc(c: ^Checker) -> ^Type_Info {
@@ -560,7 +756,7 @@ make_type_event :: proc(c: ^Checker) -> ^Type_Info {
 	type_info_event.kind = .Event
 	type_info_event.param_types = make([dynamic]^Type_Info, c.alloc)
 	type_info_event.param_names = make([dynamic]string, c.alloc)
-	type_info_event.metadata =    make(Metadata, c.alloc)
+	type_info_event.metadata =	make(Metadata, c.alloc)
 	return type_info_event
 }
 
@@ -569,7 +765,7 @@ make_type_func :: proc(c: ^Checker, ret_type: ^Type_Info) -> ^Type_Info {
 	type_info_func.kind = .Function
 	type_info_func.param_types = make([dynamic]^Type_Info, c.alloc)
 	type_info_func.param_names = make([dynamic]string, c.alloc)
-	type_info_func.metadata =    make(Metadata, c.alloc)
+	type_info_func.metadata =	make(Metadata, c.alloc)
 	if ret_type != nil {
 		type_info_func.return_t = ret_type
 	}
@@ -1264,11 +1460,21 @@ exit_scope :: proc(c: ^Checker) {
 }
 
 add_error :: proc(c: ^Checker, message: string, cause: ^ast.Node) {
-	append(&c.errs, error.Error{file=c.files[c.current_file_idx], cause_pos=cause.pos, cause_end=cause.end, message=message})
+	append(&c.errs, error.Error{
+		file = c.files[c.current_file_idx],
+		cause_pos = cause.pos,
+		cause_end = cause.end,
+		message = message,
+	})
 }
 
 add_warning :: proc(c: ^Checker, message: string, cause: ^ast.Node) {
-	append(&c.errs, error.Error{file=c.files[c.current_file_idx], cause_pos=cause.pos, cause_end=cause.end, message=message, severity=.Warning})
+	append(&c.errs, error.Error{
+		file=c.files[c.current_file_idx],
+		cause_pos=cause.pos, cause_end=cause.end,
+		message=message,
+		severity=.Warning,
+	})
 }
 
 @(private="file")
