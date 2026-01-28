@@ -562,31 +562,31 @@ print_inline_expr_to_builder :: proc(sb: ^strings.Builder, expr: ^Expr) {
 		strings.write_string(sb, n.tok.content)
 	case ^Field_Access:
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, '.')
+		strings.write_rune(sb, '.')
 		strings.write_string(sb, n.field)
 	case ^Unary_Expr:
-		strings.write_byte(sb, '(')
+		strings.write_rune(sb, '(')
 		strings.write_string(sb, n.op.content)
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, ')')
+		strings.write_rune(sb, ')')
 	case ^Binary_Expr:
-		strings.write_byte(sb, '(')
+		strings.write_rune(sb, '(')
 		print_inline_expr_to_builder(sb, n.left)
-		strings.write_byte(sb, ' ')
+		strings.write_rune(sb, ' ')
 		strings.write_string(sb, n.op.content)
-		strings.write_byte(sb, ' ')
+		strings.write_rune(sb, ' ')
 		print_inline_expr_to_builder(sb, n.right)
-		strings.write_byte(sb, ')')
+		strings.write_rune(sb, ')')
 	case ^Paren_Expr:
 		print_inline_expr_to_builder(sb, n.expr)
 	case ^Index_Expr:
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, '[')
+		strings.write_rune(sb, '[')
 		print_inline_expr_to_builder(sb, n.index)
-		strings.write_byte(sb, ']')
+		strings.write_rune(sb, ']')
 	case ^Call_Expr:
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, '(')
+		strings.write_rune(sb, '(')
 		for arg, i in n.args {
 			if i > 0 {
 				strings.write_string(sb, ", ")
@@ -603,16 +603,16 @@ print_inline_expr_to_builder :: proc(sb: ^strings.Builder, expr: ^Expr) {
 				print_inline_expr_to_builder(sb, arg)
 			}
 		}
-		strings.write_byte(sb, ')')
+		strings.write_rune(sb, ')')
 	case ^Field_Value:
-		strings.write_byte(sb, '(')
+		strings.write_rune(sb, '(')
 		print_inline_expr_to_builder(sb, n.field)
 		strings.write_string(sb, ": ")
 		print_inline_expr_to_builder(sb, n.value)
-		strings.write_byte(sb, ')')
+		strings.write_rune(sb, ')')
 	case ^Member_Access_Expr:
 		print_inline_expr_to_builder(sb, n.expr)
-		strings.write_byte(sb, '.')
+		strings.write_rune(sb, '.')
 		print_inline_expr_to_builder(sb, n.field)
 	}
 }
