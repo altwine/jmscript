@@ -26,7 +26,7 @@ parse_dir :: proc(dir_path: string, allocator := context.allocator) -> ([dynamic
 		p: Parser
 		parser_init(&p, allocator)
 		file_path, _ := strings.clone(file_info.fullpath, p.alloc)
-		file_node, file_errs := parse_file(&p, file_path, len(files))
+		file_node, file_errs := parse_file(&p, file_path)
 		for err in file_errs {
 			append(&errs, err)
 		}

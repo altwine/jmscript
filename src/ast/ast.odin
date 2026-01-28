@@ -1,5 +1,6 @@
 package ast
 
+import "core:sync"
 import "core:mem"
 import "core:fmt"
 import "core:strings"
@@ -10,12 +11,12 @@ Node :: struct {
 	pos:     lexer.Pos,
 	end:     lexer.Pos,
 	derived: Any_Node,
+	id:      int,
 }
 
 File :: struct {
 	using node: Node,
 	alloc:    mem.Allocator,
-	id:       int,
 	pkg:      string,
 	fullpath: string,
 	src:      string,
@@ -249,11 +250,13 @@ Any_Stmt :: union {
 	^Value_Decl,
 }
 
+node_id := 0
 new :: proc($T: typeid, pos, end: lexer.Pos, allocator := context.allocator) -> ^T {
 	n, _ := mem.new(T, allocator)
 	n.pos = pos
 	n.end = end
 	n.derived = n
+	n.id = sync.atomic_add(&node_id, 1)
 	return n
 }
 
@@ -270,7 +273,7 @@ print_tree :: proc(node: ^Node, indent := 0) {
 
 	switch n in node.derived {
 	case ^File:
-		fmt.printfln("File (id: %d, pkg: '%s', path: '%s')", n.id, n.pkg, n.fullpath)
+		fmt.printfln("File (pkg: '%s', path: '%s')", n.pkg, n.fullpath)
 		for decl in n.decls {
 			print_tree(decl, indent + 1)
 		}
