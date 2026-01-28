@@ -105,12 +105,14 @@ Type_Info :: struct {
 	return_t:    ^Type_Info,
 	param_names: [dynamic]string,
 	param_types: [dynamic]^Type_Info,
+	metadata:    Metadata,
 }
 
 Symbol :: struct {
 	name:        string,
 	type:        ^Type_Info,
 	decl_node:   ^ast.Node,
+	metadata:    Metadata,
 	is_const:    bool,
 }
 
@@ -175,12 +177,12 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 
 	exit_scope(c)
 
-	// for sym_name, sym_data in c.symbol_table.global_scope.symbols {
-	// 	fmt.printfln("[global] %s: %v", sym_name, sym_data.type)
+	// for sym in c.symbol_table.global_scope.symbols {
+	// 	fmt.printfln("[global] %s: %v", sym.name, sym.type)
 	// }
 	// for scope in c.symbol_table.global_scope.children {
-	// 	for sym_name, sym_data in scope.symbols {
-	// 		fmt.printfln("[local] %s: %v", sym_name, sym_data.type)
+	// 	for sym in scope.symbols {
+	// 		fmt.printfln("[local] %s: %v", sym.name, sym.type)
 	// 	}
 	// }
 
@@ -195,14 +197,46 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			check_stmt(c, item)
 		}
 
+		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if found && check_function_is_pure(c, t.name) {
+			if flags_field, has := sym.metadata["flags"]; has {
+				if flags, ok := flags_field.(Flags); ok {
+					flags += {.PURE}
+					sym.metadata["flags"] = flags
+				}
+			} else {
+				sym.metadata["flags"] = Flags{.PURE}
+			}
+		}
+
+		if anno_is_true(t, "pure") && !check_function_is_pure(c, t.name) {
+			add_error(c, fmt.tprintf("event '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
+		}
+
 	case ^ast.Func_Stmt:
 		check_anno(c, stmt)
 		for item in t.body.stmts {
 			check_stmt(c, item)
 		}
-		sym, _ := lookup_symbol(c.symbol_table.current_scope, t.name)
-		if anno_is_true(t, "pure") && !check_function_is_pure(c, t.name) {
-			add_error(c, fmt.tprintf("function '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
+
+		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if found {
+			pure := check_function_is_pure(c, t.name)
+
+			if pure {
+				if flags_field, has := sym.metadata["flags"]; has {
+					if flags, ok := flags_field.(Flags); ok {
+						flags += {.PURE}
+						sym.metadata["flags"] = flags
+					}
+				} else {
+					sym.metadata["flags"] = Flags{.PURE}
+				}
+			}
+
+			if anno_is_true(t, "pure") && !pure {
+				add_error(c, fmt.tprintf("function '%s' marked as @pure but have non pure content", t.name), &t.stmt_base)
+			}
 		}
 
 	case ^ast.Block_Stmt:
@@ -212,13 +246,42 @@ check_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 	case ^ast.Value_Decl:
 		check_anno(c, stmt)
+
 		if t.is_const && !check_expression_is_pure(c, t.value) {
 			add_error(c, fmt.tprintf("cannot initialize constant '%s' with not constant value '%s'",
 				t.name, ast.expr_to_string(t.value, context.temp_allocator)), &stmt.stmt_base)
 		}
 
+		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if found && (t.is_const || anno_is_true(stmt, "pure")) {
+			if check_expression_is_pure(c, t.value) {
+				if flags_field, has := sym.metadata["flags"]; has {
+					if flags, ok := flags_field.(Flags); ok {
+						flags += {.PURE}
+						sym.metadata["flags"] = flags
+					}
+				} else {
+					sym.metadata["flags"] = Flags{.PURE}
+				}
+			} else if anno_is_true(stmt, "pure") {
+				add_error(c, fmt.tprintf("variable '%s' marked as @pure but initialized with non pure expression",
+					t.name), &stmt.stmt_base)
+			}
+		}
+
 	case ^ast.Assign_Stmt:
 		check_anno(c, stmt)
+
+		sym, found := lookup_symbol(c.symbol_table.current_scope, t.name)
+		if found {
+			if flags_field, has := sym.metadata["flags"]; has {
+				if flags, ok := flags_field.(Flags); ok && .PURE in flags {
+					if !check_expression_is_pure(c, t.expr) {
+						add_error(c, fmt.tprintf("cannot assign non pure value to pure variable '%s'", t.name), &stmt.stmt_base)
+					}
+				}
+			}
+		}
 
 	case ^ast.Expr_Stmt:
 		check_anno(c, stmt)
@@ -256,6 +319,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			param_type := param.type
 			type_info := new(Type_Info, c.alloc)
 			type_info.kind = string_to_type_kind(c, param_type, param)
+			type_info.metadata = make(Metadata, c.alloc)
 			param_sym := make_symbol(c, param_name, type_info, stmt)
 			add_symbol(c, param_sym)
 			append(&symbol.type.param_names, param_sym.name)
@@ -270,6 +334,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		ret_type_kind := string_to_type_kind(c, t.result, t)
 		ret_type := new(Type_Info, c.alloc)
 		ret_type.kind = ret_type_kind
+		ret_type.metadata = make(Metadata, c.alloc)
 		symbol := make_symbol(c, t.name, make_type_func(c, ret_type), stmt)
 		add_symbol(c, symbol)
 		enter_scope(c)
@@ -277,6 +342,7 @@ collect_handler :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 			param_name := param.name
 			param_type := param.type
 			type_info := new(Type_Info, c.alloc)
+			type_info.metadata = make(Metadata, c.alloc)
 			type_info.kind = string_to_type_kind(c, param_type, param)
 			param_sym := make_symbol(c, param_name, type_info, stmt)
 			add_symbol(c, param_sym)
@@ -330,9 +396,13 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 		}
 
 	case ^ast.Value_Decl:
-		// TODO: make sure it's not duplicated
 		if c.symbol_table.scope_level == 0 {
 			return
+		}
+		if _, is_already_defined := lookup_local_symbol(c.symbol_table.current_scope, t.name);
+				is_already_defined {
+			add_error(c, fmt.tprintf("variable '%s' is already defined", t.name), t)
+			break
 		}
 		type_info := get_type_info_from_expression(c, t.value)
 		if type_info.kind != .Any && t.type != "" {
@@ -365,6 +435,7 @@ collect_stmt :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Info {
 	type_info := new(Type_Info, c.alloc)
+	type_info.metadata = make(Metadata, c.alloc)
 	#partial switch v in expr.derived {
 	case ^ast.Ident:
 		sym, is_exist := lookup_symbol(c.symbol_table.current_scope, v.name)
@@ -460,7 +531,9 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 					}
 
 					if arg_type.kind != param_type.kind {
-						add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'", type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), ident)
+						if !can_casted(arg_type.kind, param_type.kind) {
+							add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'", type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), ident)
+						}
 					}
 				}
 				return sym.type.return_t
@@ -487,6 +560,7 @@ make_type_event :: proc(c: ^Checker) -> ^Type_Info {
 	type_info_event.kind = .Event
 	type_info_event.param_types = make([dynamic]^Type_Info, c.alloc)
 	type_info_event.param_names = make([dynamic]string, c.alloc)
+	type_info_event.metadata =    make(Metadata, c.alloc)
 	return type_info_event
 }
 
@@ -495,6 +569,7 @@ make_type_func :: proc(c: ^Checker, ret_type: ^Type_Info) -> ^Type_Info {
 	type_info_func.kind = .Function
 	type_info_func.param_types = make([dynamic]^Type_Info, c.alloc)
 	type_info_func.param_names = make([dynamic]string, c.alloc)
+	type_info_func.metadata =    make(Metadata, c.alloc)
 	if ret_type != nil {
 		type_info_func.return_t = ret_type
 	}
@@ -506,6 +581,7 @@ make_symbol :: proc(c: ^Checker, name: string, type: ^Type_Info, node: ^ast.Node
 	symbol.name = name
 	symbol.type = type
 	symbol.decl_node = node
+	symbol.metadata = make(Metadata, c.alloc)
 	return symbol
 }
 
@@ -514,7 +590,7 @@ add_symbol :: proc(c: ^Checker, symbol: ^Symbol) -> bool {
 		return false
 	}
 
-	if _, exists := lookup_symbol(c.symbol_table.current_scope, symbol.name); exists {
+	if _, exists := lookup_local_symbol(c.symbol_table.current_scope, symbol.name); exists {
 		return false
 	}
 
@@ -525,7 +601,7 @@ add_symbol :: proc(c: ^Checker, symbol: ^Symbol) -> bool {
 lookup_symbol :: proc(scope: ^Scope, name: string) -> (^Symbol, bool) {
 	scope := scope
 	for scope != nil {
-		for symbol in scope.symbols {
+		for &symbol in scope.symbols {
 			if symbol.name == name {
 				return symbol, true
 			}
@@ -551,41 +627,57 @@ create_builtin_type_info :: proc(c: ^Checker, kind: Type_Kind) -> ^Type_Info {
 	type_info.param_names = make([dynamic]string, c.alloc)
 	type_info.param_types = make([dynamic]^Type_Info, c.alloc)
 	return_type := new(Type_Info, c.alloc)
+	return_type.metadata = make(Metadata, c.alloc)
 	return_type.kind = kind
 	type_info.return_t = return_type
+	type_info.metadata = make(Metadata, c.alloc)
 	return type_info
 }
 
 make_type_info :: proc(kind: Type_Kind, allocator := context.allocator) -> ^Type_Info {
 	type_info := new(Type_Info, allocator)
 	type_info.kind = kind
+	type_info.metadata = make(Metadata, allocator)
 	return type_info
 }
 
 add_builtin_functions :: proc(c: ^Checker) {
 	game_value_type := create_builtin_type_info(c, .GameValue)
+	game_value_type.kind = .Function
 	append(&game_value_type.param_names, "value")
 	append(&game_value_type.param_names, "selection")
 	append(&game_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&game_value_type.param_types, make_type_info(.Text, c.alloc))
-	add_symbol(c, make_symbol(c, "game_value", game_value_type, nil))
+	symbol := make_symbol(c, "game_value", game_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	item_value_type := create_builtin_type_info(c, .Item)
+	item_value_type.kind = .Function
 	append(&item_value_type.param_names, "id")
 	append(&item_value_type.param_names, "count")
 	append(&item_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&item_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "item", item_value_type, nil))
+	symbol = make_symbol(c, "item", item_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	array_value_type := create_builtin_type_info(c, .Array)
+	array_value_type.kind = .Function
 	// ...
-	add_symbol(c, make_symbol(c, "array", array_value_type, nil))
+	symbol = make_symbol(c, "array", array_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	dict_value_type := create_builtin_type_info(c, .Dict)
+	dict_value_type.kind = .Function
 	// ...
-	add_symbol(c, make_symbol(c, "dict", dict_value_type, nil))
+	symbol = make_symbol(c, "dict", dict_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	location_value_type := create_builtin_type_info(c, .Location)
+	location_value_type.kind = .Function
 	append(&location_value_type.param_names, "x")
 	append(&location_value_type.param_names, "y")
 	append(&location_value_type.param_names, "z")
@@ -596,18 +688,24 @@ add_builtin_functions :: proc(c: ^Checker) {
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&location_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "location", location_value_type, nil))
+	symbol = make_symbol(c, "location", location_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	vec3_value_type := create_builtin_type_info(c, .Vector)
+	vec3_value_type.kind = .Function
 	append(&vec3_value_type.param_names, "x")
 	append(&vec3_value_type.param_names, "y")
 	append(&vec3_value_type.param_names, "z")
 	append(&vec3_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&vec3_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&vec3_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "vec3", vec3_value_type, nil))
+	symbol = make_symbol(c, "vec3", vec3_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	sound_value_type := create_builtin_type_info(c, .Sound)
+	sound_value_type.kind = .Function
 	append(&sound_value_type.param_names, "sound")
 	append(&sound_value_type.param_names, "pitch")
 	append(&sound_value_type.param_names, "volume")
@@ -618,9 +716,12 @@ add_builtin_functions :: proc(c: ^Checker) {
 	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&sound_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&sound_value_type.param_types, make_type_info(.Text, c.alloc))
-	add_symbol(c, make_symbol(c, "sound", sound_value_type, nil))
+	symbol = make_symbol(c, "sound", sound_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	particle_value_type := create_builtin_type_info(c, .Particle)
+	particle_value_type.kind = .Function
 	append(&particle_value_type.param_names, "particle_type")
 	append(&particle_value_type.param_names, "count")
 	append(&particle_value_type.param_names, "first_spread")
@@ -639,36 +740,53 @@ add_builtin_functions :: proc(c: ^Checker) {
 	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&sound_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "particle", particle_value_type, nil))
+	symbol = make_symbol(c, "particle", particle_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	block_value_type := create_builtin_type_info(c, .Block)
+	block_value_type.kind = .Function
 	append(&block_value_type.param_names, "id")
 	append(&block_value_type.param_types, make_type_info(.Text, c.alloc))
-	add_symbol(c, make_symbol(c, "block", block_value_type, nil))
+	symbol = make_symbol(c, "block", block_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	number_value_type := create_builtin_type_info(c, .Number)
+	number_value_type.kind = .Function
 	append(&number_value_type.param_names, "value")
 	append(&number_value_type.param_types, make_type_info(.Any, c.alloc))
-	add_symbol(c, make_symbol(c, "number", number_value_type, nil))
+	symbol = make_symbol(c, "number", number_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	text_value_type := create_builtin_type_info(c, .Text)
+	text_value_type.kind = .Function
 	append(&text_value_type.param_names, "value")
 	append(&text_value_type.param_types, make_type_info(.Any, c.alloc))
-	add_symbol(c, make_symbol(c, "text", text_value_type, nil))
+	symbol = make_symbol(c, "text", text_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	enum_value_type := create_builtin_type_info(c, .Enum)
+	enum_value_type.kind = .Function
 	append(&enum_value_type.param_names, "value")
 	append(&enum_value_type.param_types, make_type_info(.Text, c.alloc))
-	add_symbol(c, make_symbol(c, "enum", enum_value_type, nil))
+	symbol = make_symbol(c, "enum", enum_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 
 	potion_value_type := create_builtin_type_info(c, .Potion)
+	particle_value_type.kind = .Function
 	append(&enum_value_type.param_names, "potion")
 	append(&enum_value_type.param_names, "amplifier")
 	append(&enum_value_type.param_names, "duration")
 	append(&enum_value_type.param_types, make_type_info(.Text, c.alloc))
 	append(&enum_value_type.param_types, make_type_info(.Number, c.alloc))
 	append(&enum_value_type.param_types, make_type_info(.Number, c.alloc))
-	add_symbol(c, make_symbol(c, "potion", potion_value_type, nil))
+	symbol = make_symbol(c, "potion", potion_value_type, nil)
+	symbol.metadata["flags"] = Flags{.BUILTIN}
+	add_symbol(c, symbol)
 }
 
 add_native_functions :: proc(c: ^Checker) {
@@ -680,15 +798,30 @@ add_native_functions :: proc(c: ^Checker) {
 		type_info.kind = .Function
 		type_info.param_names = make([dynamic]string, c.alloc)
 		type_info.param_types = make([dynamic]^Type_Info, c.alloc)
+		type_info.metadata = make(Metadata, c.alloc)
 		for slot in action_data.slots[:] {
 			append(&type_info.param_names, slot.name)
 			slot_type_info := new(Type_Info, c.alloc)
+			slot_type_info.metadata = make(Metadata, c.alloc)
 			slot_type_info.kind = string_to_type_kind(c, slot.type, nil)
 			append(&type_info.param_types, slot_type_info)
 		}
 		sym := make_symbol(c, action_name, type_info, nil)
+		sym.metadata["flags"] = Flags{.NATIVE}
 		add_symbol(c, sym)
 	}
+}
+
+can_casted :: proc(first, second: Type_Kind) -> bool {
+	if first == .Any || second == .Any {
+		return true
+	}
+
+	if first == second {
+		return true
+	}
+
+	return false
 }
 
 check_anno :: proc(c: ^Checker, stmt: ^ast.Stmt) {
@@ -701,6 +834,7 @@ check_anno :: proc(c: ^Checker, stmt: ^ast.Stmt) {
 
 check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 	sym, exists := lookup_symbol(c.symbol_table.current_scope, name)
+
 	if !exists {
 		return false
 	}
@@ -709,7 +843,7 @@ check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 		return false
 	}
 
-	if is_value_factory(name) {
+	if is_value_factory(c, name) {
 		return true
 	}
 
@@ -724,26 +858,18 @@ check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 	return false
 }
 
-is_value_factory :: proc(name: string) -> bool {
-	switch name {
-	case
-		"game_value",
-		"item",
-		"array",
-		"dict",
-		"location",
-		"vec3",
-		"sound",
-		"particle",
-		"block",
-		"number",
-		"text",
-		"enum",
-		"potion":
-		return true
-	case:
+is_value_factory :: proc(c: ^Checker, name: string) -> bool {
+	sym, found := lookup_symbol(c.symbol_table.current_scope, name)
+	if !found {
 		return false
 	}
+
+	if flags_field, has := sym.metadata["flags"]; has {
+		if flags, ok := flags_field.(Flags); ok {
+			return .BUILTIN in flags
+		}
+	}
+	return false
 }
 
 check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool {
@@ -853,6 +979,7 @@ check_for_stmt_is_pure :: proc(c: ^Checker, for_stmt: ^ast.For_Stmt) -> bool {
 			for ident in for_stmt.init {
 				type_info := new(Type_Info, c.alloc)
 				type_info.kind = .Any
+				type_info.metadata = make(Metadata, c.alloc)
 				symbol := make_symbol(c, ident.name, type_info, cast(^ast.Node)ident)
 				add_symbol(c, symbol)
 			}
