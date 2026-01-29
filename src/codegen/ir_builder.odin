@@ -38,13 +38,32 @@ ir_builder_init :: proc(irb: ^IR_Builder, minify: bool, unique_id: string, symbo
 	json_builder_init(&irb.jb, irb.minify, irb.alloc)
 }
 
-ir_add_error :: proc(irb: ^IR_Builder, message: string) {
-	err := error.Error{file=irb.curr_file, message=message}
+ir_add_error :: proc(irb: ^IR_Builder, message: string, node: ^ast.Node) {
+	cause_pos, cause_end: lexer.Pos
+	if node != nil {
+		cause_pos, cause_end = node.pos, node.end
+	}
+	err := error.Error{
+		file=irb.curr_file,
+		message=message,
+		cause_pos=cause_pos,
+		cause_end=cause_end,
+	}
 	append(&irb.errs, err)
 }
 
-ir_add_warning :: proc(irb: ^IR_Builder, message: string) {
-	warn := error.Error{file=irb.curr_file, message=message, severity=.Warning}
+ir_add_warning :: proc(irb: ^IR_Builder, message: string, node: ^ast.Node) {
+	cause_pos, cause_end: lexer.Pos
+	if node != nil {
+		cause_pos, cause_end = node.pos, node.end
+	}
+	warn := error.Error{
+		file=irb.curr_file,
+		message=message,
+		severity=.Warning,
+		cause_pos=cause_pos,
+		cause_end=cause_end,
+	}
 	append(&irb.errs, warn)
 }
 
@@ -152,7 +171,7 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 			values := make([dynamic]NamedValue, irb.alloc)
 			append(&ops, container_operation("repeat_forever", values, ops3))
 		} else {
-			ir_add_error(irb, "repeats are temporarily disabled")
+			ir_add_error(irb, "repeats are temporarily disabled", for_stmt)
 			// if for_stmt.init != nil && for_stmt.cond != nil && for_stmt.post == nil && for_stmt.second_cond == nil {
 			// 	init_ident := for_stmt.init
 			// 	cond_expr := for_stmt.cond
@@ -255,14 +274,13 @@ ir_parse_stmt :: proc(irb: ^IR_Builder, stmt: ^ast.Stmt) -> [dynamic]Operation {
 ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 	irb.curr_file = file
 	for decl in file.decls {
-		#partial switch v in decl.derived {
+		#partial switch typed_stmt in decl.derived {
 		case:
 			ops := ir_parse_stmt(irb, decl)
 			append_operations(&irb.entry_handler.operations, ops)
 		case ^ast.Func_Stmt:
-			func_stmt := cast(^ast.Func_Stmt)decl
-			func_handler := new_handler(irb, "function", func_stmt.name)
-			ops := ir_parse_stmt(irb, func_stmt.body)
+			func_handler := new_handler(irb, "function", typed_stmt.name)
+			ops := ir_parse_stmt(irb, typed_stmt.body)
 			append_operations(&func_handler.operations, ops)
 			func_handler.values = make([dynamic]NamedValue, irb.alloc)
 
@@ -278,9 +296,8 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 			append(&func_handler.values, named_value("is_hidden", enum_value("FALSE")))
 			append(&irb.handlers, func_handler)
 		case ^ast.Event_Stmt:
-			event_stmt := cast(^ast.Event_Stmt)decl
-			event_handler := new_handler(irb, "event", event_stmt.name)
-			ops := ir_parse_stmt(irb, event_stmt.body)
+			event_handler := new_handler(irb, "event", typed_stmt.name)
+			ops := ir_parse_stmt(irb, typed_stmt.body)
 			append_operations(&event_handler.operations, ops)
 			append(&irb.handlers, event_handler)
 		}
@@ -303,38 +320,35 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 	operations_list := make([dynamic]Operation, irb.alloc)
 	result_value: Value
 
-	#partial expr_type_switch: switch v in expr.derived {
+	#partial expr_type_switch: switch typed_stmt in expr.derived {
 	case ^ast.Ident:
-		ident := cast(^ast.Ident)expr
-		result_value = variable_value(ident.name, SCOPE_LOCAL)
+		result_value = variable_value(typed_stmt.name, SCOPE_LOCAL)
 	case ^ast.Basic_Lit:
-		basic_lit := cast(^ast.Basic_Lit)expr
-		#partial switch basic_lit.tok.kind {
+		#partial switch typed_stmt.tok.kind {
 		case .Ident:
-			ident_raw := basic_lit.tok.content
+			ident_raw := typed_stmt.tok.content
 			result_value = variable_value(ident_raw, SCOPE_LOCAL)
 		case .Number:
-			number_raw := basic_lit.tok.content
+			number_raw := typed_stmt.tok.content
 			num, _ := strconv.parse_f64(number_raw)
 			result_value = number_value(num)
 		case .Text:
-			text_raw := basic_lit.tok.content
+			text_raw := typed_stmt.tok.content
 			result_value = text_value(text_raw[1:len(text_raw)-1], PARSING_COLORED)
 		case .True:
 			result_value = number_value(1)
 		case .False:
 			result_value = number_value(0)
 		case:
-			fmt.printfln("[DEBUG] UNHANDLED BASIC LITERAL WITH TYPE %s", lexer.to_string(basic_lit.tok.kind))
+			fmt.printfln("[DEBUG] UNHANDLED BASIC LITERAL WITH TYPE %s", lexer.to_string(typed_stmt.tok.kind))
 		}
 	case ^ast.Binary_Expr:
-		binary_expr := cast(^ast.Binary_Expr)expr
-		ops1, left_expr := ir_parse_expression(irb, binary_expr.left)
+		ops1, left_expr := ir_parse_expression(irb, typed_stmt.left)
 		append_operations(&operations_list, ops1)
-		ops2, right_expr := ir_parse_expression(irb, binary_expr.right)
+		ops2, right_expr := ir_parse_expression(irb, typed_stmt.right)
 		append_operations(&operations_list, ops2)
 
-		#partial switch binary_expr.op.kind {
+		#partial switch typed_stmt.op.kind {
 		case .Add, .Sub, .Mul, .Quo:
 			result_value = variable_value(get_new_inner_name(irb), SCOPE_LOCAL)
 			values := make([dynamic]NamedValue, irb.alloc)
@@ -344,7 +358,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			append(&array_values, right_expr)
 			append(&values, named_value("value", array_value(array_values)))
 			action_name: string
-			#partial switch binary_expr.op.kind {
+			#partial switch typed_stmt.op.kind {
 			case .Add: action_name = "set_variable_add"
 			case .Sub: action_name = "set_variable_subtract"
 			case .Quo: action_name = "set_variable_divide"
@@ -361,44 +375,41 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 
 			append(&operations_list, basic_operation("set_variable_remainder", values))
 
-		case .Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Not: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Hash: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .At: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Cmp_And: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Cmp_Or: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Cmp_Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Not_Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Lt: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Gt: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Lt_Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case .Gt_Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(binary_expr.op.kind))
-		case: fmt.printfln("[DEBUG] UNKNOWN BINARY EXPR OP %s", lexer.to_string(binary_expr.op.kind))
+		case .Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Not: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Hash: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .At: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Cmp_And: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Cmp_Or: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Cmp_Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Not_Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Lt: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Gt: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Lt_Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case .Gt_Eq: fmt.printfln("[DEBUG] UNHANDLED BINARY EXPR OP: %s", lexer.to_string(typed_stmt.op.kind))
+		case: fmt.printfln("[DEBUG] UNKNOWN BINARY EXPR OP %s", lexer.to_string(typed_stmt.op.kind))
 		}
 	case ^ast.Paren_Expr:
-		paren_expr := cast(^ast.Paren_Expr)expr
 		ops: [dynamic]Operation
-		ops, result_value = ir_parse_expression(irb, paren_expr.expr)
+		ops, result_value = ir_parse_expression(irb, typed_stmt.expr)
 		append_operations(&operations_list, ops)
 	case ^ast.Call_Expr:
-		call_expr := cast(^ast.Call_Expr)expr
-
 		arg_names_handled := make([dynamic]string, irb.alloc)
 		arg_values_handled := make([dynamic]Value, irb.alloc)
 
-		for arg in call_expr.args {
+		for arg in typed_stmt.args {
 			ops, value := ir_parse_expression(irb, arg.value)
 			append_operations(&operations_list, ops)
 			append(&arg_values_handled, value)
 			append(&arg_names_handled, arg.name)
 		}
 
-		if ident, ok := call_expr.expr.derived.(^ast.Ident); ok {
+		if ident, ok := typed_stmt.expr.derived.(^ast.Ident); ok {
 			call_name := ident.name
 
 			if action, is_native := assets.action_native_from_mapped(call_name); is_native {
 				if len(arg_values_handled) > len(action.slots) {
-					ir_add_error(irb, "too much arguments")
+					ir_add_error(irb, "too much arguments", ident)
 					break
 				}
 				slots_map := make(map[string]Value, len(action.slots), irb.alloc)
@@ -424,7 +435,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 							// positional argument and warn user if so?
 							slots_map[arg_name] = new_arg_value
 						} else {
-							ir_add_error(irb, "unknown keyword argument: no parameters matches")
+							ir_add_error(irb, "unknown keyword argument: no parameters matches", typed_stmt)
 							break
 						}
 					}
@@ -441,14 +452,14 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			case "game_value":
 				fmt.println("[DEBUG] game_value fabric")
 				if len(arg_values_handled) == 0 {
-					ir_add_error(irb, "can't generate game value from empty constructor")
+					ir_add_error(irb, "can't generate game value from empty constructor", ident)
 					break expr_type_switch
 				}
-				ir_add_error(irb, "not implemented")
+				ir_add_error(irb, "not implemented", ident)
 				break expr_type_switch
 			case "item": // item("item_name", 16)
 				if len(arg_values_handled) == 0 {
-					ir_add_error(irb, "can't generate item from empty constructor")
+					ir_add_error(irb, "can't generate item from empty constructor", ident)
 					break expr_type_switch
 				}
 				item_name: string
@@ -485,13 +496,13 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 					}
 					item_name = item_name_raw
 				} else {
-					ir_add_error(irb, "text literal expected")
+					ir_add_error(irb, "text literal expected", ident)
 				}
 
 				if item_count_lit, is_number_lit := item_count_val.(NumberValue); is_number_lit {
 					item_count = item_count_lit.number
 				} else if len(arg_values_handled) > 1 {
-					ir_add_error(irb, "number literal expected")
+					ir_add_error(irb, "number literal expected", ident)
 				} else {
 					item_count = 1
 				}
@@ -540,8 +551,8 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			}
 
 			if _, exists := checker.lookup_symbol(irb.symbols.global_scope, call_name); exists {
-				if len(call_expr.args) > 0 {
-					ir_add_warning(irb, "Function arguments are ignored because they're not implemented yet.")
+				if len(typed_stmt.args) > 0 {
+					ir_add_warning(irb, "Function arguments are ignored because they're not implemented yet.", typed_stmt)
 				}
 				values := make([dynamic]NamedValue, irb.alloc)
 				append(&values, named_value("function_name", text_value(call_name, PARSING_COLORED)))
@@ -552,9 +563,9 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 			fmt.printfln("[DEBUG] Unhandled")
 		}
 	case ^ast.Argument:
-		fmt.printfln("UNHANDLED :: %v", v.pos)
+		fmt.printfln("UNHANDLED :: %v", typed_stmt.pos)
 	case:
-		fmt.printfln("UNHANDLED :: %v", v)
+		fmt.printfln("UNHANDLED :: %v", typed_stmt)
 		result_value = variable_value(get_new_inner_name(irb), SCOPE_LOCAL)
 	}
 
@@ -574,7 +585,7 @@ ir_build :: proc(irb: ^IR_Builder) -> (string, [dynamic]error.Error) {
 			} else {
 				handler_name = handler.name
 			}
-			ir_add_warning(irb, fmt.tprintf("Skipping empty handler: %s", handler_name))
+			ir_add_warning(irb, fmt.tprintf("Skipping empty handler: %s", handler_name), nil)
 			continue
 		}
 		append(&all_handlers, handler)
