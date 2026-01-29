@@ -1,4 +1,4 @@
-package test;
+package test
 
 func a() {
 	// player_send_message("all_players", "SPACES");

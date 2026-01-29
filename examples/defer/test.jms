@@ -1,0 +1,15 @@
+package test
+
+func a() {
+	defer {
+		B :: 1
+
+		B = 2
+	}
+
+	B = 3
+
+	C :: 1
+
+	C = 2
+}

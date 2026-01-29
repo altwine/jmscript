@@ -7,7 +7,7 @@ Scripting language for JustMC creative+
 
 ## Language syntax
 ```go
-package main;
+package main
 
 event player_join() {
 	player_send_message("Welcome to my world 🥰", "CONCATENATION")

@@ -18,22 +18,24 @@ Symbol_Table :: struct {
 Scope :: struct {
 	symbols:  [dynamic]^Symbol,
 	parent:   ^Scope,
-	level:	int,
+	level:	  int,
 	children: [dynamic]^Scope,
 }
 
 Checker :: struct {
-	alloc:		mem.Allocator,
-	symbol_table: ^Symbol_Table,
-	files:		[dynamic]^ast.File,
-	errs:		 [dynamic]error.Error,
-	current_file: ^ast.File,
+	alloc:			  mem.Allocator,
+	symbol_table:	  ^Symbol_Table,
+	files:			  [dynamic]^ast.File,
+	errs:			  [dynamic]error.Error,
+	current_file:	  ^ast.File,
 	current_file_idx: int,
+
+	node_scopes:	  map[int]^Scope,
 
 	collector_walker:	 ^ast.Walker,
 	type_checker_walker: ^ast.Walker,
 
-	collector_vtable:	ast.Visitor_VTable,
+	collector_vtable:	 ast.Visitor_VTable,
 	type_checker_vtable: ast.Visitor_VTable,
 }
 
@@ -48,6 +50,7 @@ checker_init :: proc(c: ^Checker, allocator := context.allocator) {
 	c.errs = make([dynamic]error.Error, allocator)
 	c.symbol_table = new(Symbol_Table, allocator)
 	c.symbol_table.scope_level = -1
+	c.node_scopes = make(map[int]^Scope, 0, allocator)
 
 	c.collector_vtable = ast.Visitor_VTable{}
 	c.type_checker_vtable = ast.Visitor_VTable{}
@@ -62,14 +65,10 @@ checker_init :: proc(c: ^Checker, allocator := context.allocator) {
 	c.type_checker_vtable.visit_event_stmt = _type_check_visit_event_stmt
 	c.type_checker_vtable.visit_value_decl = _type_check_visit_value_decl
 	c.type_checker_vtable.visit_assign_stmt = _type_check_visit_assign_stmt
-	c.type_checker_vtable.visit_expr_stmt = _type_check_visit_expr_stmt
-	c.type_checker_vtable.visit_if_stmt = _type_check_visit_if_stmt
-	c.type_checker_vtable.visit_for_stmt = _type_check_visit_for_stmt
-	c.type_checker_vtable.visit_return_stmt = _type_check_visit_return_stmt
-	c.type_checker_vtable.visit_defer_stmt = _type_check_visit_defer_stmt
 	c.type_checker_vtable.visit_ident = _type_check_visit_ident
 	c.type_checker_vtable.visit_call_expr = _type_check_visit_call_expr
 	c.type_checker_vtable.visit_binary_expr = _type_check_visit_binary_expr
+	c.type_checker_vtable.before_visit_node = _type_check_before_visit_node
 	c.type_checker_vtable.before_visit_child = _type_check_before_visit_child
 	c.type_checker_vtable.after_visit_child = _type_check_after_visit_child
 
@@ -84,48 +83,136 @@ checker_init :: proc(c: ^Checker, allocator := context.allocator) {
 }
 
 @(private="file")
-_collect_enter_scope :: proc(c: ^Checker, node: ^ast.Node) -> bool {
+get_node_annotations :: proc(node: ^ast.Node) -> (annotations: [dynamic]ast.Annotation, ok: bool) {
+	if node == nil {
+		return {}, false
+	}
+
 	#partial switch n in node.derived {
+	case ^ast.Func_Stmt:
+		return n.annotations, true
+	case ^ast.Event_Stmt:
+		return n.annotations, true
+	case ^ast.Value_Decl:
+		return n.annotations, true
+	case ^ast.Assign_Stmt:
+		return n.annotations, true
+	case ^ast.Expr_Stmt:
+		return n.annotations, true
+	case ^ast.If_Stmt:
+		return n.annotations, true
+	case ^ast.For_Stmt:
+		return n.annotations, true
+	case ^ast.Return_Stmt:
+		return n.annotations, true
+	case ^ast.Defer_Stmt:
+		return n.annotations, true
 	case ^ast.Block_Stmt:
-		enter_scope(c)
+		return n.annotations, true
+	case:
+		return {}, false
+	}
+}
+
+@(private="file")
+check_annotation_purity :: proc(c: ^Checker, anno: ast.Annotation, node: ^ast.Node) {
+	if anno.value != nil && !check_expression_is_pure(c, anno.value) {
+		add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), node)
+	}
+}
+
+@(private="file")
+check_node_annotations :: proc(c: ^Checker, node: ^ast.Node) {
+	if node == nil {
+		return
+	}
+
+	if annotations, ok := get_node_annotations(node); ok {
+		for &anno in annotations {
+			check_annotation_purity(c, anno, &anno.anno_base)
+		}
+	}
+}
+
+@(private="file")
+_collect_before_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) -> bool {
+	c := cast(^Checker)v.user_data
+	if child != nil {
+		enter_scope_for_node(c, child)
+	}
+	return true
+}
+
+@(private="file")
+_collect_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
+	c := cast(^Checker)v.user_data
+	if child != nil {
+		exit_scope_for_node(c, child)
+	}
+}
+
+enter_scope_for_node :: proc(c: ^Checker, node: ^ast.Node) -> bool {
+	#partial switch t in node.derived {
+	case ^ast.Block_Stmt,
+		 ^ast.Func_Stmt,
+		 ^ast.Event_Stmt,
+		 ^ast.Defer_Stmt:
+
+		if scope, exists := c.node_scopes[node.id]; exists {
+			c.symbol_table.current_scope = scope
+			c.symbol_table.scope_level = scope.level
+		} else {
+			enter_scope(c)
+			c.node_scopes[node.id] = c.symbol_table.current_scope
+		}
 		return true
-	case ^ast.Func_Stmt, ^ast.Event_Stmt:
+	case:
+		return false
+	}
+}
+
+exit_scope_for_node :: proc(c: ^Checker, node: ^ast.Node) {
+	#partial switch t in node.derived {
+	case ^ast.Block_Stmt,
+		 ^ast.Func_Stmt,
+		 ^ast.Event_Stmt,
+		 ^ast.Defer_Stmt:
+
+		if scope, exists := c.node_scopes[node.id]; exists && scope.parent != nil {
+			c.symbol_table.current_scope = scope.parent
+			c.symbol_table.scope_level = scope.parent.level
+		}
+	case:
+	}
+}
+
+set_scope_from_node_id :: proc(c: ^Checker, node: ^ast.Node) -> bool {
+	if node == nil {
+		return false
+	}
+
+	if scope, exists := c.node_scopes[node.id]; exists {
+		c.symbol_table.current_scope = scope
+		c.symbol_table.scope_level = scope.level
 		return true
 	}
 	return false
-}
-
-@(private="file")
-_collect_exit_scope :: proc(c: ^Checker, node: ^ast.Node) {
-	#partial switch n in node.derived {
-	case ^ast.Block_Stmt, ^ast.Func_Stmt, ^ast.Event_Stmt:
-		exit_scope(c)
-	}
-}
-
-@(private="file")
-_type_check_enter_scope :: proc(c: ^Checker, node: ^ast.Node) -> bool {
-	#partial switch n in node.derived {
-	case ^ast.Block_Stmt:
-		enter_scope(c)
-		return true
-	}
-	return false
-}
-
-@(private="file")
-_type_check_exit_scope :: proc(c: ^Checker, node: ^ast.Node) {
-	#partial switch n in node.derived {
-	case ^ast.Block_Stmt:
-		exit_scope(c)
-	}
 }
 
 @(private="file")
 _type_check_before_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) -> bool {
 	c := cast(^Checker)v.user_data
-	if parent != nil {
-		_type_check_enter_scope(c, child)
+
+	if child != nil {
+		#partial switch t in child.derived {
+		case ^ast.Block_Stmt,
+			 ^ast.Func_Stmt,
+			 ^ast.Event_Stmt,
+			 ^ast.Defer_Stmt:
+
+			set_scope_from_node_id(c, child)
+		case:
+		}
 	}
 	return true
 }
@@ -133,17 +220,36 @@ _type_check_before_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node
 @(private="file")
 _type_check_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
 	c := cast(^Checker)v.user_data
-	if parent != nil && child != nil {
-		_type_check_exit_scope(c, child)
+
+	if child != nil {
+		#partial switch t in child.derived {
+		case ^ast.Block_Stmt,
+			 ^ast.Func_Stmt,
+			 ^ast.Event_Stmt,
+			 ^ast.Defer_Stmt:
+
+			if scope, exists := c.node_scopes[child.id]; exists && scope.parent != nil {
+				c.symbol_table.current_scope = scope.parent
+				c.symbol_table.scope_level = scope.parent.level
+			}
+		case:
+		}
 	}
+}
+
+@(private="file")
+_type_check_before_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) -> bool {
+	c := cast(^Checker)v.user_data
+	check_node_annotations(c, node)
+	return true
 }
 
 checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table, [dynamic]error.Error) {
 	c.files = files
 
 	enter_scope(c)
-	add_builtin_functions(c)
-	add_native_functions(c)
+	// add_builtin_functions(c)
+	// add_native_functions(c)
 
 	for file, idx in files {
 		c.current_file = file
@@ -166,15 +272,9 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	c := cast(^Checker)v.user_data
 
-	if c.symbol_table.scope_level > 0 {
+	if c.symbol_table.scope_level > 1 {
 		add_error(c, "can't define function in nested scope", node)
 		return
-	}
-
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
 	}
 
 	ret_type_kind := string_to_type_kind(c, node.result, node)
@@ -189,8 +289,6 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 		return
 	}
 
-	enter_scope(c)
-
 	if node.params != nil {
 		for param in node.params.list {
 			type_info := new(Type_Info, c.alloc)
@@ -204,25 +302,15 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 			append(&symbol.type.param_types, type_info)
 		}
 	}
-
-	if node.body != nil {
-		ast.walk_node(c.collector_walker, node.body)
-	}
 }
 
 @(private="file")
 _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 	c := cast(^Checker)v.user_data
 
-	if c.symbol_table.scope_level > 0 {
+	if c.symbol_table.scope_level > 1 {
 		add_error(c, "can't define event in nested scope", node)
 		return
-	}
-
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
 	}
 
 	symbol := create_symbol(node.name, make_type_event(c), node, c.alloc)
@@ -232,8 +320,6 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 		return
 	}
 
-	enter_scope(c)
-
 	if node.params != nil {
 		for param in node.params.list {
 			type_info := new(Type_Info, c.alloc)
@@ -246,10 +332,6 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 			append(&symbol.type.param_names, param_sym.name)
 			append(&symbol.type.param_types, type_info)
 		}
-	}
-
-	if node.body != nil {
-		ast.walk_node(c.collector_walker, node.body)
 	}
 }
 
@@ -276,23 +358,6 @@ _collect_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	symbol := create_symbol(node.name, type_info, node, c.alloc)
 	symbol.is_const = node.is_const
 	add_symbol(c, symbol)
-}
-
-@(private="file")
-_collect_before_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) -> bool {
-	c := cast(^Checker)v.user_data
-	if parent != nil {
-		_collect_enter_scope(c, child)
-	}
-	return true
-}
-
-@(private="file")
-_collect_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
-	c := cast(^Checker)v.user_data
-	if parent != nil && child != nil {
-		_collect_exit_scope(c, child)
-	}
 }
 
 @(private="file")
@@ -341,12 +406,6 @@ _type_check_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	c := cast(^Checker)v.user_data
 
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
-	}
-
 	if node.is_const && !check_expression_is_pure(c, node.value) {
 		add_error(c, fmt.tprintf("cannot initialize constant '%s' with non-constant value '%s'",
 			node.name, ast.expr_to_string(node.value, context.temp_allocator)), &node.stmt_base)
@@ -373,13 +432,6 @@ _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 @(private="file")
 _type_check_visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	c := cast(^Checker)v.user_data
-
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
-	}
-
 	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
 	if found {
 		if sym.is_const {
@@ -487,98 +539,6 @@ _type_check_visit_binary_expr :: proc(v: ^ast.Visitor, node: ^ast.Binary_Expr) {
 		left_str := type_kind_to_string(c, left_kind)
 		right_str := type_kind_to_string(c, right_kind)
 		add_error(c, fmt.tprintf("incompatible types: '%s' and '%s'", left_str, right_str), node)
-	}
-}
-
-@(private="file")
-_check_annotations :: proc(c: ^Checker, node: ^ast.Node) {
-	#partial switch n in node.derived {
-	case ^ast.Func_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.Event_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.Value_Decl:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.Assign_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.Expr_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.If_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.For_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.Return_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.Defer_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	case ^ast.Block_Stmt:
-		_check_annotations_internal(c, n.annotations)
-	}
-}
-
-@(private="file")
-_check_annotations_internal :: proc(c: ^Checker, annotations: [dynamic]ast.Annotation) {
-	for &anno in annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
-	}
-}
-
-@(private="file")
-_type_check_before_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) -> bool {
-	c := cast(^Checker)v.user_data
-	_check_annotations(c, node)
-	return true
-}
-
-@(private="file")
-_type_check_visit_expr_stmt :: proc(v: ^ast.Visitor, node: ^ast.Expr_Stmt) {
-	c := cast(^Checker)v.user_data
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
-	}
-}
-
-@(private="file")
-_type_check_visit_if_stmt :: proc(v: ^ast.Visitor, node: ^ast.If_Stmt) {
-	c := cast(^Checker)v.user_data
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
-	}
-}
-
-@(private="file")
-_type_check_visit_for_stmt :: proc(v: ^ast.Visitor, node: ^ast.For_Stmt) {
-	c := cast(^Checker)v.user_data
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
-	}
-}
-
-@(private="file")
-_type_check_visit_return_stmt :: proc(v: ^ast.Visitor, node: ^ast.Return_Stmt) {
-	c := cast(^Checker)v.user_data
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
-	}
-}
-
-@(private="file")
-_type_check_visit_defer_stmt :: proc(v: ^ast.Visitor, node: ^ast.Defer_Stmt) {
-	c := cast(^Checker)v.user_data
-	for &anno in node.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
-		}
 	}
 }
 
@@ -861,9 +821,9 @@ can_casted :: proc(first, second: Type_Kind) -> bool {
 }
 
 check_anno :: proc(c: ^Checker, stmt: ^ast.Stmt) {
-	for &anno in stmt.annotations {
-		if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-			add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), &anno.anno_base)
+	if annotations, ok := get_node_annotations(cast(^ast.Node)stmt); ok {
+		for &anno in annotations {
+			check_annotation_purity(c, anno, &anno.anno_base)
 		}
 	}
 }
@@ -879,7 +839,7 @@ check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 		return false
 	}
 
-	if is_value_factory(c, name) {
+	if is_builtin(c, name) {
 		return true
 	}
 
@@ -894,7 +854,7 @@ check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 	return false
 }
 
-is_value_factory :: proc(c: ^Checker, name: string) -> bool {
+is_builtin :: proc(c: ^Checker, name: string) -> bool {
 	sym, found := lookup_symbol(c.symbol_table.current_scope, name)
 	if !found {
 		return false
@@ -998,7 +958,7 @@ check_for_stmt_is_pure :: proc(c: ^Checker, for_stmt: ^ast.For_Stmt) -> bool {
 			if !check_expression_is_pure(c, post_stmt.expr) {
 				return false
 			}
-		case ^ast.Assign_Stmt:
+	 case ^ast.Assign_Stmt:
 			if !check_expression_is_pure(c, post_stmt.expr) {
 				return false
 			}
@@ -1235,9 +1195,11 @@ check_expression_is_pure :: proc(c: ^Checker, expr: ^ast.Expr) -> bool {
 }
 
 get_anno :: proc(stmt: ^ast.Stmt, name: string) -> ^ast.Annotation {
-	for &anno in stmt.annotations {
-		if strings.equal_fold(anno.name, name) {
-			return &anno
+	if annotations, ok := get_node_annotations(cast(^ast.Node)stmt); ok {
+		for &anno in annotations {
+			if strings.equal_fold(anno.name, name) {
+				return &anno
+			}
 		}
 	}
 	return nil
