@@ -153,9 +153,11 @@ _collect_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
 
 enter_scope_for_node :: proc(c: ^Checker, node: ^ast.Node) -> bool {
 	#partial switch t in node.derived {
+	case ^ast.Func_Stmt,
+		 ^ast.Event_Stmt:
+		return false
+
 	case ^ast.Block_Stmt,
-		 ^ast.Func_Stmt,
-		 ^ast.Event_Stmt,
 		 ^ast.Defer_Stmt:
 
 		if scope, exists := c.node_scopes[node.id]; exists {
@@ -272,7 +274,7 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	c := cast(^Checker)v.user_data
 
-	if c.symbol_table.scope_level > 1 {
+	if c.symbol_table.scope_level > 0 {
 		add_error(c, "can't define function in nested scope", node)
 		return
 	}
@@ -288,6 +290,10 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 		add_error(c, fmt.tprintf("function '%s' is already defined", node.name), node)
 		return
 	}
+
+	enter_scope(c)
+	func_scope := c.symbol_table.current_scope
+	c.node_scopes[node.id] = func_scope
 
 	if node.params != nil {
 		for param in node.params.list {
@@ -308,7 +314,7 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 	c := cast(^Checker)v.user_data
 
-	if c.symbol_table.scope_level > 1 {
+	if c.symbol_table.scope_level > 0 {
 		add_error(c, "can't define event in nested scope", node)
 		return
 	}
@@ -319,6 +325,10 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 		add_error(c, fmt.tprintf("event '%s' is already defined", node.name), node)
 		return
 	}
+
+	enter_scope(c)
+	event_scope := c.symbol_table.current_scope
+	c.node_scopes[node.id] = event_scope
 
 	if node.params != nil {
 		for param in node.params.list {
@@ -407,6 +417,7 @@ _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	c := cast(^Checker)v.user_data
 
 	if node.is_const && !check_expression_is_pure(c, node.value) {
+		fmt.println(c.symbol_table.scope_level)
 		add_error(c, fmt.tprintf("cannot initialize constant '%s' with non-constant value '%s'",
 			node.name, ast.expr_to_string(node.value, context.temp_allocator)), &node.stmt_base)
 	}

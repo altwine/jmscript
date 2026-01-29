@@ -130,24 +130,62 @@ walk_node :: proc(w: ^Walker, node: ^Node) {
 		walk_child_expr(w, node, n.expr)
 
 	case ^Func_Stmt:
+		for &anno in n.annotations {
+			walk_child_node(w, node, &anno)
+		}
+
 		if w.vtable.visit_func_stmt != nil {
 			w.vtable.visit_func_stmt(&w.visitor, n)
 		}
+
+		if w.vtable.before_visit_child != nil {
+			w.vtable.before_visit_child(&w.visitor, node, n.params)
+		}
+
+		walk_child_node(w, node, n.params)
+
+		if w.vtable.after_visit_child != nil {
+			w.vtable.after_visit_child(&w.visitor, node, n.params)
+		}
+
+		if w.vtable.before_visit_child != nil {
+			w.vtable.before_visit_child(&w.visitor, node, n.body)
+		}
+
+		walk_child_node(w, node, n.body)
+
+		if w.vtable.after_visit_child != nil {
+			w.vtable.after_visit_child(&w.visitor, node, n.body)
+		}
+
+	case ^Event_Stmt:
 		for &anno in n.annotations {
 			walk_child_node(w, node, &anno)
 		}
-		walk_child_node(w, node, n.params)
-		walk_child_node(w, node, n.body)
 
-	case ^Event_Stmt:
 		if w.vtable.visit_event_stmt != nil {
 			w.vtable.visit_event_stmt(&w.visitor, n)
 		}
-		for &anno in n.annotations {
-			walk_child_node(w, node, &anno)
+
+		if w.vtable.before_visit_child != nil {
+			w.vtable.before_visit_child(&w.visitor, node, n.params)
 		}
+
 		walk_child_node(w, node, n.params)
+
+		if w.vtable.after_visit_child != nil {
+			w.vtable.after_visit_child(&w.visitor, node, n.params)
+		}
+
+		if w.vtable.before_visit_child != nil {
+			w.vtable.before_visit_child(&w.visitor, node, n.body)
+		}
+
 		walk_child_node(w, node, n.body)
+
+		if w.vtable.after_visit_child != nil {
+			w.vtable.after_visit_child(&w.visitor, node, n.body)
+		}
 
 	case ^Expr_Stmt:
 		if w.vtable.visit_expr_stmt != nil {
