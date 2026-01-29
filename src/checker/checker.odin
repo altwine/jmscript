@@ -566,7 +566,6 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 	case ^ast.Ident:
 		sym, exists := lookup_symbol(c.symbol_table.current_scope, v.name)
 		if !exists {
-			add_error(c, fmt.tprintf("variable '%s' is not declared", v.name), v)
 			type_info.kind = .Invalid
 			return type_info
 		}
