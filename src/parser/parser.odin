@@ -198,6 +198,7 @@ parse_annotation_or_list :: proc(p: ^Parser, annos: ^[dynamic]ast.Annotation) {
 	} else {
 		parse_single_anno_without_paren(p, start_pos, annos)
 	}
+	skip_optional_semicolon(p)
 }
 
 parse_single_annotation_in_paren :: proc(p: ^Parser, start_pos: lexer.Pos, annos: ^[dynamic]ast.Annotation) {
