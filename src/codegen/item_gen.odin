@@ -1,5 +1,9 @@
 package codegen
 
+import "core:fmt"
+import "core:strings"
+
+import "../../assets"
 import nbt "../../odin-nbt"
 
 Minecraft_Item :: struct {
@@ -10,11 +14,23 @@ Minecraft_Item :: struct {
 
 AIR_ITEM_NBT_BASE64 :: "AAAAAAAAAAA="
 
-generate_item :: proc(id: string, count: int, allocator := context.allocator) -> (string, bool) #optional_ok {
+generate_item :: proc(irb: ^IR_Builder, id: string, count: int, allocator := context.allocator) -> (string, bool) #optional_ok {
+	id := id
+	if !strings.starts_with(id, "minecraft:") {
+		id = strings.concatenate([]string{"minecraft:", id}, irb.alloc)
+	}
+
 	// NOTE: shortcut for air item
 	if id == "minecraft:air" {
 		return AIR_ITEM_NBT_BASE64, true
 	}
+
+	item_id := strings.trim_prefix(id, "minecraft:")
+	if _, is_valid := assets.get_minecraft_item(item_id); !is_valid {
+		ir_add_error(irb, fmt.tprintf("invalid item id: '%s'", item_id), nil)
+		return AIR_ITEM_NBT_BASE64, false
+	}
+
 	w: nbt.Writer
 	nbt.writer_init(&w, allocator)
 	defer nbt.writer_destroy(&w)

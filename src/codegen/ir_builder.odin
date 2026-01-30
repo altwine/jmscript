@@ -315,7 +315,7 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 					if basic_lit, is_basic_lit := icon_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
 						if basic_lit.tok.kind == .Text {
 							item_id := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
-							func_icon := generate_item(item_id, 1, irb.alloc)
+							func_icon := generate_item(irb, item_id, 1, irb.alloc)
 							append(&func_handler.values, named_value("icon", item_value(func_icon)))
 						}
 					}
@@ -522,11 +522,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 				}
 
 				if item_name_lit, is_text_lit := item_name_val.(TextValue); is_text_lit {
-					item_name_raw :=  item_name_lit.text
-					if !strings.starts_with(item_name_raw, "minecraft:") {
-						item_name_raw = strings.concatenate([]string{"minecraft:", item_name_raw}, irb.alloc)
-					}
-					item_name = item_name_raw
+					item_name = item_name_lit.text
 				} else {
 					ir_add_error(irb, "text literal expected", ident)
 				}
@@ -539,7 +535,7 @@ ir_parse_expression :: proc(irb: ^IR_Builder, expr: ^ast.Expr) -> ([dynamic]Oper
 					item_count = 1
 				}
 
-				nbt_result, success := generate_item(item_name, int(item_count), irb.alloc)
+				nbt_result, success := generate_item(irb, item_name, int(item_count), irb.alloc)
 				if !success {
 					fmt.printfln("[DEBUG] Can't compress item from raw to nbt format for some reason. Contact compiler devs pls")
 					break expr_type_switch
