@@ -285,15 +285,47 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 			func_handler.values = make([dynamic]NamedValue, irb.alloc)
 
 			translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}`
-			display_name_data := fmt.tprintf(translations_template, "Test", "Тест", "Тест", "Test")
-			display_desc_data := fmt.tprintf(translations_template, "Test", "Тест", "Тест", "Test")
-			append(&func_handler.values, named_value("display_name", localized_text_value(display_name_data)))
-			append(&func_handler.values, named_value("display_description", localized_text_value(display_desc_data)))
 
-			func_test_icon := generate_item("minecraft:lapis_lazuli", 1, irb.alloc)
-			append(&func_handler.values, named_value("icon", item_value(func_test_icon)))
+			if name_anno := checker.get_anno(typed_stmt, "name"); name_anno != nil {
+				if name_anno.value != nil {
+					if basic_lit, is_basic_lit := name_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
+						if basic_lit.tok.kind == .Text {
+							anno_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+							display_name_data := fmt.tprintf(translations_template, anno_content, anno_content, anno_content, anno_content)
+							append(&func_handler.values, named_value("display_name", localized_text_value(display_name_data)))
+						}
+					}
+				}
+			}
 
-			append(&func_handler.values, named_value("is_hidden", enum_value("FALSE")))
+			if desc_anno := checker.get_anno(typed_stmt, "desc"); desc_anno != nil {
+				if desc_anno.value != nil {
+					if basic_lit, is_basic_lit := desc_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
+						if basic_lit.tok.kind == .Text {
+							anno_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+							display_desc_data := fmt.tprintf(translations_template, anno_content, anno_content, anno_content, anno_content)
+							append(&func_handler.values, named_value("display_description", localized_text_value(display_desc_data)))
+						}
+					}
+				}
+			}
+
+			if icon_anno := checker.get_anno(typed_stmt, "icon"); icon_anno != nil {
+				if icon_anno.value != nil {
+					if basic_lit, is_basic_lit := icon_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
+						if basic_lit.tok.kind == .Text {
+							item_id := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+							func_icon := generate_item(item_id, 1, irb.alloc)
+							append(&func_handler.values, named_value("icon", item_value(func_icon)))
+						}
+					}
+				}
+			}
+
+			if checker.has_anno(typed_stmt, "hidden") {
+				append(&func_handler.values, named_value("is_hidden", enum_value("TRUE")))
+			}
+
 			append(&irb.handlers, func_handler)
 		case ^ast.Event_Stmt:
 			event_handler := new_handler(irb, "event", typed_stmt.name)
