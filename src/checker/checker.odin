@@ -563,6 +563,8 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 	}
 
 	#partial switch v in expr.derived {
+	case ^ast.Paren_Expr:
+		return get_type_info_from_expression(c, v.expr)
 	case ^ast.Ident:
 		sym, exists := lookup_symbol(c.symbol_table.current_scope, v.name)
 		if !exists {
