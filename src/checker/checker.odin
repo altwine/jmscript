@@ -484,6 +484,7 @@ _type_check_visit_call_expr :: proc(v: ^ast.Visitor, node: ^ast.Call_Expr) {
 		if len(node.args) != len(sym.type.param_types) {
 			add_error(c, fmt.tprintf("invalid arguments count in function call: %d != %d",
 				len(node.args), len(sym.type.param_types)), node)
+			return
 		}
 
 		for arg, i in node.args {
