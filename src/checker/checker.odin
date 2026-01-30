@@ -13,6 +13,7 @@ Symbol_Table :: struct {
 	global_scope:  ^Scope,
 	current_scope: ^Scope,
 	scope_level:   int,
+	node_scopes:   map[int]^Scope,
 }
 
 Scope :: struct {
@@ -29,8 +30,6 @@ Checker :: struct {
 	errs:			  [dynamic]error.Error,
 	current_file:	  ^ast.File,
 	current_file_idx: int,
-
-	node_scopes:	  map[int]^Scope,
 
 	collector_walker:	 ^ast.Walker,
 	type_checker_walker: ^ast.Walker,
@@ -50,7 +49,7 @@ checker_init :: proc(c: ^Checker, allocator := context.allocator) {
 	c.errs = make([dynamic]error.Error, allocator)
 	c.symbol_table = new(Symbol_Table, allocator)
 	c.symbol_table.scope_level = -1
-	c.node_scopes = make(map[int]^Scope, 0, allocator)
+	c.symbol_table.node_scopes = make(map[int]^Scope, 0, allocator)
 
 	c.collector_vtable = ast.Visitor_VTable{}
 	c.type_checker_vtable = ast.Visitor_VTable{}
@@ -160,12 +159,12 @@ enter_scope_for_node :: proc(c: ^Checker, node: ^ast.Node) -> bool {
 	case ^ast.Block_Stmt,
 		 ^ast.Defer_Stmt:
 
-		if scope, exists := c.node_scopes[node.id]; exists {
+		if scope, exists := c.symbol_table.node_scopes[node.id]; exists {
 			c.symbol_table.current_scope = scope
 			c.symbol_table.scope_level = scope.level
 		} else {
 			enter_scope(c)
-			c.node_scopes[node.id] = c.symbol_table.current_scope
+			c.symbol_table.node_scopes[node.id] = c.symbol_table.current_scope
 		}
 		return true
 	case:
@@ -180,7 +179,7 @@ exit_scope_for_node :: proc(c: ^Checker, node: ^ast.Node) {
 		 ^ast.Event_Stmt,
 		 ^ast.Defer_Stmt:
 
-		if scope, exists := c.node_scopes[node.id]; exists && scope.parent != nil {
+		if scope, exists := c.symbol_table.node_scopes[node.id]; exists && scope.parent != nil {
 			c.symbol_table.current_scope = scope.parent
 			c.symbol_table.scope_level = scope.parent.level
 		}
@@ -193,7 +192,7 @@ set_scope_from_node_id :: proc(c: ^Checker, node: ^ast.Node) -> bool {
 		return false
 	}
 
-	if scope, exists := c.node_scopes[node.id]; exists {
+	if scope, exists := c.symbol_table.node_scopes[node.id]; exists {
 		c.symbol_table.current_scope = scope
 		c.symbol_table.scope_level = scope.level
 		return true
@@ -230,7 +229,7 @@ _type_check_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node)
 			 ^ast.Event_Stmt,
 			 ^ast.Defer_Stmt:
 
-			if scope, exists := c.node_scopes[child.id]; exists && scope.parent != nil {
+			if scope, exists := c.symbol_table.node_scopes[child.id]; exists && scope.parent != nil {
 				c.symbol_table.current_scope = scope.parent
 				c.symbol_table.scope_level = scope.parent.level
 			}
@@ -293,7 +292,7 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 
 	enter_scope(c)
 	func_scope := c.symbol_table.current_scope
-	c.node_scopes[node.id] = func_scope
+	c.symbol_table.node_scopes[node.id] = func_scope
 
 	if node.params != nil {
 		for param in node.params.list {
@@ -328,7 +327,7 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 
 	enter_scope(c)
 	event_scope := c.symbol_table.current_scope
-	c.node_scopes[node.id] = event_scope
+	c.symbol_table.node_scopes[node.id] = event_scope
 
 	if node.params != nil {
 		for param in node.params.list {
