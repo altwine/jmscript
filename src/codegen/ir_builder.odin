@@ -284,7 +284,7 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 			append_operations(&func_handler.operations, ops)
 			func_handler.values = make([dynamic]NamedValue, irb.alloc)
 
-			translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ua-UA\":{{\"rawText\":\"%s\"\"parsingType\":\"LEGACY\"},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}`
+			translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}`
 			display_name_data := fmt.tprintf(translations_template, "Test", "Тест", "Тест", "Test")
 			display_desc_data := fmt.tprintf(translations_template, "Test", "Тест", "Тест", "Test")
 			append(&func_handler.values, named_value("display_name", localized_text_value(display_name_data)))
@@ -764,8 +764,8 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		}
 		location_value := value.(LocationValue)
 		json_write_string(&irb.jb, "type", "location", true)
-		json_write_number(&irb.jb, "x", location_value.yaw, true)
-		json_write_number(&irb.jb, "x", location_value.pitch, true)
+		json_write_number(&irb.jb, "yaw", location_value.yaw, true)
+		json_write_number(&irb.jb, "pitch", location_value.pitch, true)
 		json_write_number(&irb.jb, "x", location_value.x, true)
 		json_write_number(&irb.jb, "y", location_value.y, true)
 		json_write_number(&irb.jb, "z", location_value.z, false)

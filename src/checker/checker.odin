@@ -250,8 +250,8 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 	c.files = files
 
 	enter_scope(c)
-	// add_builtin_functions(c)
-	// add_native_functions(c)
+	add_builtin_functions(c)
+	add_native_functions(c)
 
 	for file, idx in files {
 		c.current_file = file
@@ -417,7 +417,6 @@ _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	c := cast(^Checker)v.user_data
 
 	if node.is_const && !check_expression_is_pure(c, node.value) {
-		fmt.println(c.symbol_table.scope_level)
 		add_error(c, fmt.tprintf("cannot initialize constant '%s' with non-constant value '%s'",
 			node.name, ast.expr_to_string(node.value, context.temp_allocator)), &node.stmt_base)
 	}
@@ -737,15 +736,15 @@ add_builtin_functions :: proc(c: ^Checker) {
 	append(&particle_value_type.param_names, "z_motion")
 	append(&particle_value_type.param_names, "color")
 	append(&particle_value_type.param_names, "size")
-	append(&sound_value_type.param_types, create_type_info(.Text, c.alloc))
-	append(&sound_value_type.param_types, create_type_info(.Number, c.alloc))
-	append(&sound_value_type.param_types, create_type_info(.Number, c.alloc))
-	append(&sound_value_type.param_types, create_type_info(.Number, c.alloc))
-	append(&sound_value_type.param_types, create_type_info(.Number, c.alloc))
-	append(&sound_value_type.param_types, create_type_info(.Number, c.alloc))
-	append(&sound_value_type.param_types, create_type_info(.Number, c.alloc))
-	append(&sound_value_type.param_types, create_type_info(.Number, c.alloc))
-	append(&sound_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Text, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&particle_value_type.param_types, create_type_info(.Number, c.alloc))
 	symbol = create_symbol("particle", particle_value_type, nil, c.alloc)
 	symbol.metadata["flags"] = Flags{.BUILTIN}
 	add_symbol(c, symbol)
@@ -783,13 +782,13 @@ add_builtin_functions :: proc(c: ^Checker) {
 	add_symbol(c, symbol)
 
 	potion_value_type := create_builtin_type_info(c, .Potion)
-	particle_value_type.kind = .Function
-	append(&enum_value_type.param_names, "potion")
-	append(&enum_value_type.param_names, "amplifier")
-	append(&enum_value_type.param_names, "duration")
-	append(&enum_value_type.param_types, create_type_info(.Text, c.alloc))
-	append(&enum_value_type.param_types, create_type_info(.Number, c.alloc))
-	append(&enum_value_type.param_types, create_type_info(.Number, c.alloc))
+	potion_value_type.kind = .Function
+	append(&potion_value_type.param_names, "potion")
+	append(&potion_value_type.param_names, "amplifier")
+	append(&potion_value_type.param_names, "duration")
+	append(&potion_value_type.param_types, create_type_info(.Text, c.alloc))
+	append(&potion_value_type.param_types, create_type_info(.Number, c.alloc))
+	append(&potion_value_type.param_types, create_type_info(.Number, c.alloc))
 	symbol = create_symbol("potion", potion_value_type, nil, c.alloc)
 	symbol.metadata["flags"] = Flags{.BUILTIN}
 	add_symbol(c, symbol)
