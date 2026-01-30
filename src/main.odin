@@ -72,6 +72,8 @@ main :: proc() {
 		command_init()
 	case "report":
 		command_report()
+	case "license":
+		command_license()
 	case "help":
 		command_help()
 	case:
@@ -152,6 +154,11 @@ command_report :: proc() {
 	fmt.printfln("\tOS: %s", info.os_version.as_string)
 	fmt.printfln("\tRAM: %d MiB", info.ram.total_ram / mem.Megabyte)
 	fmt.printfln("\tCPU: %s", info.cpu.name)
+}
+
+command_license :: proc() {
+	LICENSE_TEXT : string : #load("../LICENSE")
+	fmt.println(LICENSE_TEXT)
 }
 
 command_help :: proc() {
@@ -290,6 +297,7 @@ print_help :: proc() {
 	fmt.println("\tversion   Prints version.")
 	fmt.println("\tinit      Initialize project.")
 	fmt.println("\treport    Prints system information for bug report.")
+	fmt.println("\tlicense   Prints license text.")
 	fmt.println("\thelp      Prints help message.")
 	fmt.println("\t...       Everything else prints this message.")
 }
