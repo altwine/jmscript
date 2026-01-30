@@ -859,7 +859,9 @@ check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
 	}
 
 	if func_stmt, is_func_stmt := sym.decl_node.derived.(^ast.Func_Stmt); is_func_stmt {
-		return check_function_body_is_pure(c, func_stmt.body)
+		if func_scope, exists2 := c.symbol_table.node_scopes[func_stmt.id]; exists2 {
+			return check_function_body_is_pure(c, func_stmt.body, func_scope)
+		}
 	}
 
 	return false
@@ -879,18 +881,13 @@ is_builtin :: proc(c: ^Checker, name: string) -> bool {
 	return false
 }
 
-check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool {
+check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt, func_scope: ^Scope = nil) -> bool {
 	if body == nil {
 		return true
 	}
 
 	for stmt in body.stmts {
 		#partial switch s in stmt.derived {
-		case ^ast.Expr_Stmt:
-			if !check_expression_is_pure(c, s.expr) {
-				return false
-			}
-
 		case ^ast.Value_Decl:
 			if t, is_value_decl := s.derived.(^ast.Value_Decl); is_value_decl {
 				if !check_expression_is_pure(c, t.value) {
@@ -899,6 +896,20 @@ check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool 
 			}
 
 		case ^ast.Assign_Stmt:
+			if !check_expression_is_pure(c, s.expr) {
+				return false
+			}
+
+			if func_scope != nil {
+				if sym, exists := lookup_local_symbol(func_scope, s.name); exists {
+				} else if sym2, exists2 := lookup_symbol(c.symbol_table.global_scope, s.name); exists2 {
+					return false
+				} else if sym3, exists3 := lookup_symbol(c.symbol_table.current_scope, s.name); exists3 {
+					return false
+				}
+			}
+
+		case ^ast.Expr_Stmt:
 			if !check_expression_is_pure(c, s.expr) {
 				return false
 			}
@@ -912,10 +923,10 @@ check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool 
 			if !check_expression_is_pure(c, s.cond) {
 				return false
 			}
-			if !check_function_body_is_pure(c, s.body) {
+			if !check_function_body_is_pure(c, s.body, func_scope) {
 				return false
 			}
-			if s.else_stmt != nil && !check_function_body_is_pure(c, s.else_stmt) {
+			if s.else_stmt != nil && !check_function_body_is_pure(c, s.else_stmt, func_scope) {
 				return false
 			}
 
@@ -925,7 +936,7 @@ check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt) -> bool 
 			}
 
 		case ^ast.Block_Stmt:
-			if !check_function_body_is_pure(c, s) {
+			if !check_function_body_is_pure(c, s, func_scope) {
 				return false
 			}
 
