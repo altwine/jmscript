@@ -1,5 +1,10 @@
 package test
 
-func a(arg: text) {
-	B := arg
+func a() {
+	A :: 1
+	player_send_message(text(A), "CONCATENATION")
+}
+
+event player_join() {
+	a()
 }
