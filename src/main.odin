@@ -230,6 +230,12 @@ upload_code :: proc(code: string, allocator := context.allocator) -> (string, bo
 		return "", false
 	}
 
+	opt7_res := curl.easy_setopt(ce, curl.option.NOSIGNAL, true)
+	if opt7_res != .E_OK {
+		fmt.printfln("Can't upload code: %s", curl.easy_strerror(opt7_res))
+		return "", false
+	}
+
 	perform_res := curl.easy_perform(ce)
 	if perform_res != .E_OK {
 		fmt.printfln("Can't upload code: %s", curl.easy_strerror(perform_res))

@@ -42,6 +42,7 @@ fetch_url :: proc(url: string) -> (string, bool) #optional_ok {
     curl.easy_setopt(c, curl.option.WRITEFUNCTION, write_to_string)
     curl.easy_setopt(c, curl.option.WRITEDATA, &builder)
     curl.easy_setopt(c, curl.option.FOLLOWLOCATION, 1)
+    curl.easy_setopt(c, curl.option.NOSIGNAL, true)
 
     res := curl.easy_perform(c)
 
