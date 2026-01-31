@@ -594,15 +594,11 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 
 make_type_event :: proc(c: ^Checker) -> ^Type_Info {
 	type_info_event := create_type_info(.Event, c.alloc)
-	type_info_event.param_types = make([dynamic]^Type_Info, c.alloc)
-	type_info_event.param_names = make([dynamic]string, c.alloc)
 	return type_info_event
 }
 
 make_type_func :: proc(c: ^Checker, ret_type: ^Type_Info) -> ^Type_Info {
 	type_info_func := create_type_info(.Function, c.alloc)
-	type_info_func.param_types = make([dynamic]^Type_Info, c.alloc)
-	type_info_func.param_names = make([dynamic]string, c.alloc)
 	if ret_type != nil {
 		type_info_func.return_t = ret_type
 	}
@@ -611,8 +607,6 @@ make_type_func :: proc(c: ^Checker, ret_type: ^Type_Info) -> ^Type_Info {
 
 create_builtin_type_info :: proc(c: ^Checker, kind, ret_kind: Type_Kind) -> ^Type_Info {
 	type_info := create_type_info(kind, c.alloc)
-	type_info.param_names = make([dynamic]string, c.alloc)
-	type_info.param_types = make([dynamic]^Type_Info, c.alloc)
 	return_type := create_type_info(ret_kind, c.alloc)
 	type_info.return_t = return_type
 	return type_info
@@ -759,8 +753,6 @@ add_native_functions :: proc(c: ^Checker) {
 			continue
 		}
 		type_info := create_type_info(.Function, c.alloc)
-		type_info.param_names = make([dynamic]string, c.alloc)
-		type_info.param_types = make([dynamic]^Type_Info, c.alloc)
 		for slot in action_data.slots[:] {
 			append(&type_info.param_names, slot.name)
 			slot_type_info := create_type_info(string_to_type_kind(c, slot.type, nil), c.alloc)

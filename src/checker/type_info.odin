@@ -39,6 +39,8 @@ create_type_info :: proc(kind: Type_Kind, allocator := context.allocator) -> ^Ty
 	type_info := new(Type_Info, allocator)
 	type_info.kind = kind
 	type_info.metadata = make(Metadata, allocator)
+	type_info.param_types = make([dynamic]^Type_Info, allocator)
+	type_info.param_names = make([dynamic]string, allocator)
 	return type_info
 }
 
