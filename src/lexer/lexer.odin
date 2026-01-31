@@ -306,17 +306,21 @@ skip_whitespaces :: proc(l: ^Lexer) {
 advance :: proc(l: ^Lexer) {
 	if l.read_offset >= len(l.src) {
 		l.ch = -1
+		l.offset = l.read_offset
 		return
 	}
+
 	l.offset = l.read_offset
 	r, w := utf8.decode_rune(l.src[l.read_offset:])
 	l.read_offset += w
-	if l.ch == '\n' {
+
+	if r == '\n' {
 		l.line += 1
-		l.column = 1
-	} else if l.ch != 0 {
+		l.column = 0
+	} else {
 		l.column += 1
 	}
+
 	l.ch = r
 }
 
