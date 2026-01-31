@@ -16,13 +16,6 @@ Symbol_Table :: struct {
 	node_scopes:   map[int]^Scope,
 }
 
-Scope :: struct {
-	symbols:  [dynamic]^Symbol,
-	parent:   ^Scope,
-	level:	  int,
-	children: [dynamic]^Scope,
-}
-
 Checker :: struct {
 	alloc:			  mem.Allocator,
 	symbol_table:	  ^Symbol_Table,
@@ -1260,11 +1253,7 @@ anno_is_true :: proc(stmt: ^ast.Stmt, name: string) -> bool {
 }
 
 enter_scope :: proc(c: ^Checker) {
-	new_scope := new(Scope, c.alloc)
-	new_scope.symbols = make([dynamic]^Symbol, c.alloc)
-	new_scope.parent = c.symbol_table.current_scope
-	new_scope.level = c.symbol_table.scope_level + 1
-	new_scope.children = make([dynamic]^Scope, 0, c.alloc)
+	new_scope := create_scope(c.symbol_table.current_scope, c.symbol_table.scope_level + 1, c.alloc)
 
 	if c.symbol_table.current_scope == nil {
 		c.symbol_table.global_scope = new_scope
