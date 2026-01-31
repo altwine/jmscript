@@ -252,7 +252,8 @@ Any_Stmt :: union {
 
 node_id := 0
 new :: proc($T: typeid, pos, end: lexer.Pos, allocator := context.allocator) -> ^T {
-	n, _ := mem.new(T, allocator)
+	n, err := mem.new(T, allocator)
+	assert(n != nil, "new ast node is nil")
 	n.pos = pos
 	n.end = end
 	n.derived = n

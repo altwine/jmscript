@@ -1,7 +1,6 @@
 package parser
 
 import "core:os"
-import "core:fmt"
 import "core:mem"
 
 import "../lexer"
@@ -285,8 +284,6 @@ parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {
 		cond = parse_expression(p)
 		if match(p, .Open_Brace) {
 			body = parse_block_stmt(p)
-		} else {
-			fmt.printfln("[DEBUG] Strange for loop, unhandled")
 		}
 	}
 
@@ -400,6 +397,9 @@ parse_event_stmt :: proc(p: ^Parser) -> ^ast.Event_Stmt {
 	params := make([dynamic]^ast.Param, p.file.alloc)
 	if peek(p).kind != .Close_Paren {
 		for {
+			if match(p, .EOF) {
+				break
+			}
 			param_name := advance(p)
 			param_sep := advance(p)
 			param_type := advance(p)
@@ -443,6 +443,9 @@ parse_func_stmt :: proc(p: ^Parser) -> ^ast.Func_Stmt {
 	params := make([dynamic]^ast.Param, p.file.alloc)
 	if peek(p).kind != .Close_Paren {
 		for {
+			if match(p, .EOF) {
+				break
+			}
 			param_name := advance(p)
 			param_sep := advance(p)
 			param_type := advance(p)
@@ -674,7 +677,6 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 				advance(p)
 				advance(p)
 			} else if positional_args_started {
-				fmt.printfln("%v", current(p))
 				add_error(p, "positional arguments not allowed after keyword arguments in function call", current(p), current(p))
 			}
 			arg := parse_expression(p)
