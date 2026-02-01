@@ -1818,6 +1818,197 @@ remove_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> int {
 	return removed_count
 }
 
+reorder_constant_operands :: proc(o: ^Optimizer, expr: ^ast.Binary_Expr) -> bool {
+	if expr == nil {
+		return false
+	}
+
+	is_associative_commutative := false
+	#partial switch expr.op.kind {
+	case .Add, .Mul:
+		is_associative_commutative = true
+	case:
+		return false
+	}
+
+	if !is_associative_commutative {
+		return false
+	}
+
+	changed := false
+	if left_binary, is_left_binary := expr.left.derived.(^ast.Binary_Expr); is_left_binary && left_binary.op.kind == expr.op.kind {
+		changed = reorder_constant_operands(o, left_binary) || changed
+	}
+	if right_binary, is_right_binary := expr.right.derived.(^ast.Binary_Expr); is_right_binary && right_binary.op.kind == expr.op.kind {
+		changed = reorder_constant_operands(o, right_binary) || changed
+	}
+
+	constant_parts := make([dynamic]^ast.Expr, o.alloc)
+	defer delete(constant_parts)
+
+	variable_parts := make([dynamic]^ast.Expr, o.alloc)
+	defer delete(variable_parts)
+
+	collect_parts :: proc(o: ^Optimizer, expr: ^ast.Expr, op: lexer.Token_Kind, constant_parts: ^[dynamic]^ast.Expr, variable_parts: ^[dynamic]^ast.Expr) {
+		if expr == nil {
+			return
+		}
+
+		#partial switch e in expr.derived {
+		case ^ast.Binary_Expr:
+			binary := e
+			if binary.op.kind == op {
+				collect_parts(o, binary.left, op, constant_parts, variable_parts)
+				collect_parts(o, binary.right, op, constant_parts, variable_parts)
+				return
+			}
+		}
+
+		result := evaluate_constant_expression(o, expr)
+		if result.is_constant {
+			append(constant_parts, expr)
+		} else {
+			append(variable_parts, expr)
+		}
+	}
+
+	collect_parts(o, expr.left, expr.op.kind, &constant_parts, &variable_parts)
+	collect_parts(o, expr.right, expr.op.kind, &constant_parts, &variable_parts)
+
+	if len(constant_parts) >= 2 {
+		if len(constant_parts) > 0 {
+			current_const: ^ast.Expr = constant_parts[0]
+
+			for i := 1; i < len(constant_parts); i += 1 {
+				current_const = create_binary_expression_for_constants(o, current_const, constant_parts[i], expr.op)
+				changed = true
+			}
+
+			final_expr: ^ast.Expr = current_const
+
+			for i := 0; i < len(variable_parts); i += 1 {
+				final_expr = ast.create_binary_expr(
+					final_expr,
+					expr.op,
+					variable_parts[i],
+					expr.pos,
+					expr.end,
+					o.alloc,
+				)
+				changed = true
+			}
+
+			if parent, exists := o.node_parent[expr]; exists {
+				replace_expr_in_parent(o, parent, expr, final_expr)
+				return true
+			}
+		}
+	}
+
+	return changed
+}
+
+create_binary_expression_for_constants :: proc(o: ^Optimizer, left, right: ^ast.Expr, op: lexer.Token) -> ^ast.Expr {
+	left_result := evaluate_constant_expression(o, left)
+	right_result := evaluate_constant_expression(o, right)
+
+	if !left_result.is_constant || !right_result.is_constant {
+		return ast.create_binary_expr(left, op, right, left.pos, right.end, o.alloc)
+	}
+
+	combined_result: Constant_Result
+	#partial switch op.kind {
+	case .Add:
+		combined_result = add_numbers(left_result, right_result)
+	case .Mul:
+		combined_result = perform_arithmetic(.Mul, left_result, right_result)
+	case:
+		return ast.create_binary_expr(left, op, right, left.pos, right.end, o.alloc)
+	}
+
+	if combined_result.is_constant {
+		new_lit := create_constant_literal(o, combined_result, left.pos, right.end)
+		if new_lit != nil {
+			return new_lit
+		}
+	}
+
+	return ast.create_binary_expr(left, op, right, left.pos, right.end, o.alloc)
+}
+
+replace_expr_in_parent :: proc(o: ^Optimizer, parent: ^ast.Node, old_expr, new_expr: ^ast.Expr) -> bool {
+	if parent == nil || old_expr == nil || new_expr == nil {
+		return false
+	}
+
+	#partial switch p in parent.derived {
+	case ^ast.Binary_Expr:
+		binary := p
+		if binary.left == old_expr {
+			binary.left = new_expr
+			o.node_parent[new_expr] = parent
+			return true
+		} else if binary.right == old_expr {
+			binary.right = new_expr
+			o.node_parent[new_expr] = parent
+			return true
+		}
+	case ^ast.Value_Decl:
+		decl := p
+		if decl.value == old_expr {
+			decl.value = new_expr
+			o.node_parent[new_expr] = parent
+			return true
+		}
+	case ^ast.Expr_Stmt:
+		stmt := p
+		if stmt.expr == old_expr {
+			stmt.expr = new_expr
+			o.node_parent[new_expr] = parent
+			return true
+		}
+	case ^ast.Assign_Stmt:
+		assign := p
+		if assign.expr == old_expr {
+			assign.expr = new_expr
+			o.node_parent[new_expr] = parent
+			return true
+		}
+	case ^ast.Return_Stmt:
+		ret := p
+		if ret.result == old_expr {
+			ret.result = new_expr
+			o.node_parent[new_expr] = parent
+			return true
+		}
+	case ^ast.Unary_Expr:
+		unary := p
+		if unary.expr == old_expr {
+			unary.expr = new_expr
+			o.node_parent[new_expr] = parent
+			return true
+		}
+	case ^ast.Call_Expr:
+		call := p
+		for i in 0..<len(call.args) {
+			if call.args[i].value == old_expr {
+				call.args[i].value = new_expr
+				o.node_parent[new_expr] = parent
+				return true
+			}
+		}
+	case ^ast.Paren_Expr:
+		paren := p
+		if paren.expr == old_expr {
+			paren.expr = new_expr
+			o.node_parent[new_expr] = parent
+			return true
+		}
+	}
+
+	return false
+}
+
 optimize_constants_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> int {
 	if stmt == nil {
 		return 0
@@ -1828,6 +2019,12 @@ optimize_constants_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> int {
 	#partial switch s in stmt.derived {
 	case ^ast.Value_Decl:
 		if decl, ok := s.derived.(^ast.Value_Decl); ok && decl.value != nil {
+			if binary, is_binary := decl.value.derived.(^ast.Binary_Expr); is_binary {
+				if reorder_constant_operands(o, binary) {
+					optimized_count += 1
+				}
+			}
+
 			if optimized, _ := try_optimize_expression(o, decl.value, cast(^ast.Node)stmt); optimized {
 				optimized_count += 1
 			}
@@ -2020,6 +2217,33 @@ optimize_constants_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> in
 	optimized_count := 0
 
 	for stmt in block.stmts {
+		#partial switch s in stmt.derived {
+		case ^ast.Value_Decl:
+			if decl, ok := s.derived.(^ast.Value_Decl); ok && decl.value != nil {
+				if binary, is_binary := decl.value.derived.(^ast.Binary_Expr); is_binary {
+					if reorder_constant_operands(o, binary) {
+						optimized_count += 1
+					}
+				}
+			}
+		case ^ast.Expr_Stmt:
+			if expr_stmt, ok := s.derived.(^ast.Expr_Stmt); ok && expr_stmt.expr != nil {
+				if binary, is_binary := expr_stmt.expr.derived.(^ast.Binary_Expr); is_binary {
+					if reorder_constant_operands(o, binary) {
+						optimized_count += 1
+					}
+				}
+			}
+		case ^ast.Assign_Stmt:
+			if assign, ok := s.derived.(^ast.Assign_Stmt); ok && assign.expr != nil {
+				if binary, is_binary := assign.expr.derived.(^ast.Binary_Expr); is_binary {
+					if reorder_constant_operands(o, binary) {
+						optimized_count += 1
+					}
+				}
+			}
+		}
+
 		optimized_count += optimize_constants_in_stmt(o, stmt)
 
 		#partial switch s in stmt.derived {
