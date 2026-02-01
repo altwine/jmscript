@@ -27,3 +27,6 @@ func g() {}
 @test
 @another
 func h() {}
+
+@test("value")
+func i() {}

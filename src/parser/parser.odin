@@ -195,8 +195,45 @@ parse_annotation_or_list :: proc(p: ^Parser, annos: ^[dynamic]ast.Annotation) {
 		advance(p)
 
 	} else {
-		parse_single_anno_without_paren(p, start_pos, annos)
+		if !match(p, .Ident) {
+			add_error(p, "Expected annotation name after '@'", current(p), current(p))
+			return
+		}
+
+		name := current(p).content
+		end_pos := current(p).pos
+		advance(p)
+
+		if match(p, .Open_Paren) {
+			advance(p)
+
+			value := parse_expression(p)
+			if value == nil {
+				add_error(p, "Expected expression inside parentheses", current(p), current(p))
+				skip_to_close_paren(p)
+				return
+			}
+
+			if !match(p, .Close_Paren) {
+				add_error(p, "Expected ')' after annotation value", current(p), current(p))
+				skip_to_close_paren(p)
+				return
+			}
+			end_pos = current(p).pos
+			advance(p)
+
+			anno := ast.new(ast.Annotation, start_pos, end_pos, p.file.alloc)
+			anno.name = name
+			anno.value = value
+			append(annos, anno^)
+		} else {
+			anno := ast.new(ast.Annotation, start_pos, end_pos, p.file.alloc)
+			anno.name = name
+			anno.value = nil
+			append(annos, anno^)
+		}
 	}
+
 	skip_optional_semicolon(p)
 }
 
@@ -217,27 +254,26 @@ parse_single_annotation_in_paren :: proc(p: ^Parser, start_pos: lexer.Pos, annos
 		if value == nil {
 			add_error(p, "Expected expression after '='", current(p), current(p))
 		}
+	} else if match(p, .Open_Paren) {
+		advance(p)
+		value = parse_expression(p)
+		if value == nil {
+			add_error(p, "Expected expression inside parentheses", current(p), current(p))
+			skip_to_close_paren(p)
+			return
+		}
+
+		if !match(p, .Close_Paren) {
+			add_error(p, "Expected ')' after annotation value", current(p), current(p))
+			skip_to_close_paren(p)
+			return
+		}
+		advance(p)
 	}
 
 	anno := ast.new(ast.Annotation, start_pos, current(p).pos, p.file.alloc)
 	anno.name = name
 	anno.value = value
-	append(annos, anno^)
-}
-
-parse_single_anno_without_paren :: proc(p: ^Parser, start_pos: lexer.Pos, annos: ^[dynamic]ast.Annotation) {
-	if !match(p, .Ident) {
-		add_error(p, "Expected annotation name after '@'", current(p), current(p))
-		return
-	}
-
-	name := current(p).content
-	end_pos := current(p).pos
-	advance(p)
-
-	anno := ast.new(ast.Annotation, start_pos, end_pos, p.file.alloc)
-	anno.name = name
-	anno.value = nil
 	append(annos, anno^)
 }
 
