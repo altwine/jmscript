@@ -46,8 +46,8 @@ main :: proc() {
 	append(&build_prod_cmd, "-strict-style")
 	append(&build_prod_cmd, "-disallow-do")
 	append(&build_prod_cmd, "-warnings-as-errors")
-	append(&build_prod_cmd, strings.concatenate([]string{"-resource:", resources_file_path}))
-	append(&build_prod_cmd, strings.concatenate([]string{"-out:", output_file_path}))
+	append(&build_prod_cmd, fmt.tprintf("-resource:%s", resources_file_path))
+	append(&build_prod_cmd, fmt.tprintf("-out:%s", output_file_path))
 
 	proc_state, stdout, stderr, err := os2.process_exec(
 		os2.Process_Desc{command=build_prod_cmd[:]},

@@ -34,10 +34,10 @@ main :: proc() {
 	events_list := update_assets.extract_events()
 
 	for locale in LOCALES {
-		translations_raw := update_assets.fetch_url(strings.concatenate({LOCALE_DATA_URL_BASE, locale, ".properties"}))
+		translations_raw := update_assets.fetch_url(fmt.tprintf(LOCALE_DATA_URL_BASE+"%s.properties", locale))
 		t := parse_properties(translations_raw)
 
-		events_file_path := filepath.join({docs_dir, strings.concatenate({"events_", locale, ".md"}) })
+		events_file_path := filepath.join({docs_dir, fmt.tprintf("events_%s.md", locale)})
 
 		events_fd, err := os.open(events_file_path, FILE_FLAGS)
 		if err != nil {

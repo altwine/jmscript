@@ -253,7 +253,7 @@ upload_code :: proc(code: string, allocator := context.allocator) -> (string, bo
 	buf: [64]byte
 	timestamp := time.time_to_unix(time.now())
 	ts := strconv.write_int(buf[:], timestamp, 10)
-	code_url := strings.clone(strings.concatenate([]string{"https://m.justmc.ru/api/", result_id, "#origin=jms,timestamp=", ts}))
+	code_url := fmt.tprintf("https://m.justmc.ru/api/%s#origin=jms,timestamp=%s", result_id, ts)
 	return code_url, true
 }
 

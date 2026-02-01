@@ -27,7 +27,7 @@ main :: proc() {
     append(&run_tests_cmd, "odin")
     append(&run_tests_cmd, "test")
     append(&run_tests_cmd, tests_dir)
-    append(&run_tests_cmd, strings.concatenate([]string{"-collection:src=", src_dir}))
+    append(&run_tests_cmd, fmt.tprintf("-collection:src=%s", src_dir))
 	append(&run_tests_cmd, "-debug")
 	append(&run_tests_cmd, "-sanitize:address")
 	append(&run_tests_cmd, "-define:ODIN_TEST_THREADS=1")

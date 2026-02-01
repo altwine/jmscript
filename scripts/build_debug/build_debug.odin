@@ -41,7 +41,7 @@ main :: proc() {
 	append(&build_debug_cmd, "-disallow-do")
 	append(&build_debug_cmd, "-warnings-as-errors")
 	append(&build_debug_cmd, "-sanitize:address")
-	append(&build_debug_cmd, strings.concatenate([]string{"-out:", output_file_path}))
+	append(&build_debug_cmd, fmt.tprintf("-out:%s", output_file_path))
 
 	proc_state, stdout, stderr, err := os2.process_exec(
 		os2.Process_Desc{command=build_debug_cmd[:]},

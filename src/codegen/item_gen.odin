@@ -17,7 +17,7 @@ AIR_ITEM_NBT_BASE64 :: "AAAAAAAAAAA="
 generate_item :: proc(irb: ^IR_Builder, id: string, count: int, allocator := context.allocator) -> (string, bool) #optional_ok {
 	id := id
 	if !strings.starts_with(id, "minecraft:") {
-		id = strings.concatenate([]string{"minecraft:", id}, irb.alloc)
+		id = fmt.tprintf("minecraft:%s", id)
 	}
 
 	// NOTE: shortcut for air item
