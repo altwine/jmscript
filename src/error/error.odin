@@ -36,7 +36,7 @@ print :: proc(error: Error) {
 	line_trimmed := strings.trim_space(line)
 	leading_whitespace := len(line) - len(strings.trim_left_space(line))
 	cause_pos_column := error.cause_pos.column
-	spaces := strings.repeat(" ", cause_pos_column - leading_whitespace - 1, context.temp_allocator)
+	spaces := strings.repeat(" ", max(0, cause_pos_column - leading_whitespace - 1), context.temp_allocator)
 	arrows_count := min(end_offset-pos_offset+1, len(strings.trim_space(line)))
 	arrows := strings.repeat("^", arrows_count, context.temp_allocator)
 	fmt.printfln("%s:%d:%d %s: %s", error.file.fullpath, error.cause_pos.line+1, cause_pos_column, error_type, error.message)
