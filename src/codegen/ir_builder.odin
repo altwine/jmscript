@@ -709,40 +709,26 @@ ir_write_named_value :: proc(irb: ^IR_Builder, named_value: ^NamedValue, comma: 
 }
 
 ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named := true) {
-	switch v in value {
+	if is_named {
+		json_begin_object(&irb.jb, "value")
+	} else {
+		json_begin_object(&irb.jb)
+	}
+	switch typed_value in value {
 	case NullValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
 		json_begin_object(&irb.jb)
 		json_end_object(&irb.jb, false)
-		json_end_object(&irb.jb, comma)
 	case ArrayValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		array_value := value.(ArrayValue)
 		json_write_string(&irb.jb, "type", "array", true)
 		json_begin_array(&irb.jb, "values")
-		values_count := len(array_value.values)
-		for &value, value_idx in array_value.values {
+		values_count := len(typed_value.values)
+		for &value, value_idx in typed_value.values {
 			is_last_value := value_idx == values_count-1
 			ir_write_value(irb, &value, !is_last_value, false)
 		}
 		json_end_array(&irb.jb, false)
-		json_end_object(&irb.jb, comma)
 	case NumberValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		number_value := value.(NumberValue)
-		number_string := fmt.tprintf("%0.8f", number_value.number)
+		number_string := fmt.tprintf("%0.8f", typed_value.number)
 		for strings.contains(number_string, ".") && strings.ends_with(number_string, "0") {
 			number_string = number_string[:len(number_string)-1]
 		}
@@ -751,151 +737,67 @@ ir_write_value :: proc(irb: ^IR_Builder, value: ^Value, comma: bool, is_named :=
 		}
 		json_write_string(&irb.jb, "type", "number", true)
 		json_write_string_unquoted(&irb.jb, "number", number_string, false)
-		json_end_object(&irb.jb, comma)
 	case TextValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		text_value := value.(TextValue)
 		json_write_string(&irb.jb, "type", "text", true)
-		json_write_string(&irb.jb, "text", text_value.text, true)
-		json_write_string(&irb.jb, "parsing", text_value.parsing, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "text", typed_value.text, true)
+		json_write_string(&irb.jb, "parsing", typed_value.parsing, false)
 	case VariableValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		variable_value := value.(VariableValue)
 		json_write_string(&irb.jb, "type", "variable", true)
-		json_write_string(&irb.jb, "variable", variable_value.variable, true)
-		json_write_string(&irb.jb, "scope", variable_value.scope, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "variable", typed_value.variable, true)
+		json_write_string(&irb.jb, "scope", typed_value.scope, false)
 	case EnumValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		enum_value := value.(EnumValue)
 		json_write_string(&irb.jb, "type", "enum", true)
-		json_write_string(&irb.jb, "enum", enum_value._enum, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "enum", typed_value._enum, false)
 	case LocationValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		location_value := value.(LocationValue)
 		json_write_string(&irb.jb, "type", "location", true)
-		json_write_number(&irb.jb, "yaw", location_value.yaw, true)
-		json_write_number(&irb.jb, "pitch", location_value.pitch, true)
-		json_write_number(&irb.jb, "x", location_value.x, true)
-		json_write_number(&irb.jb, "y", location_value.y, true)
-		json_write_number(&irb.jb, "z", location_value.z, false)
-		json_end_object(&irb.jb, comma)
+		json_write_number(&irb.jb, "yaw", typed_value.yaw, true)
+		json_write_number(&irb.jb, "pitch", typed_value.pitch, true)
+		json_write_number(&irb.jb, "x", typed_value.x, true)
+		json_write_number(&irb.jb, "y", typed_value.y, true)
+		json_write_number(&irb.jb, "z", typed_value.z, false)
 	case VectorValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		vector_value := value.(VectorValue)
 		json_write_string(&irb.jb, "type", "vector", true)
-		json_write_number(&irb.jb, "x", vector_value.x, true)
-		json_write_number(&irb.jb, "y", vector_value.y, true)
-		json_write_number(&irb.jb, "z", vector_value.z, false)
-		json_end_object(&irb.jb, comma)
+		json_write_number(&irb.jb, "x", typed_value.x, true)
+		json_write_number(&irb.jb, "y", typed_value.y, true)
+		json_write_number(&irb.jb, "z", typed_value.z, false)
 	case SoundValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		sound_value := value.(SoundValue)
 		json_write_string(&irb.jb, "type", "sound", true)
-		json_write_string(&irb.jb, "sound", sound_value.sound, true)
-		json_write_string(&irb.jb, "source", sound_value.source, true)
-		json_write_string(&irb.jb, "variation", sound_value.variation, true)
-		json_write_number(&irb.jb, "volume", sound_value.volume, true)
-		json_write_number(&irb.jb, "pitch", sound_value.pitch, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "sound", typed_value.sound, true)
+		json_write_string(&irb.jb, "source", typed_value.source, true)
+		json_write_string(&irb.jb, "variation", typed_value.variation, true)
+		json_write_number(&irb.jb, "volume", typed_value.volume, true)
+		json_write_number(&irb.jb, "pitch", typed_value.pitch, false)
 	case ParticleValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		particle_value := value.(ParticleValue)
 		json_write_string(&irb.jb, "type", "particle", true)
-		json_write_string(&irb.jb, "particle_type", particle_value.particle_type, true)
-		json_write_number(&irb.jb, "count", particle_value.count, true)
-		json_write_number(&irb.jb, "size", particle_value.size, true)
-		json_write_number(&irb.jb, "color", particle_value.color, true)
-		json_write_number(&irb.jb, "first_spread", particle_value.first_spread, true)
-		json_write_number(&irb.jb, "second_spread", particle_value.second_spread, true)
-		json_write_number(&irb.jb, "x_motion", particle_value.x_motion, true)
-		json_write_number(&irb.jb, "y_motion", particle_value.y_motion, true)
-		json_write_number(&irb.jb, "z_motion", particle_value.z_motion, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "particle_type", typed_value.particle_type, true)
+		json_write_number(&irb.jb, "count", typed_value.count, true)
+		json_write_number(&irb.jb, "size", typed_value.size, true)
+		json_write_number(&irb.jb, "color", typed_value.color, true)
+		json_write_number(&irb.jb, "first_spread", typed_value.first_spread, true)
+		json_write_number(&irb.jb, "second_spread", typed_value.second_spread, true)
+		json_write_number(&irb.jb, "x_motion", typed_value.x_motion, true)
+		json_write_number(&irb.jb, "y_motion", typed_value.y_motion, true)
+		json_write_number(&irb.jb, "z_motion", typed_value.z_motion, false)
 	case ItemValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		item_value := value.(ItemValue)
 		json_write_string(&irb.jb, "type", "item", true)
-		json_write_string(&irb.jb, "item", item_value.item, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "item", typed_value.item, false)
 	case GameValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		game_value := value.(GameValue)
 		json_write_string(&irb.jb, "type", "game_value", true)
-		json_write_string(&irb.jb, "game_value", game_value.game_value, true)
-		json_write_string(&irb.jb, "selection", game_value.selection, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "game_value", typed_value.game_value, true)
+		json_write_string(&irb.jb, "selection", typed_value.selection, false)
 	case PotionValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		potion_value := value.(PotionValue)
 		json_write_string(&irb.jb, "type", "potion", true)
-		json_write_string(&irb.jb, "potion", potion_value.potion, true)
-		json_write_number(&irb.jb, "amplifier", potion_value.amplifier, true)
-		json_write_number(&irb.jb, "duration", potion_value.duration, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "potion", typed_value.potion, true)
+		json_write_number(&irb.jb, "amplifier", typed_value.amplifier, true)
+		json_write_number(&irb.jb, "duration", typed_value.duration, false)
 	case BlockValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		block_value := value.(BlockValue)
 		json_write_string(&irb.jb, "type", "block", true)
-		json_write_string(&irb.jb, "block", block_value.block, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "block", typed_value.block, false)
 	case LocalizedTextValue:
-		if is_named {
-			json_begin_object(&irb.jb, "value")
-		} else {
-			json_begin_object(&irb.jb)
-		}
-		localized_text_value := value.(LocalizedTextValue)
 		json_write_string(&irb.jb, "type", "localized_text", true)
-		json_write_string(&irb.jb, "data", localized_text_value.data, false)
-		json_end_object(&irb.jb, comma)
+		json_write_string(&irb.jb, "data", typed_value.data, false)
 	}
+	json_end_object(&irb.jb, comma)
 }
 
 append_operations :: proc(operations_1: ^[dynamic]Operation, operations_2: [dynamic]Operation) {
