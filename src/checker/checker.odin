@@ -31,12 +31,6 @@ Checker :: struct {
 	type_checker_vtable: ast.Visitor_VTable,
 }
 
-CheckerContext :: struct {
-	in_function: string,
-	current_return_type: ^Type_Info,
-	is_checking_purity: bool,
-}
-
 checker_init :: proc(c: ^Checker, allocator := context.allocator) {
 	c.alloc = allocator
 	c.errs = make([dynamic]error.Error, allocator)
@@ -1160,7 +1154,7 @@ check_expression_is_pure :: proc(c: ^Checker, expr: ^ast.Expr) -> bool {
 }
 
 get_anno :: proc(stmt: ^ast.Stmt, name: string) -> ^ast.Annotation {
-	if annotations, ok := get_node_annotations(cast(^ast.Node)stmt); ok {
+	if annotations, ok := get_node_annotations(stmt); ok {
 		for &anno in annotations {
 			if strings.equal_fold(anno.name, name) {
 				return &anno
@@ -1168,10 +1162,6 @@ get_anno :: proc(stmt: ^ast.Stmt, name: string) -> ^ast.Annotation {
 		}
 	}
 	return nil
-}
-
-has_anno :: proc(stmt: ^ast.Stmt, name: string) -> bool {
-	return get_anno(stmt, name) != nil
 }
 
 anno_is_true :: proc(stmt: ^ast.Stmt, name: string) -> bool {
