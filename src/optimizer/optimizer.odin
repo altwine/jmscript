@@ -35,6 +35,10 @@ Optimizer :: struct {
 	walker_vtable: ast.Visitor_VTable,
 
 	constant_cache: map[^ast.Node]Constant_Result,
+
+	inlined_symbols:   map[^checker.Symbol]bool,
+	symbol_usage_count: map[^checker.Symbol]int,
+	symbols_to_inline: [dynamic]^checker.Symbol,
 }
 
 Constant_Value :: union {
@@ -63,6 +67,9 @@ optimizer_init :: proc(o: ^Optimizer, allocator := context.allocator) {
 	o.preserved_symbols = make(map[^checker.Symbol]bool, allocator)
 	o.unused_warnings = make(map[^checker.Symbol]bool, allocator)
 	o.constant_cache = make(map[^ast.Node]Constant_Result, allocator)
+	o.inlined_symbols = make(map[^checker.Symbol]bool, allocator)
+	o.symbol_usage_count = make(map[^checker.Symbol]int, allocator)
+	o.symbols_to_inline = make([dynamic]^checker.Symbol, allocator)
 
 	o.walker_vtable = ast.Visitor_VTable{
 		visit_ident = _visit_ident,
@@ -145,6 +152,143 @@ exit_scope_for_node :: proc(o: ^Optimizer, node: ^ast.Node) {
 			o.current_level = scope.parent.level
 		}
 	}
+}
+
+count_all_symbol_usage :: proc(o: ^Optimizer) {
+	for file in o.files {
+		count_symbol_usage_in_file(o, file)
+	}
+
+	for sym, count in &o.symbol_usage_count {
+		if can_inline_symbol(o, sym) {
+			append(&o.symbols_to_inline, sym)
+		}
+	}
+}
+
+count_symbol_usage_in_file :: proc(o: ^Optimizer, file: ^ast.File) {
+	for decl in file.decls {
+		count_symbol_usage_in_node(o, decl)
+	}
+}
+
+count_symbol_usage_in_node :: proc(o: ^Optimizer, node: ^ast.Node) {
+	if node == nil { return }
+
+	#partial switch n in node.derived {
+	case ^ast.Ident:
+		sym := find_symbol_in_scopes(o, n.name, o.current_scope)
+		if sym != nil {
+			if count, exists := &o.symbol_usage_count[sym]; exists {
+				o.symbol_usage_count[sym] = count^ + 1
+			} else {
+				o.symbol_usage_count[sym] = 1
+			}
+		}
+
+	case ^ast.Call_Expr:
+		if ident, is_ident := n.expr.derived.(^ast.Ident); is_ident {
+			sym := find_symbol_in_scopes(o, ident.name, o.current_scope)
+			if sym != nil {
+				if count, exists := &o.symbol_usage_count[sym]; exists {
+					o.symbol_usage_count[sym] = count^ + 1
+				} else {
+					o.symbol_usage_count[sym] = 1
+				}
+			}
+		}
+		for arg in n.args {
+			count_symbol_usage_in_node(o, arg)
+		}
+
+	case ^ast.File:
+		for decl in n.decls {
+			count_symbol_usage_in_node(o, decl)
+		}
+
+	case ^ast.Block_Stmt:
+		for stmt in n.stmts {
+			count_symbol_usage_in_node(o, stmt)
+		}
+
+	case ^ast.Value_Decl:
+		if n.value != nil {
+			count_symbol_usage_in_node(o, n.value)
+		}
+
+	case ^ast.Binary_Expr:
+		count_symbol_usage_in_node(o, n.left)
+		count_symbol_usage_in_node(o, n.right)
+
+	case ^ast.Unary_Expr:
+		count_symbol_usage_in_node(o, n.expr)
+
+	case ^ast.Paren_Expr:
+		count_symbol_usage_in_node(o, n.expr)
+
+	case ^ast.If_Stmt:
+		if n.cond != nil {
+			count_symbol_usage_in_node(o, n.cond)
+		}
+		if n.body != nil {
+			count_symbol_usage_in_node(o, n.body)
+		}
+		if n.else_stmt != nil {
+			count_symbol_usage_in_node(o, n.else_stmt)
+		}
+
+	case ^ast.For_Stmt:
+		if n.cond != nil {
+			count_symbol_usage_in_node(o, n.cond)
+		}
+		if n.body != nil {
+			count_symbol_usage_in_node(o, n.body)
+		}
+
+	case ^ast.Func_Stmt:
+		if n.body != nil {
+			saved_scope := o.current_scope
+			if scope, exists := o.symbols.node_scopes[n.id]; exists {
+				o.current_scope = scope
+			}
+			count_symbol_usage_in_node(o, n.body)
+			o.current_scope = saved_scope
+		}
+
+	case ^ast.Event_Stmt:
+		if n.body != nil {
+			saved_scope := o.current_scope
+			if scope, exists := o.symbols.node_scopes[n.id]; exists {
+				o.current_scope = scope
+			}
+			count_symbol_usage_in_node(o, n.body)
+			o.current_scope = saved_scope
+		}
+	}
+}
+
+can_inline_symbol :: proc(o: ^Optimizer, sym: ^checker.Symbol) -> bool {
+	if is_symbol_public(sym) {
+		return false
+	}
+
+	if flags_field, has := sym.metadata["flags"]; has {
+		if flags, ok := flags_field.(checker.Flags); ok {
+			if .BUILTIN in flags || .NATIVE in flags {
+				return false
+			}
+		}
+	}
+
+	if !sym.is_const {
+		return false
+	}
+
+	if count, exists := &o.symbol_usage_count[sym]; exists {
+		return count^ == 1
+	}
+
+	return false
 }
 
 build_parent_tree :: proc(o: ^Optimizer) {
@@ -772,6 +916,23 @@ remove_unused_symbols :: proc(o: ^Optimizer) -> int {
 
 			should_keep := false
 
+			if _, was_inlined := o.inlined_symbols[sym]; was_inlined {
+				if count, exists := &o.symbol_usage_count[sym]; exists && count^ <= 0 {
+					ordered_remove(&scope.symbols, i)
+					removed_count += 1
+
+					if sym.decl_node != nil {
+						remove_node_from_parent(o, sym.decl_node)
+					}
+
+					delete_key(&o.symbol_deps, sym)
+					delete_key(&o.reverse_deps, sym)
+					delete_key(&o.symbol_usage_count, sym)
+					delete_key(&o.inlined_symbols, sym)
+					continue
+				}
+			}
+
 			if _, preserved := o.preserved_symbols[sym]; preserved {
 				should_keep = true
 			}
@@ -785,6 +946,12 @@ remove_unused_symbols :: proc(o: ^Optimizer) -> int {
 			}
 
 			if !should_keep {
+				if count, exists := o.symbol_usage_count[sym]; exists && count > 0 {
+					should_keep = true
+				}
+			}
+
+			if !should_keep {
 				ordered_remove(&scope.symbols, i)
 				removed_count += 1
 
@@ -792,12 +959,9 @@ remove_unused_symbols :: proc(o: ^Optimizer) -> int {
 					remove_node_from_parent(o, sym.decl_node)
 				}
 
-				if deps, exists := o.symbol_deps[sym]; exists {
-					delete_key(&o.symbol_deps, sym)
-				}
-				if rev_deps, exists := o.reverse_deps[sym]; exists {
-					delete_key(&o.reverse_deps, sym)
-				}
+				delete_key(&o.symbol_deps, sym)
+				delete_key(&o.reverse_deps, sym)
+				delete_key(&o.symbol_usage_count, sym)
 			} else {
 				i += 1
 			}
@@ -926,6 +1090,13 @@ evaluate_identifier :: proc(o: ^Optimizer, ident: ^ast.Ident) -> Constant_Result
 						#partial switch decl in sym.decl_node.derived {
 						case ^ast.Value_Decl:
 							if decl.value != nil {
+								if can_inline_symbol(o, sym) {
+									if count, exists := &o.symbol_usage_count[sym]; exists && count^ > 0 {
+										o.symbol_usage_count[sym] = count^ - 1
+										o.inlined_symbols[sym] = true
+									}
+								}
+
 								return evaluate_constant_expression(o, decl.value)
 							}
 						}
@@ -1396,51 +1567,64 @@ try_optimize_expression :: proc(o: ^Optimizer, expr: ^ast.Expr, parent: ^ast.Nod
 
 		if new_lit != nil {
 			#partial switch p in parent.derived {
-			case ^ast.Value_Decl:
-				p.value = new_lit
-
-			case ^ast.Expr_Stmt:
-				p.expr = new_lit
-
-			case ^ast.Assign_Stmt:
-				p.expr = new_lit
-
-			case ^ast.Return_Stmt:
-				p.result = new_lit
-
-			case ^ast.If_Stmt:
-				p.cond = new_lit
-
-			case ^ast.For_Stmt:
-				p.cond = new_lit
-
 			case ^ast.Binary_Expr:
 				if p.left == expr {
 					p.left = new_lit
+					o.node_parent[new_lit] = parent
+					return true, result
 				} else if p.right == expr {
 					p.right = new_lit
+					o.node_parent[new_lit] = parent
+					return true, result
 				}
-
+			case ^ast.Value_Decl:
+				p.value = new_lit
+				o.node_parent[new_lit] = parent
+				return true, result
+			case ^ast.Expr_Stmt:
+				p.expr = new_lit
+				o.node_parent[new_lit] = parent
+				return true, result
+			case ^ast.Assign_Stmt:
+				p.expr = new_lit
+				o.node_parent[new_lit] = parent
+				return true, result
+			case ^ast.Return_Stmt:
+				p.result = new_lit
+				o.node_parent[new_lit] = parent
+				return true, result
+			case ^ast.If_Stmt:
+				p.cond = new_lit
+				o.node_parent[new_lit] = parent
+				return true, result
+			case ^ast.For_Stmt:
+				p.cond = new_lit
+				o.node_parent[new_lit] = parent
+				return true, result
 			case ^ast.Unary_Expr:
 				p.expr = new_lit
-
+				o.node_parent[new_lit] = parent
+				return true, result
 			case ^ast.Call_Expr:
 				for i in 0..<len(p.args) {
 					if p.args[i].value == expr {
 						p.args[i].value = new_lit
+						o.node_parent[new_lit] = parent
+						return true, result
 					}
 				}
+			/* TODO:
+			^Member_Access_Expr
 
+			^Index_Expr
+
+			^Field_Value
+			*/
 			case ^ast.Paren_Expr:
 				p.expr = new_lit
-
-			case ^ast.Member_Access_Expr:
-				if p.expr == expr {
-					//TODO
-				}
+				o.node_parent[new_lit] = parent
+				return true, result
 			}
-
-			return true, result
 		}
 	}
 
@@ -2453,6 +2637,36 @@ remove_unused :: proc(o: ^Optimizer) -> int {
 	return removed
 }
 
+remove_inlined_symbols :: proc(o: ^Optimizer) -> int {
+	removed_count := 0
+
+	for sym in o.symbols_to_inline {
+		if _, was_inlined := o.inlined_symbols[sym]; was_inlined {
+			scope := get_symbol_scope(o, sym)
+			if scope == nil { continue }
+
+			for i in 0..<len(scope.symbols) {
+				if scope.symbols[i] == sym {
+					ordered_remove(&scope.symbols, i)
+					removed_count += 1
+
+					if sym.decl_node != nil {
+						remove_node_from_parent(o, sym.decl_node)
+					}
+
+					break
+				}
+			}
+		}
+	}
+
+	if removed_count > 0 {
+		fmt.printfln("[DEBUG] Removed %d inlined constant(s)", removed_count)
+	}
+
+	return removed_count
+}
+
 optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table) -> [dynamic]error.Error {
 	o.files = files
 	o.symbols = symbols
@@ -2462,12 +2676,15 @@ optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^c
 
 	analyze_usage(o)
 
+	count_all_symbol_usage(o)
+
 	optimize_constant_expressions(o)
+
+	count_all_symbol_usage(o)
 
 	remove_unused(o)
 
 	remove_empty_blocks(o)
-
 	flatten_nested_blocks(o)
 
 	return o.errs
