@@ -16,3 +16,8 @@ B :: a() // incorect if uncomment
 func b() {
 	// player_send_message("all_players", "SPACES");
 }
+
+@(name = "test")
+func c() {
+
+}

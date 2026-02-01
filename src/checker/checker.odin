@@ -107,7 +107,6 @@ check_annotation_purity :: proc(c: ^Checker, anno: ast.Annotation, node: ^ast.No
 	}
 }
 
-@(private="file")
 check_node_annotations :: proc(c: ^Checker, node: ^ast.Node) {
 	if node == nil {
 		return
@@ -115,7 +114,27 @@ check_node_annotations :: proc(c: ^Checker, node: ^ast.Node) {
 
 	if annotations, ok := get_node_annotations(node); ok {
 		for &anno in annotations {
-			check_annotation_purity(c, anno, &anno.anno_base)
+			is_stmt := false
+			#partial switch _ in node.derived {
+			case ^ast.Func_Stmt,
+				 ^ast.Event_Stmt,
+				 ^ast.Value_Decl,
+				 ^ast.Assign_Stmt,
+				 ^ast.Expr_Stmt,
+				 ^ast.If_Stmt,
+				 ^ast.For_Stmt,
+				 ^ast.Return_Stmt,
+				 ^ast.Defer_Stmt,
+				 ^ast.Block_Stmt:
+				is_stmt = true
+			}
+
+			if is_stmt {
+				check_annotation_purity(c, anno, &anno.anno_base)
+				if !check_anno_meanings(c, cast(^ast.Stmt)node, &anno) {
+					add_warning(c, fmt.tprintf("annotation '%s' likely has no effect on this kind of stmt", anno.name), cast(^ast.Node)&anno)
+				}
+			}
 		}
 	}
 }
@@ -770,12 +789,21 @@ can_casted :: proc(first, second: Type_Kind) -> bool {
 	return false
 }
 
-check_anno :: proc(c: ^Checker, stmt: ^ast.Stmt) {
-	if annotations, ok := get_node_annotations(cast(^ast.Node)stmt); ok {
-		for &anno in annotations {
-			check_annotation_purity(c, anno, &anno.anno_base)
+check_anno_meanings :: proc(c: ^Checker, stmt: ^ast.Stmt, anno: ^ast.Annotation) -> bool {
+	switch anno.name {
+	case "pure":
+		#partial switch t in stmt.derived {
+		case ^ast.Func_Stmt, ^ast.Event_Stmt, ^ast.Value_Decl, ^ast.Assign_Stmt:
+			return true
+		}
+	case "name", "desc", "icon":
+		#partial switch t in stmt.derived {
+		case ^ast.Func_Stmt:
+			return true
 		}
 	}
+
+	return false
 }
 
 check_function_is_pure :: proc(c: ^Checker, name: string) -> bool {
