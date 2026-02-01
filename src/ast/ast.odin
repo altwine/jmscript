@@ -8,20 +8,20 @@ import "core:strings"
 import "../lexer"
 
 Node :: struct {
-	pos:     lexer.Pos,
-	end:     lexer.Pos,
+	pos:	 lexer.Pos,
+	end:	 lexer.Pos,
 	derived: Any_Node,
-	id:      int,
+	id:	  int,
 }
 
 File :: struct {
 	using node: Node,
-	alloc:    mem.Allocator,
-	pkg:      string,
+	alloc:	mem.Allocator,
+	pkg:	  string,
 	fullpath: string,
-	src:      string,
-	tags:     [dynamic]string,
-	decls:    [dynamic]^Stmt,
+	src:	  string,
+	tags:	 [dynamic]string,
+	decls:	[dynamic]^Stmt,
 }
 
 Expr :: struct {
@@ -36,7 +36,7 @@ Annotation :: struct {
 
 Stmt :: struct {
 	using stmt_base: Node,
-	annotations:     [dynamic]Annotation,
+	annotations:	 [dynamic]Annotation,
 }
 
 Decl :: struct {
@@ -77,7 +77,7 @@ Unary_Expr :: struct {
 Binary_Expr :: struct {
 	using node: Expr,
 	left:  ^Expr,
-	op:    lexer.Token,
+	op:	lexer.Token,
 	right: ^Expr,
 }
 
@@ -91,14 +91,14 @@ Paren_Expr :: struct {
 Member_Access_Expr :: struct {
 	using node: Expr,
 	expr:  ^Expr,
-	op:    lexer.Token,
+	op:	lexer.Token,
 	field: ^Ident,
 }
 
 Call_Expr :: struct {
 	using node: Expr,
-	expr:     ^Expr,
-	args:     []^Argument,
+	expr:	 ^Expr,
+	args:	 []^Argument,
 	ellipsis: lexer.Token,
 }
 
@@ -122,9 +122,9 @@ Expr_Stmt :: struct {
 
 Assign_Stmt :: struct {
 	using node: Stmt,
-	name:    string,
-	op:     lexer.Token,
-	expr:    ^Expr,
+	name:	string,
+	op:	 lexer.Token,
+	expr:	^Expr,
 }
 
 Block_Stmt :: struct {
@@ -134,9 +134,9 @@ Block_Stmt :: struct {
 
 If_Stmt :: struct {
 	using node: Stmt,
-	init:      ^Stmt,
-	cond:      ^Expr,
-	body:      ^Block_Stmt,
+	init:	  ^Stmt,
+	cond:	  ^Expr,
+	body:	  ^Block_Stmt,
 	else_stmt: ^Block_Stmt,
 }
 
@@ -152,20 +152,20 @@ Defer_Stmt :: struct {
 
 For_Stmt :: struct {
 	using node: Stmt,
-	for_pos:     lexer.Pos,
-	init:        []^Ident,
-	cond:        ^Expr,
-	post:        ^Stmt,
-	body:        ^Block_Stmt,
+	for_pos:	 lexer.Pos,
+	init:		[]^Ident,
+	cond:		^Expr,
+	post:		^Stmt,
+	body:		^Block_Stmt,
 	range_tok:   lexer.Token,
 	second_cond: ^Expr,
 }
 
 Value_Decl :: struct {
 	using node: Decl,
-	name:     string,
-	type:     string,
-	value:    ^Expr,
+	name:	 string,
+	type:	 string,
+	value:	^Expr,
 	is_const: bool,
 }
 
@@ -259,6 +259,78 @@ new :: proc($T: typeid, pos, end: lexer.Pos, allocator := context.allocator) -> 
 	n.derived = n
 	n.id = sync.atomic_add(&node_id, 1)
 	return n
+}
+
+create_ident :: proc(name: string, pos, end: lexer.Pos, allocator := context.allocator) -> ^Ident {
+	ident := new(Ident, pos, end, allocator)
+	ident.name = name
+	return ident
+}
+
+create_basic_lit :: proc(tok: lexer.Token, pos, end: lexer.Pos, allocator := context.allocator) -> ^Basic_Lit {
+	lit := new(Basic_Lit, pos, end, allocator)
+	lit.tok = tok
+	return lit
+}
+
+create_number_lit :: proc(value: string, pos, end: lexer.Pos, allocator := context.allocator) -> ^Basic_Lit {
+	tok := lexer.Token {
+		kind = .Number,
+		content = value,
+	}
+	return create_basic_lit(tok, pos, end, allocator)
+}
+
+create_text_lit :: proc(value: string, pos, end: lexer.Pos, allocator := context.allocator) -> ^Basic_Lit {
+	tok := lexer.Token {
+		kind = .Text,
+		content = fmt.tprintf("\"%s\"", value),
+	}
+	return create_basic_lit(tok, pos, end, allocator)
+}
+
+create_bool_lit :: proc(value: bool, pos, end: lexer.Pos, allocator := context.allocator) -> ^Basic_Lit {
+	tok := lexer.Token {
+		kind = value ? .True : .False,
+		content = value ? "true" : "false",
+	}
+	return create_basic_lit(tok, pos, end, allocator)
+}
+
+create_unary_expr :: proc(op: lexer.Token, expr: ^Expr, pos, end: lexer.Pos, allocator := context.allocator) -> ^Unary_Expr {
+	unary := new(Unary_Expr, pos, end, allocator)
+	unary.op = op
+	unary.expr = expr
+	return unary
+}
+
+create_binary_expr :: proc(left: ^Expr, op: lexer.Token, right: ^Expr, pos, end: lexer.Pos, allocator := context.allocator) -> ^Binary_Expr {
+	binary := new(Binary_Expr, pos, end, allocator)
+	binary.left = left
+	binary.op = op
+	binary.right = right
+	return binary
+}
+
+create_paren_expr :: proc(expr: ^Expr, pos, end: lexer.Pos, allocator := context.allocator) -> ^Paren_Expr {
+	paren := new(Paren_Expr, pos, end, allocator)
+	paren.expr = expr
+	return paren
+}
+
+create_call_expr :: proc(expr: ^Expr, args: []^Argument, ellipsis: lexer.Token, pos, end: lexer.Pos, allocator := context.allocator) -> ^Call_Expr {
+	call := new(Call_Expr, pos, end, allocator)
+	call.expr = expr
+	call.args = args
+	call.ellipsis = ellipsis
+	return call
+}
+
+create_argument :: proc(name: string, value: ^Expr, pos, end: lexer.Pos, allocator := context.allocator) -> ^Argument {
+	arg := new(Argument, pos, end, allocator)
+	arg.name = name
+	arg.value = value
+	return arg
 }
 
 print_tree :: proc(node: ^Node, indent := 0) {

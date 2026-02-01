@@ -2,17 +2,19 @@ package optimizer
 
 import "core:mem"
 import "core:fmt"
+import "core:strconv"
+import "core:strings"
 
 import "../ast"
 import "../checker"
 import "../error"
+import "../lexer"
 
 Optimizer :: struct {
 	alloc:		mem.Allocator,
 	files:		[dynamic]^ast.File,
 	symbols:	  ^checker.Symbol_Table,
 	current_file: ^ast.File,
-	pass:		 int,
 	errs:		 [dynamic]error.Error,
 
 	scope_symbols_usage: map[^checker.Scope]map[string]bool,
@@ -31,6 +33,21 @@ Optimizer :: struct {
 
 	walker:		^ast.Walker,
 	walker_vtable: ast.Visitor_VTable,
+
+	constant_cache: map[^ast.Node]Constant_Result,
+}
+
+Constant_Value :: union {
+	bool,
+	i64,
+	f64,
+	string,
+}
+
+Constant_Result :: struct {
+	value:   Constant_Value,
+	is_constant: bool,
+	type_kind:   checker.Type_Kind,
 }
 
 optimizer_init :: proc(o: ^Optimizer, allocator := context.allocator) {
@@ -45,6 +62,7 @@ optimizer_init :: proc(o: ^Optimizer, allocator := context.allocator) {
 	o.reverse_deps = make(map[^checker.Symbol][dynamic]^checker.Symbol, allocator)
 	o.preserved_symbols = make(map[^checker.Symbol]bool, allocator)
 	o.unused_warnings = make(map[^checker.Symbol]bool, allocator)
+	o.constant_cache = make(map[^ast.Node]Constant_Result, allocator)
 
 	o.walker_vtable = ast.Visitor_VTable{
 		visit_ident = _visit_ident,
@@ -789,6 +807,1625 @@ remove_unused_symbols :: proc(o: ^Optimizer) -> int {
 	return removed_count
 }
 
+create_constant_literal :: proc(o: ^Optimizer, const_result: Constant_Result, pos, end: lexer.Pos) -> ^ast.Expr {
+	if !const_result.is_constant {
+		return nil
+	}
+
+	#partial switch const_result.type_kind {
+	case .Number:
+		#partial switch val in const_result.value {
+		case i64:
+			return ast.create_number_lit(fmt.tprintf("%d", val), pos, end, o.alloc)
+		case f64:
+			return ast.create_number_lit(fmt.tprintf("%f", val), pos, end, o.alloc)
+		}
+
+	case .Boolean:
+		if val, ok := const_result.value.(bool); ok {
+			return ast.create_bool_lit(val, pos, end, o.alloc)
+		}
+
+	case .Text:
+		if str_val, ok := const_result.value.(string); ok {
+			return ast.create_text_lit(str_val, pos, end, o.alloc)
+		}
+	}
+
+	return nil
+}
+
+evaluate_constant_expression :: proc(o: ^Optimizer, expr: ^ast.Expr) -> Constant_Result {
+	if expr == nil {
+		return {is_constant = false}
+	}
+
+	if result, exists := o.constant_cache[expr]; exists {
+		return result
+	}
+
+	result: Constant_Result
+
+	#partial switch node in expr.derived {
+	case ^ast.Basic_Lit:
+		result = evaluate_basic_literal(o, node)
+
+	case ^ast.Ident:
+		result = evaluate_identifier(o, node)
+
+	case ^ast.Binary_Expr:
+		result = evaluate_binary_expression(o, node)
+
+	case ^ast.Unary_Expr:
+		result = evaluate_unary_expression(o, node)
+
+	case ^ast.Paren_Expr:
+		result = evaluate_constant_expression(o, node.expr)
+
+	case ^ast.Call_Expr:
+		result = evaluate_call_expression(o, node)
+
+	case:
+		result.is_constant = false
+	}
+
+	o.constant_cache[expr] = result
+	return result
+}
+
+evaluate_basic_literal :: proc(o: ^Optimizer, lit: ^ast.Basic_Lit) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = false
+
+	#partial switch lit.tok.kind {
+	case .Number:
+		if val, ok := strconv.parse_i64(lit.tok.content); ok {
+			result.value = val
+			result.type_kind = .Number
+			result.is_constant = true
+		} else if val, ok2 := strconv.parse_f64(lit.tok.content); ok2 {
+			result.value = val
+			result.type_kind = .Number
+			result.is_constant = true
+		}
+
+	case .Text:
+		if len(lit.tok.content) >= 2 {
+			result.value = lit.tok.content[1:len(lit.tok.content)-1]
+			result.type_kind = .Text
+			result.is_constant = true
+		}
+
+	case .True:
+		result.value = true
+		result.type_kind = .Boolean
+		result.is_constant = true
+
+	case .False:
+		result.value = false
+		result.type_kind = .Boolean
+		result.is_constant = true
+
+	case:
+		result.is_constant = false
+	}
+
+	return result
+}
+
+evaluate_identifier :: proc(o: ^Optimizer, ident: ^ast.Ident) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = false
+
+	scope := o.current_scope
+	for scope != nil {
+		for sym in scope.symbols {
+			if sym.name == ident.name {
+				if sym.is_const {
+					if sym.decl_node != nil {
+						#partial switch decl in sym.decl_node.derived {
+						case ^ast.Value_Decl:
+							if decl.value != nil {
+								return evaluate_constant_expression(o, decl.value)
+							}
+						}
+					}
+				}
+
+				if flags_field, has := sym.metadata["flags"]; has {
+					if flags, ok := flags_field.(checker.Flags); ok && .PURE in flags {
+						if sym.decl_node != nil {
+							#partial switch decl in sym.decl_node.derived {
+							case ^ast.Value_Decl:
+								if decl.value != nil {
+									return evaluate_constant_expression(o, decl.value)
+								}
+							}
+						}
+					}
+				}
+				return result
+			}
+		}
+		scope = scope.parent
+	}
+
+	return result
+}
+
+evaluate_binary_expression :: proc(o: ^Optimizer, expr: ^ast.Binary_Expr) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = false
+
+	left_result := evaluate_constant_expression(o, expr.left)
+	right_result := evaluate_constant_expression(o, expr.right)
+
+	if left_result.is_constant && right_result.is_constant {
+		if expr.op.kind == .Add && left_result.type_kind == .Number && right_result.type_kind == .Number {
+			result = add_numbers(left_result, right_result)
+		} else if expr.op.kind == .Add && left_result.type_kind == .Text && right_result.type_kind == .Text {
+			if left_str, left_ok := left_result.value.(string); left_ok {
+				if right_str, right_ok := right_result.value.(string); right_ok {
+					result.type_kind = .Text
+					result.value = strings.concatenate([]string{left_str, right_str}, o.alloc)
+					result.is_constant = true
+				}
+			}
+		} else if (expr.op.kind == .Add || expr.op.kind == .Sub || expr.op.kind == .Mul || expr.op.kind == .Quo) &&
+				left_result.type_kind == .Number && right_result.type_kind == .Number {
+
+			result = perform_arithmetic(expr.op.kind, left_result, right_result)
+		} else if (expr.op.kind == .Gt || expr.op.kind == .Gt_Eq || expr.op.kind == .Lt || expr.op.kind == .Lt_Eq ||
+				 expr.op.kind == .Eq || expr.op.kind == .Not_Eq) {
+
+			result = perform_comparison(expr.op.kind, left_result, right_result)
+		} else if (expr.op.kind == .Cmp_And || expr.op.kind == .Cmp_Or) {
+			result = perform_logical(expr.op.kind, left_result, right_result)
+		}
+	}
+
+	return result
+}
+
+add_numbers :: proc(left, right: Constant_Result) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = true
+	result.type_kind = .Number
+
+	#partial switch left_val in left.value {
+	case i64:
+		#partial switch right_val in right.value {
+		case i64: result.value = left_val + right_val
+		case f64: result.value = f64(left_val) + right_val
+		}
+	case f64:
+		#partial switch right_val in right.value {
+		case i64: result.value = left_val + f64(right_val)
+		case f64: result.value = left_val + right_val
+		}
+	}
+
+	return result
+}
+
+perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = true
+	result.type_kind = .Number
+
+	left_num: f64
+	right_num: f64
+
+	if i64_val, is_i64 := left.value.(i64); is_i64 {
+		left_num = f64(i64_val)
+	} else if f64_val, is_f64 := left.value.(f64); is_f64 {
+		left_num = f64_val
+	} else {
+		result.is_constant = false
+		return result
+	}
+
+	if i64_val, is_i64 := right.value.(i64); is_i64 {
+		right_num = f64(i64_val)
+	} else if f64_val, is_f64 := right.value.(f64); is_f64 {
+		right_num = f64_val
+	} else {
+		result.is_constant = false
+		return result
+	}
+
+	#partial switch op {
+	case .Add: result.value = left_num + right_num
+	case .Sub: result.value = left_num - right_num
+	case .Mul: result.value = left_num * right_num
+	case .Quo:
+		if right_num == 0.0 {
+			result.is_constant = false
+		} else {
+			result.value = left_num / right_num
+		}
+	case:
+		result.is_constant = false
+	}
+
+	return result
+}
+
+perform_comparison :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = true
+	result.type_kind = .Boolean
+
+	if left.type_kind == .Number && right.type_kind == .Number {
+		left_num: f64
+		right_num: f64
+
+		if i64_val, is_i64 := left.value.(i64); is_i64 {
+			left_num = f64(i64_val)
+		} else if f64_val, is_f64 := left.value.(f64); is_f64 {
+			left_num = f64_val
+		} else {
+			result.is_constant = false
+			return result
+		}
+
+		if i64_val, is_i64 := right.value.(i64); is_i64 {
+			right_num = f64(i64_val)
+		} else if f64_val, is_f64 := right.value.(f64); is_f64 {
+			right_num = f64_val
+		} else {
+			result.is_constant = false
+			return result
+		}
+
+		#partial switch op {
+		case .Gt: result.value = left_num > right_num
+		case .Gt_Eq: result.value = left_num >= right_num
+		case .Lt: result.value = left_num < right_num
+		case .Lt_Eq: result.value = left_num <= right_num
+		case .Eq: result.value = left_num == right_num
+		case .Not_Eq: result.value = left_num != right_num
+		case:
+			result.is_constant = false
+		}
+	} else if left.type_kind == .Text && right.type_kind == .Text {
+		if left_str, left_ok := left.value.(string); left_ok {
+			if right_str, right_ok := right.value.(string); right_ok {
+				#partial switch op {
+				case .Eq: result.value = left_str == right_str
+				case .Not_Eq: result.value = left_str != right_str
+				case:
+					result.is_constant = false
+				}
+			} else {
+				result.is_constant = false
+			}
+		} else {
+			result.is_constant = false
+		}
+	} else if left.type_kind == .Boolean && right.type_kind == .Boolean {
+		if left_bool, left_ok := left.value.(bool); left_ok {
+			if right_bool, right_ok := right.value.(bool); right_ok {
+				#partial switch op {
+				case .Eq: result.value = left_bool == right_bool
+				case .Not_Eq: result.value = left_bool != right_bool
+				case:
+					result.is_constant = false
+				}
+			} else {
+				result.is_constant = false
+			}
+		} else {
+			result.is_constant = false
+		}
+	} else {
+		result.is_constant = false
+	}
+
+	return result
+}
+
+perform_logical :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = true
+	result.type_kind = .Boolean
+
+	left_bool: bool
+	right_bool: bool
+
+	if left.type_kind == .Boolean {
+		if bool_val, ok := left.value.(bool); ok {
+			left_bool = bool_val
+		} else {
+			result.is_constant = false
+			return result
+		}
+	} else if left.type_kind == .Number {
+		if i64_val, is_i64 := left.value.(i64); is_i64 {
+			left_bool = i64_val != 0
+		} else if f64_val, is_f64 := left.value.(f64); is_f64 {
+			left_bool = f64_val != 0.0
+		} else {
+			result.is_constant = false
+			return result
+		}
+	} else {
+		result.is_constant = false
+		return result
+	}
+
+	if right.type_kind == .Boolean {
+		if bool_val, ok := right.value.(bool); ok {
+			right_bool = bool_val
+		} else {
+			result.is_constant = false
+			return result
+		}
+	} else if right.type_kind == .Number {
+		if i64_val, is_i64 := right.value.(i64); is_i64 {
+			right_bool = i64_val != 0
+		} else if f64_val, is_f64 := right.value.(f64); is_f64 {
+			right_bool = f64_val != 0.0
+		} else {
+			result.is_constant = false
+			return result
+		}
+	} else {
+		result.is_constant = false
+		return result
+	}
+
+	#partial switch op {
+	case .Cmp_And: result.value = left_bool && right_bool
+	case .Cmp_Or: result.value = left_bool || right_bool
+	case:
+		result.is_constant = false
+	}
+
+	return result
+}
+
+compare_numbers :: proc(op: lexer.Token_Kind, left, right: f64) -> bool {
+	#partial switch op {
+	case .Gt:
+		return left > right
+	case .Gt_Eq:
+		return left >= right
+	case .Lt:
+		return left < right
+	case .Lt_Eq:
+		return left <= right
+	case:
+		return false
+	}
+}
+
+evaluate_unary_expression :: proc(o: ^Optimizer, expr: ^ast.Unary_Expr) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = false
+
+	operand_result := evaluate_constant_expression(o, expr.expr)
+
+	if operand_result.is_constant {
+		result.is_constant = true
+		result.type_kind = operand_result.type_kind
+
+		#partial switch expr.op.kind {
+		case .Add:
+			result.value = operand_result.value
+
+		case .Sub:
+			if operand_result.type_kind == .Number {
+				#partial switch val in operand_result.value {
+				case i64:
+					result.value = -val
+				case f64:
+					result.value = -val
+				}
+			} else {
+				result.is_constant = false
+			}
+
+		case .Not:
+			if operand_result.type_kind == .Boolean {
+				if bool_val, ok := operand_result.value.(bool); ok {
+					result.value = !bool_val
+				} else {
+					result.is_constant = false
+				}
+			} else {
+				result.is_constant = false
+			}
+		case:
+			result.is_constant = false
+		}
+	}
+
+	return result
+}
+
+evaluate_call_expression :: proc(o: ^Optimizer, call: ^ast.Call_Expr) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = false
+
+	if ident, is_ident := call.expr.derived.(^ast.Ident); is_ident {
+		if is_builtin_factory(ident.name) {
+			all_args_constant := true
+			for arg in call.args {
+				arg_result := evaluate_constant_expression(o, arg.value)
+				if !arg_result.is_constant {
+					all_args_constant = false
+					break
+				}
+			}
+
+			if all_args_constant {
+				result = evaluate_builtin_factory(o, ident.name, call.args)
+			}
+			return result
+		}
+
+		sym := find_symbol_in_scopes(o, ident.name, o.current_scope)
+		if sym != nil && sym.type.kind == .Function {
+			if flags_field, has := sym.metadata["flags"]; has {
+				if flags, ok := flags_field.(checker.Flags); ok && .PURE in flags {
+					all_args_constant := true
+					for arg in call.args {
+						arg_result := evaluate_constant_expression(o, arg.value)
+						if !arg_result.is_constant {
+							all_args_constant = false
+							break
+						}
+					}
+
+					if all_args_constant {
+						// TODO
+						result.is_constant = true
+						result.type_kind = .Any
+					}
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+replace_constant_factory_calls :: proc(o: ^Optimizer, file: ^ast.File) -> int {
+	replaced_count := 0
+
+	traverse_and_replace :: proc(o: ^Optimizer, node: ^ast.Node, replaced_count: ^int) {
+		if node == nil { return }
+
+		#partial switch n in node.derived {
+		case ^ast.Value_Decl:
+			decl := n
+			if decl.value != nil {
+				#partial switch expr in decl.value.derived {
+				case ^ast.Call_Expr:
+					call := expr
+					if ident, is_ident := call.expr.derived.(^ast.Ident); is_ident {
+						if is_builtin_factory(ident.name) {
+							result := evaluate_builtin_factory(o, ident.name, call.args)
+							if result.is_constant {
+								new_lit := create_constant_literal(o, result, decl.value.pos, decl.value.end)
+								if new_lit != nil {
+									decl.value = new_lit
+									replaced_count^ += 1
+								}
+							}
+						}
+					}
+				case ^ast.Binary_Expr:
+					binary := expr
+					traverse_and_replace(o, binary.left, replaced_count)
+					traverse_and_replace(o, binary.right, replaced_count)
+				}
+			}
+
+		case ^ast.Expr_Stmt:
+			stmt := n
+			if stmt.expr != nil {
+				#partial switch expr in stmt.expr.derived {
+				case ^ast.Call_Expr:
+					call := expr
+					if ident, is_ident := call.expr.derived.(^ast.Ident); is_ident {
+						if is_builtin_factory(ident.name) {
+							result := evaluate_builtin_factory(o, ident.name, call.args)
+							if result.is_constant {
+								new_lit := create_constant_literal(o, result, stmt.expr.pos, stmt.expr.end)
+								if new_lit != nil {
+									stmt.expr = new_lit
+									replaced_count^ += 1
+								}
+							}
+						}
+					}
+				}
+			}
+
+		case ^ast.Block_Stmt:
+			block := n
+			for stmt in block.stmts {
+				traverse_and_replace(o, stmt, replaced_count)
+			}
+
+		case ^ast.If_Stmt:
+			if_stmt := n
+			if if_stmt.body != nil {
+				traverse_and_replace(o, if_stmt.body, replaced_count)
+			}
+			if if_stmt.else_stmt != nil {
+				traverse_and_replace(o, if_stmt.else_stmt, replaced_count)
+			}
+
+		case ^ast.For_Stmt:
+			for_stmt := n
+			if for_stmt.body != nil {
+				traverse_and_replace(o, for_stmt.body, replaced_count)
+			}
+
+		case ^ast.Func_Stmt:
+			func_stmt := n
+			if func_stmt.body != nil {
+				traverse_and_replace(o, func_stmt.body, replaced_count)
+			}
+
+		case ^ast.Event_Stmt:
+			event_stmt := n
+			if event_stmt.body != nil {
+				traverse_and_replace(o, event_stmt.body, replaced_count)
+			}
+		}
+	}
+
+	traverse_and_replace(o, file, &replaced_count)
+
+	if replaced_count > 0 {
+		fmt.printfln("[DEBUG] Replaced %d constant factory call(s)", replaced_count)
+	}
+
+	return replaced_count
+}
+
+try_optimize_expression :: proc(o: ^Optimizer, expr: ^ast.Expr, parent: ^ast.Node) -> (bool, Constant_Result) {
+	result := evaluate_constant_expression(o, expr)
+
+	if result.is_constant && parent != nil {
+		new_lit := create_constant_literal(o, result, expr.pos, expr.end)
+
+		if new_lit != nil {
+			#partial switch p in parent.derived {
+			case ^ast.Value_Decl:
+				p.value = new_lit
+
+			case ^ast.Expr_Stmt:
+				p.expr = new_lit
+
+			case ^ast.Assign_Stmt:
+				p.expr = new_lit
+
+			case ^ast.Return_Stmt:
+				p.result = new_lit
+
+			case ^ast.If_Stmt:
+				p.cond = new_lit
+
+			case ^ast.For_Stmt:
+				p.cond = new_lit
+
+			case ^ast.Binary_Expr:
+				if p.left == expr {
+					p.left = new_lit
+				} else if p.right == expr {
+					p.right = new_lit
+				}
+
+			case ^ast.Unary_Expr:
+				p.expr = new_lit
+
+			case ^ast.Call_Expr:
+				for i in 0..<len(p.args) {
+					if p.args[i].value == expr {
+						p.args[i].value = new_lit
+					}
+				}
+
+			case ^ast.Paren_Expr:
+				p.expr = new_lit
+
+			case ^ast.Member_Access_Expr:
+				if p.expr == expr {
+					//TODO
+				}
+			}
+
+			return true, result
+		}
+	}
+
+	return false, result
+}
+
+simplify_constant_subexpressions :: proc(o: ^Optimizer, expr: ^ast.Expr) -> bool {
+	if expr == nil {
+		return false
+	}
+
+	changed := false
+
+	#partial switch node in expr.derived {
+	case ^ast.Binary_Expr:
+		changed = simplify_constant_subexpressions(o, node.left) || changed
+		changed = simplify_constant_subexpressions(o, node.right) || changed
+
+		if ok, result := try_optimize_expression(o, expr, nil); ok {
+			changed = true
+		}
+
+	case ^ast.Unary_Expr:
+		changed = simplify_constant_subexpressions(o, node.expr)
+
+		if ok, result := try_optimize_expression(o, expr, nil); ok {
+			changed = true
+		}
+
+	case ^ast.Paren_Expr:
+		changed = simplify_constant_subexpressions(o, node.expr)
+
+		if _, is_lit := node.expr.derived.(^ast.Basic_Lit); is_lit {
+			if parent, exists := o.node_parent[expr]; exists {
+				#partial switch p in parent.derived {
+				case ^ast.Binary_Expr:
+					if p.left == expr {
+						p.left = node.expr
+						changed = true
+					} else if p.right == expr {
+						p.right = node.expr
+						changed = true
+					}
+				}
+			}
+		}
+
+	case ^ast.Call_Expr:
+		changed = simplify_constant_subexpressions(o, node.expr)
+		for arg in node.args {
+			changed = simplify_constant_subexpressions(o, arg.value) || changed
+		}
+	}
+
+	return changed
+}
+
+remove_constant_conditions :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> int {
+	removed_count := 0
+
+	#partial switch s in stmt.derived {
+	case ^ast.If_Stmt:
+		if s.cond != nil {
+			result := evaluate_constant_expression(o, s.cond)
+			if result.is_constant && result.type_kind == .Boolean {
+				if bool_val, ok := result.value.(bool); ok {
+					if bool_val {
+						if s.else_stmt != nil {
+							removed_count += remove_block(o, s.else_stmt)
+							s.else_stmt = nil
+						}
+					} else {
+						if s.body != nil {
+							removed_count += remove_block(o, s.body)
+							s.body = nil
+
+							if s.else_stmt != nil {
+								s.body = s.else_stmt
+								s.else_stmt = nil
+							}
+						}
+					}
+				}
+			}
+		}
+
+	case ^ast.For_Stmt:
+		if s.cond != nil {
+			result := evaluate_constant_expression(o, s.cond)
+			if result.is_constant && result.type_kind == .Boolean {
+				if bool_val, ok := result.value.(bool); ok && !bool_val {
+					if block := find_parent_block(o, stmt); block != nil {
+						for i in 0..<len(block.stmts) {
+							if cast(uintptr)block.stmts[i] == cast(uintptr)stmt {
+								new_stmts := make([dynamic]^ast.Stmt, len(block.stmts)-1, o.alloc)
+								copy(new_stmts[:i], block.stmts[:i])
+								copy(new_stmts[i:], block.stmts[i+1:])
+								block.stmts = new_stmts[:]
+								removed_count += 1
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return removed_count
+}
+
+remove_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> int {
+	if block == nil {
+		return 0
+	}
+
+	removed_count := 0
+
+	parent, exists := o.node_parent[block]
+	if !exists {
+		return 0
+	}
+
+	#partial switch p in parent.derived {
+	case ^ast.File:
+		file := p
+		for i := 0; i < len(file.decls); i += 1 {
+			if cast(uintptr)file.decls[i] == cast(uintptr)block {
+				ordered_remove(&file.decls, i)
+				delete_key(&o.node_parent, block)
+				removed_count += 1
+				break
+			}
+		}
+
+	case ^ast.Block_Stmt:
+		parent_block := p
+		for i in 0..<len(parent_block.stmts) {
+			if cast(uintptr)parent_block.stmts[i] == cast(uintptr)block {
+				new_stmts := make([]^ast.Stmt, len(parent_block.stmts)-1, o.alloc)
+				copy(new_stmts[:i], parent_block.stmts[:i])
+				copy(new_stmts[i:], parent_block.stmts[i+1:])
+				parent_block.stmts = new_stmts
+				delete_key(&o.node_parent, block)
+				removed_count += 1
+				break
+			}
+		}
+
+	case ^ast.If_Stmt:
+		if_stmt := p
+		if if_stmt.body == block {
+			if_stmt.body = nil
+			delete_key(&o.node_parent, block)
+			removed_count += 1
+		} else if if_stmt.else_stmt == block {
+			if_stmt.else_stmt = nil
+			delete_key(&o.node_parent, block)
+			removed_count += 1
+		}
+
+	case ^ast.For_Stmt:
+		for_stmt := p
+		if for_stmt.body == block {
+			for_stmt.body = nil
+			delete_key(&o.node_parent, block)
+			removed_count += 1
+		}
+
+	case ^ast.Func_Stmt:
+		func_stmt := p
+		if func_stmt.body == block {
+			func_stmt.body = nil
+			delete_key(&o.node_parent, block)
+			removed_count += 1
+		}
+
+	case ^ast.Event_Stmt:
+		event_stmt := p
+		if event_stmt.body == block {
+			event_stmt.body = nil
+			delete_key(&o.node_parent, block)
+			removed_count += 1
+		}
+	}
+
+	for stmt in block.stmts {
+		delete_key(&o.node_parent, stmt)
+	}
+
+	return removed_count
+}
+
+optimize_constants_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> int {
+	if stmt == nil {
+		return 0
+	}
+
+	optimized_count := 0
+
+	#partial switch s in stmt.derived {
+	case ^ast.Value_Decl:
+		if decl, ok := s.derived.(^ast.Value_Decl); ok && decl.value != nil {
+			if optimized, _ := try_optimize_expression(o, decl.value, cast(^ast.Node)stmt); optimized {
+				optimized_count += 1
+			}
+		}
+
+	case ^ast.Expr_Stmt:
+		if expr_stmt, ok := s.derived.(^ast.Expr_Stmt); ok && expr_stmt.expr != nil {
+			if optimized, _ := try_optimize_expression(o, expr_stmt.expr, cast(^ast.Node)stmt); optimized {
+				optimized_count += 1
+			}
+		}
+
+	case ^ast.Assign_Stmt:
+		if assign, ok := s.derived.(^ast.Assign_Stmt); ok && assign.expr != nil {
+			if optimized, _ := try_optimize_expression(o, assign.expr, cast(^ast.Node)stmt); optimized {
+				optimized_count += 1
+			}
+		}
+
+	case ^ast.Return_Stmt:
+		if ret, ok := s.derived.(^ast.Return_Stmt); ok && ret.result != nil {
+			if optimized, _ := try_optimize_expression(o, ret.result, cast(^ast.Node)stmt); optimized {
+				optimized_count += 1
+			}
+		}
+
+	case ^ast.If_Stmt:
+		if if_stmt, ok := s.derived.(^ast.If_Stmt); ok {
+			optimized_count += remove_constant_conditions(o, stmt)
+
+			if if_stmt.cond != nil {
+				if optimized, _ := try_optimize_expression(o, if_stmt.cond, cast(^ast.Node)stmt); optimized {
+					optimized_count += 1
+				}
+			}
+
+			if if_stmt.body != nil {
+				optimized_count += optimize_constants_in_block(o, if_stmt.body)
+			}
+			if if_stmt.else_stmt != nil {
+				optimized_count += optimize_constants_in_block(o, if_stmt.else_stmt)
+			}
+		}
+
+	case ^ast.Block_Stmt:
+		if block, ok := s.derived.(^ast.Block_Stmt); ok {
+			optimized_count += optimize_constants_in_block(o, block)
+		}
+
+	case ^ast.For_Stmt:
+		if for_stmt, ok := s.derived.(^ast.For_Stmt); ok {
+			optimized_count += remove_constant_conditions(o, stmt)
+
+			if for_stmt.cond != nil {
+				if optimized, _ := try_optimize_expression(o, for_stmt.cond, cast(^ast.Node)stmt); optimized {
+					optimized_count += 1
+				}
+			}
+
+			if for_stmt.body != nil {
+				optimized_count += optimize_constants_in_block(o, for_stmt.body)
+			}
+		}
+	}
+
+	return optimized_count
+}
+
+optimize_constant_expressions :: proc(o: ^Optimizer) -> int {
+	optimized_count := 0
+
+	for file in o.files {
+		o.current_file = file
+		optimized_count += replace_constant_factory_calls(o, file)
+	}
+
+	for file in o.files {
+		o.current_file = file
+		optimized_count += optimize_constants_in_file(o, file)
+	}
+
+	for file in o.files {
+		o.current_file = file
+		optimized_count += fold_constants_after_factories(o, file)
+	}
+
+	if optimized_count > 0 {
+		fmt.printfln("[DEBUG] Optimized %d constant expression(s)", optimized_count)
+	}
+
+	return optimized_count
+}
+
+fold_constants_after_factories :: proc(o: ^Optimizer, file: ^ast.File) -> int {
+	folded_count := 0
+
+	traverse_and_fold :: proc(o: ^Optimizer, node: ^ast.Node, folded_count: ^int) {
+		if node == nil { return }
+
+		#partial switch n in node.derived {
+		case ^ast.Value_Decl:
+			decl := n
+			if decl.value != nil {
+				if optimized, _ := try_optimize_expression(o, decl.value, node); optimized {
+					folded_count^ += 1
+				}
+
+				traverse_and_fold(o, decl.value, folded_count)
+			}
+
+		case ^ast.Expr_Stmt:
+			stmt := n
+			if stmt.expr != nil {
+				if optimized, _ := try_optimize_expression(o, stmt.expr, node); optimized {
+					folded_count^ += 1
+				}
+				traverse_and_fold(o, stmt.expr, folded_count)
+			}
+
+		case ^ast.Binary_Expr:
+			binary := n
+			traverse_and_fold(o, binary.left, folded_count)
+			traverse_and_fold(o, binary.right, folded_count)
+
+			if parent, exists := o.node_parent[node]; exists {
+				if optimized, _ := try_optimize_expression(o, cast(^ast.Expr)node, parent); optimized {
+					folded_count^ += 1
+				}
+			}
+
+		case ^ast.Unary_Expr:
+			unary := n
+			traverse_and_fold(o, unary.expr, folded_count)
+
+		case ^ast.Call_Expr:
+			call := n
+			traverse_and_fold(o, call.expr, folded_count)
+			for arg in call.args {
+				traverse_and_fold(o, arg, folded_count)
+			}
+
+		case ^ast.Block_Stmt:
+			block := n
+			for stmt in block.stmts {
+				traverse_and_fold(o, stmt, folded_count)
+			}
+
+		case ^ast.If_Stmt:
+			if_stmt := n
+			traverse_and_fold(o, if_stmt.cond, folded_count)
+			if if_stmt.body != nil {
+				traverse_and_fold(o, if_stmt.body, folded_count)
+			}
+			if if_stmt.else_stmt != nil {
+				traverse_and_fold(o, if_stmt.else_stmt, folded_count)
+			}
+
+		case ^ast.For_Stmt:
+			for_stmt := n
+			traverse_and_fold(o, for_stmt.cond, folded_count)
+			traverse_and_fold(o, for_stmt.second_cond, folded_count)
+			if for_stmt.body != nil {
+				traverse_and_fold(o, for_stmt.body, folded_count)
+			}
+
+		case ^ast.Func_Stmt:
+			func_stmt := n
+			if func_stmt.body != nil {
+				traverse_and_fold(o, func_stmt.body, folded_count)
+			}
+
+		case ^ast.Event_Stmt:
+			event_stmt := n
+			if event_stmt.body != nil {
+				traverse_and_fold(o, event_stmt.body, folded_count)
+			}
+		}
+	}
+
+	traverse_and_fold(o, file, &folded_count)
+
+	return folded_count
+}
+
+optimize_constants_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> int {
+	if block == nil {
+		return 0
+	}
+
+	optimized_count := 0
+
+	for stmt in block.stmts {
+		optimized_count += optimize_constants_in_stmt(o, stmt)
+
+		#partial switch s in stmt.derived {
+		case ^ast.If_Stmt:
+			if if_stmt, ok := s.derived.(^ast.If_Stmt); ok {
+				if if_stmt.body != nil {
+
+					if if_stmt.cond != nil {
+						if optimized, _ := try_optimize_expression(o, if_stmt.cond, cast(^ast.Node)if_stmt); optimized {
+							optimized_count += 1
+						}
+					}
+
+					optimized_count += optimize_constants_in_block(o, if_stmt.body)
+				}
+				if if_stmt.else_stmt != nil {
+					optimized_count += optimize_constants_in_block(o, if_stmt.else_stmt)
+				}
+			}
+
+		case ^ast.For_Stmt:
+			if for_stmt, ok := s.derived.(^ast.For_Stmt); ok {
+				if for_stmt.cond != nil {
+					if optimized, _ := try_optimize_expression(o, for_stmt.cond, cast(^ast.Node)for_stmt); optimized {
+						optimized_count += 1
+					}
+				}
+				if for_stmt.body != nil {
+					optimized_count += optimize_constants_in_block(o, for_stmt.body)
+				}
+			}
+
+		case ^ast.Block_Stmt:
+			if nested_block, ok := s.derived.(^ast.Block_Stmt); ok {
+				optimized_count += optimize_constants_in_block(o, nested_block)
+			}
+
+		case ^ast.Func_Stmt:
+			if func_stmt, ok := s.derived.(^ast.Func_Stmt); ok && func_stmt.body != nil {
+				saved_scope := o.current_scope
+				saved_level := o.current_level
+
+				if scope, exists := o.symbols.node_scopes[func_stmt.id]; exists {
+					o.current_scope = scope
+					o.current_level = scope.level
+				}
+
+				optimized_count += optimize_constants_in_block(o, func_stmt.body)
+
+				o.current_scope = saved_scope
+				o.current_level = saved_level
+			}
+
+		case ^ast.Event_Stmt:
+			if event_stmt, ok := s.derived.(^ast.Event_Stmt); ok && event_stmt.body != nil {
+				saved_scope := o.current_scope
+				saved_level := o.current_level
+
+				if scope, exists := o.symbols.node_scopes[event_stmt.id]; exists {
+					o.current_scope = scope
+					o.current_level = scope.level
+				}
+
+				optimized_count += optimize_constants_in_block(o, event_stmt.body)
+
+				o.current_scope = saved_scope
+				o.current_level = saved_level
+			}
+		}
+	}
+
+	return optimized_count
+}
+
+is_empty_block :: proc(block: ^ast.Block_Stmt) -> bool {
+	return block == nil || len(block.stmts) == 0
+}
+
+remove_empty_blocks :: proc(o: ^Optimizer) -> int {
+	removed_count := 0
+
+	for file in o.files {
+		removed_count += remove_empty_blocks_in_file(o, file)
+	}
+
+	if removed_count > 0 {
+		fmt.printfln("[DEBUG] Removed %d empty block(s)", removed_count)
+	}
+
+	return removed_count
+}
+
+remove_empty_blocks_in_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
+	removed_count := 0
+
+	nodes_to_process := make([dynamic]^ast.Node, o.alloc)
+	defer delete(nodes_to_process)
+
+	for decl in file.decls {
+		append(&nodes_to_process, decl)
+	}
+
+	for len(nodes_to_process) > 0 {
+		node := pop(&nodes_to_process)
+
+		#partial switch n in node.derived {
+		case ^ast.Block_Stmt:
+			block := n
+			if is_empty_block(block) {
+				parent, exists := o.node_parent[block]
+				if exists {
+					#partial switch p in parent.derived {
+					case ^ast.File:
+						file_parent := p
+						for i in 0..<len(file_parent.decls) {
+							if cast(uintptr)file_parent.decls[i] == cast(uintptr)block {
+								new_decls := make([dynamic]^ast.Stmt, len(file_parent.decls)-1, o.alloc)
+								copy(new_decls[:], file_parent.decls[:i])
+								copy(new_decls[i:], file_parent.decls[i+1:])
+								file_parent.decls = new_decls
+								delete_key(&o.node_parent, block)
+								removed_count += 1
+								break
+							}
+						}
+					case ^ast.Block_Stmt:
+						parent_block := p
+						for i in 0..<len(parent_block.stmts) {
+							if cast(uintptr)parent_block.stmts[i] == cast(uintptr)block {
+								new_stmts := make([]^ast.Stmt, len(parent_block.stmts)-1, o.alloc)
+								copy(new_stmts[:i], parent_block.stmts[:i])
+								copy(new_stmts[i:], parent_block.stmts[i+1:])
+								parent_block.stmts = new_stmts
+								delete_key(&o.node_parent, block)
+								removed_count += 1
+								break
+							}
+						}
+					case ^ast.Func_Stmt:
+						func_parent := p
+						if func_parent.body == block {
+							func_parent.body = nil
+							delete_key(&o.node_parent, block)
+							removed_count += 1
+						}
+					case ^ast.Event_Stmt:
+						event_parent := p
+						if event_parent.body == block {
+							event_parent.body = nil
+							delete_key(&o.node_parent, block)
+							removed_count += 1
+						}
+					case ^ast.If_Stmt:
+						if_parent := p
+						if if_parent.body == block {
+							if_parent.body = nil
+							delete_key(&o.node_parent, block)
+							removed_count += 1
+						} else if if_parent.else_stmt == block {
+							if_parent.else_stmt = nil
+							delete_key(&o.node_parent, block)
+							removed_count += 1
+						}
+					case ^ast.For_Stmt:
+						for_parent := p
+						if for_parent.body == block {
+							for_parent.body = nil
+							delete_key(&o.node_parent, block)
+							removed_count += 1
+						}
+					}
+				}
+				continue
+			}
+
+			i := 0
+			for i < len(block.stmts) {
+				stmt := block.stmts[i]
+
+				if nested_block, is_block := stmt.derived.(^ast.Block_Stmt); is_block && is_empty_block(nested_block) {
+					new_stmts := make([]^ast.Stmt, len(block.stmts)-1, o.alloc)
+					copy(new_stmts[:i], block.stmts[:i])
+					copy(new_stmts[i:], block.stmts[i+1:])
+					block.stmts = new_stmts
+					delete_key(&o.node_parent, nested_block)
+					removed_count += 1
+					continue
+				}
+
+				append(&nodes_to_process, stmt)
+				i += 1
+			}
+
+		case ^ast.If_Stmt:
+			if_stmt := n
+			if if_stmt.body != nil {
+				append(&nodes_to_process, if_stmt.body)
+			}
+			if if_stmt.else_stmt != nil {
+				append(&nodes_to_process, if_stmt.else_stmt)
+			}
+
+		case ^ast.For_Stmt:
+			for_stmt := n
+			if for_stmt.body != nil {
+				append(&nodes_to_process, for_stmt.body)
+			}
+
+		case ^ast.Func_Stmt:
+			func_stmt := n
+			if func_stmt.body != nil {
+				append(&nodes_to_process, func_stmt.body)
+			}
+
+		case ^ast.Event_Stmt:
+			event_stmt := n
+			if event_stmt.body != nil {
+				append(&nodes_to_process, event_stmt.body)
+			}
+		}
+	}
+
+	return removed_count
+}
+
+flatten_nested_blocks :: proc(o: ^Optimizer) -> int {
+	flattened_count := 0
+
+	for file in o.files {
+		flattened_count += flatten_blocks_in_file(o, file)
+	}
+
+	if flattened_count > 0 {
+		fmt.printfln("[DEBUG] Flattened %d nested block(s)", flattened_count)
+	}
+
+	return flattened_count
+}
+
+can_flatten_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> bool {
+	if block == nil {
+		return false
+	}
+
+	block_scope, has_scope := o.symbols.node_scopes[block.id]
+	if !has_scope {
+		return true
+	}
+
+	if len(block_scope.symbols) == 0 {
+		return true
+	}
+
+	parent := find_parent_block(o, cast(^ast.Node)block)
+	if parent == nil {
+		return false
+	}
+
+	parent_scope, parent_has_scope := o.symbols.node_scopes[parent.id]
+	if !parent_has_scope {
+		return false
+	}
+
+	if block_scope.parent != parent_scope {
+		return false
+	}
+
+	for sym in block_scope.symbols {
+		for parent_sym in parent_scope.symbols {
+			if parent_sym.name == sym.name {
+				return false
+			}
+		}
+
+		if is_symbol_used_outside_block(o, sym, block) {
+			return false
+		}
+	}
+
+	return true
+}
+
+is_symbol_used_outside_block :: proc(o: ^Optimizer, sym: ^checker.Symbol, block: ^ast.Block_Stmt) -> bool {
+	if sym == nil || block == nil || sym.decl_node == nil {
+		return false
+	}
+
+	parent := find_parent_block(o, cast(^ast.Node)block)
+	if parent == nil {
+		return false
+	}
+
+	block_index := -1
+	for i in 0..<len(parent.stmts) {
+		if cast(uintptr)parent.stmts[i] == cast(uintptr)block {
+			block_index = i
+			break
+		}
+	}
+
+	if block_index == -1 {
+		return false
+	}
+
+	for i in block_index+1..<len(parent.stmts) {
+		stmt := parent.stmts[i]
+		if has_specific_symbol_usage(o, stmt, sym) {
+			return true
+		}
+	}
+
+	return false
+}
+
+has_specific_symbol_usage :: proc(o: ^Optimizer, node: ^ast.Node, sym: ^checker.Symbol) -> bool {
+	if node == nil || sym == nil {
+		return false
+	}
+
+	saved_scope := o.current_scope
+	saved_level := o.current_level
+
+	sym_scope := get_symbol_scope(o, sym)
+	if sym_scope != nil {
+		o.current_scope = sym_scope
+		o.current_level = sym_scope.level
+	}
+
+	result := false
+
+	#partial switch n in node.derived {
+	case ^ast.Ident:
+		if n.name == sym.name {
+			found_sym := find_symbol_in_scopes(o, n.name, o.current_scope)
+			result = found_sym == sym
+		}
+
+	case ^ast.Value_Decl:
+		if decl, ok := n.derived.(^ast.Value_Decl); ok && decl.value != nil {
+			result = has_specific_symbol_usage(o, decl.value, sym)
+		}
+
+	case ^ast.Expr_Stmt:
+		if expr_stmt, ok := n.derived.(^ast.Expr_Stmt); ok && expr_stmt.expr != nil {
+			result = has_specific_symbol_usage(o, expr_stmt.expr, sym)
+		}
+
+	case ^ast.Assign_Stmt:
+		if assign, ok := n.derived.(^ast.Assign_Stmt); ok && assign.expr != nil {
+			result = has_specific_symbol_usage(o, assign.expr, sym)
+		}
+
+	case ^ast.Return_Stmt:
+		if ret, ok := n.derived.(^ast.Return_Stmt); ok && ret.result != nil {
+			result = has_specific_symbol_usage(o, ret.result, sym)
+		}
+
+	case ^ast.If_Stmt:
+		if if_stmt, ok := n.derived.(^ast.If_Stmt); ok {
+			result = (if_stmt.cond != nil && has_specific_symbol_usage(o, if_stmt.cond, sym)) ||
+					(if_stmt.body != nil && has_specific_symbol_usage(o, if_stmt.body, sym)) ||
+					(if_stmt.else_stmt != nil && has_specific_symbol_usage(o, if_stmt.else_stmt, sym))
+		}
+
+	case ^ast.For_Stmt:
+		if for_stmt, ok := n.derived.(^ast.For_Stmt); ok {
+			result = (for_stmt.cond != nil && has_specific_symbol_usage(o, for_stmt.cond, sym)) ||
+					(for_stmt.body != nil && has_specific_symbol_usage(o, for_stmt.body, sym))
+		}
+
+	case ^ast.Block_Stmt:
+		if block, ok := n.derived.(^ast.Block_Stmt); ok {
+			for stmt in block.stmts {
+				if has_specific_symbol_usage(o, stmt, sym) {
+					result = true
+					break
+				}
+			}
+		}
+
+	case ^ast.Call_Expr:
+		if call, ok := n.derived.(^ast.Call_Expr); ok {
+			result = has_specific_symbol_usage(o, call.expr, sym)
+			if !result {
+				for arg in call.args {
+					if has_specific_symbol_usage(o, arg.value, sym) {
+						result = true
+						break
+					}
+				}
+			}
+		}
+
+	case ^ast.Binary_Expr:
+		if binary, ok := n.derived.(^ast.Binary_Expr); ok {
+			result = has_specific_symbol_usage(o, binary.left, sym) ||
+				   has_specific_symbol_usage(o, binary.right, sym)
+		}
+
+	case ^ast.Unary_Expr:
+		if unary, ok := n.derived.(^ast.Unary_Expr); ok {
+			result = has_specific_symbol_usage(o, unary.expr, sym)
+		}
+
+	case ^ast.Paren_Expr:
+		if paren, ok := n.derived.(^ast.Paren_Expr); ok {
+			result = has_specific_symbol_usage(o, paren.expr, sym)
+		}
+
+	case ^ast.Index_Expr:
+		if index, ok := n.derived.(^ast.Index_Expr); ok {
+			result = has_specific_symbol_usage(o, index.expr, sym) ||
+				   has_specific_symbol_usage(o, index.index, sym)
+		}
+
+	case ^ast.Member_Access_Expr:
+		if member, ok := n.derived.(^ast.Member_Access_Expr); ok {
+			result = has_specific_symbol_usage(o, member.expr, sym)
+		}
+	}
+
+	o.current_scope = saved_scope
+	o.current_level = saved_level
+
+	return result
+}
+
+get_symbol_scope :: proc(o: ^Optimizer, sym: ^checker.Symbol) -> ^checker.Scope {
+	if sym == nil || sym.decl_node == nil {
+		return nil
+	}
+
+	if scope, exists := o.symbols.node_scopes[sym.decl_node.id]; exists {
+		return scope
+	}
+
+	return nil
+}
+
+flatten_blocks_in_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
+	flattened_count := 0
+
+	nodes_to_process := make([dynamic]^ast.Node, o.alloc)
+	defer delete(nodes_to_process)
+
+	for decl in file.decls {
+		append(&nodes_to_process, decl)
+	}
+
+	for len(nodes_to_process) > 0 {
+		node := pop(&nodes_to_process)
+
+		#partial switch n in node.derived {
+		case ^ast.Block_Stmt:
+			block := n
+			i := 0
+			for i < len(block.stmts) {
+				stmt := block.stmts[i]
+
+				if nested_block, is_block := stmt.derived.(^ast.Block_Stmt); is_block && len(nested_block.stmts) == 1 {
+					if can_flatten_block(o, nested_block) {
+						single_stmt := nested_block.stmts[0]
+
+						o.node_parent[single_stmt] = node
+
+						block.stmts[i] = single_stmt
+
+						delete_key(&o.node_parent, nested_block)
+
+						flattened_count += 1
+						continue
+					}
+				}
+
+				append(&nodes_to_process, stmt)
+				i += 1
+			}
+
+		case ^ast.If_Stmt:
+			if_stmt := n
+			if if_stmt.body != nil {
+				append(&nodes_to_process, if_stmt.body)
+			}
+			if if_stmt.else_stmt != nil {
+				append(&nodes_to_process, if_stmt.else_stmt)
+			}
+
+		case ^ast.For_Stmt:
+			for_stmt := n
+			if for_stmt.body != nil {
+				append(&nodes_to_process, for_stmt.body)
+			}
+
+		case ^ast.Func_Stmt:
+			func_stmt := n
+			if func_stmt.body != nil {
+				append(&nodes_to_process, func_stmt.body)
+			}
+
+		case ^ast.Event_Stmt:
+			event_stmt := n
+			if event_stmt.body != nil {
+				append(&nodes_to_process, event_stmt.body)
+			}
+		}
+	}
+
+	return flattened_count
+}
+
+is_builtin_factory :: proc(name: string) -> bool {
+	factories := []string{
+		"game_value", "item", "array", "dict", "location",
+		"vec3", "sound", "particle", "block", "number",
+		"text", "enum", "potion",
+	}
+
+	for factory in factories {
+		if factory == name {
+			return true
+		}
+	}
+	return false
+}
+
+evaluate_builtin_factory :: proc(o: ^Optimizer, name: string, args: []^ast.Argument) -> Constant_Result {
+	result: Constant_Result
+	result.is_constant = false
+
+	if name == "number" && len(args) == 1 {
+		arg_result := evaluate_constant_expression(o, args[0].value)
+		if arg_result.is_constant {
+			if arg_result.type_kind == .Text {
+				if str_val, ok := arg_result.value.(string); ok {
+					if val, ok2 := strconv.parse_i64(str_val); ok2 {
+						result.value = val
+						result.type_kind = .Number
+						result.is_constant = true
+					} else if val, ok3 := strconv.parse_f64(str_val); ok3 {
+						result.value = val
+						result.type_kind = .Number
+						result.is_constant = true
+					}
+				}
+			} else if arg_result.type_kind == .Number {
+				result = arg_result
+			}
+		}
+	} else if name == "text" && len(args) == 1 {
+		arg_result := evaluate_constant_expression(o, args[0].value)
+		if arg_result.is_constant {
+			if arg_result.type_kind == .Number {
+				if i64_val, ok := arg_result.value.(i64); ok {
+					result.value = fmt.tprintf("%d", i64_val)
+					result.type_kind = .Text
+					result.is_constant = true
+				} else if f64_val, ok2 := arg_result.value.(f64); ok2 {
+					result.value = fmt.tprintf("%f", f64_val)
+					result.type_kind = .Text
+					result.is_constant = true
+				}
+			} else if arg_result.type_kind == .Boolean {
+				if bool_val, ok := arg_result.value.(bool); ok {
+					result.value = bool_val ? "true" : "false"
+					result.type_kind = .Text
+					result.is_constant = true
+				}
+			}
+		}
+	} else if name == "enum" && len(args) == 1 {
+		arg_result := evaluate_constant_expression(o, args[0].value)
+		if arg_result.is_constant && arg_result.type_kind == .Text {
+			result = arg_result
+			result.type_kind = .Enum
+		}
+	}
+
+	return result
+}
+
+optimize_constants_in_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
+	optimized_count := 0
+
+	for stmt in file.decls {
+		optimized_count += optimize_constants_in_stmt(o, stmt)
+	}
+
+	return optimized_count
+}
+
 analyze_usage :: proc(o: ^Optimizer) {
 	collect_all_scopes(o, o.symbols.global_scope)
 
@@ -810,7 +2447,7 @@ remove_unused :: proc(o: ^Optimizer) -> int {
 	removed := remove_unused_symbols(o)
 
 	if removed > 0 {
-		fmt.printfln("[INFO] Removed %d unused symbol(s)", removed)
+		fmt.printfln("[DEBUG] Removed %d unused symbol(s)", removed)
 	}
 
 	return removed
@@ -819,14 +2456,19 @@ remove_unused :: proc(o: ^Optimizer) -> int {
 optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table) -> [dynamic]error.Error {
 	o.files = files
 	o.symbols = symbols
-	o.pass += 1
 
 	o.current_scope = symbols.global_scope
 	o.current_level = 0
 
 	analyze_usage(o)
 
+	optimize_constant_expressions(o)
+
 	remove_unused(o)
+
+	remove_empty_blocks(o)
+
+	flatten_nested_blocks(o)
 
 	return o.errs
 }
