@@ -15,6 +15,7 @@ main :: proc() {
 
 	exe_path, _ := filepath.abs(os.args[0])
     exe_dir := filepath.dir(exe_path)
+    pdb_path := filepath.join([]string{exe_dir, "tests.pdb"})
 
     bin_dir := filepath.join([]string{exe_dir, "bin"})
     src_dir := filepath.join([]string{exe_dir, "src"})
@@ -34,6 +35,9 @@ main :: proc() {
 	defer {
 		if os.exists(exe_path) {
 			os.remove(exe_path)
+		}
+		if os.exists(pdb_path) {
+			os.remove(pdb_path)
 		}
 	}
 
