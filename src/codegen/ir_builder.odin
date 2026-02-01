@@ -322,7 +322,7 @@ ir_builder_append_file :: proc(irb: ^IR_Builder, file: ^ast.File) {
 				}
 			}
 
-			if checker.has_anno(typed_stmt, "hidden") {
+			if checker.anno_is_true(typed_stmt, "hidden") {
 				append(&func_handler.values, named_value("is_hidden", enum_value("TRUE")))
 			}
 
