@@ -1,7 +1,6 @@
 package codegen
 
 import "core:mem"
-
 import "../ast"
 import "../checker"
 import "../error"
@@ -27,7 +26,12 @@ codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Sy
 		ir_builder_append_file(&irb, file)
 	}
 	result, irb_errors := ir_build(&irb)
-	return result,irb_errors
+
+	for err in irb_errors {
+		append(&c.errs, err)
+	}
+
+	return result, c.errs
 }
 
 add_error :: proc(c: ^Codegen, message: string, file: ^ast.File) {
