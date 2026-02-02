@@ -346,6 +346,11 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 _collect_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	c := cast(^Checker)v.user_data
 
+	if node.name == "_" {
+		get_type_info_from_expression(c, node.value)
+		return
+	}
+
 	if _, already_defined := lookup_local_symbol(c.symbol_table.current_scope, node.name);
 		already_defined {
 		add_error(c, fmt.tprintf("variable '%s' is already defined", node.name), node)
@@ -412,6 +417,10 @@ _type_check_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 @(private="file")
 _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	c := cast(^Checker)v.user_data
+
+	if node.name == "_" {
+		return
+	}
 
 	if node.is_const && !check_expression_is_pure(c, node.value) {
 		add_error(c, fmt.tprintf("cannot initialize constant '%s' with non-constant value '%s'",

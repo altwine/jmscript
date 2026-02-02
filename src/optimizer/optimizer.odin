@@ -36,6 +36,8 @@ Optimizer :: struct {
 
 	constant_cache: map[^ast.Node]Constant_Result,
 
+	anonymous_vars: map[string]bool,
+
 	inlined_symbols:   map[^checker.Symbol]bool,
 	symbol_usage_count: map[^checker.Symbol]int,
 	symbols_to_inline: [dynamic]^checker.Symbol,
@@ -70,6 +72,7 @@ optimizer_init :: proc(o: ^Optimizer, allocator := context.allocator) {
 	o.inlined_symbols = make(map[^checker.Symbol]bool, allocator)
 	o.symbol_usage_count = make(map[^checker.Symbol]int, allocator)
 	o.symbols_to_inline = make([dynamic]^checker.Symbol, allocator)
+	o.anonymous_vars = make(map[string]bool, allocator)
 
 	o.walker_vtable = ast.Visitor_VTable{
 		visit_ident = _visit_ident,
@@ -205,8 +208,14 @@ count_symbol_usage_in_node :: proc(o: ^Optimizer, node: ^ast.Node) {
 		}
 
 	case ^ast.Value_Decl:
-		if n.value != nil {
+		if n.name == "_" && n.value != nil {
 			count_symbol_usage_in_node(o, n.value)
+
+			collect_symbols_from_expr(o, n.value)
+		} else {
+			if n.value != nil {
+				count_symbol_usage_in_node(o, n.value)
+			}
 		}
 
 	case ^ast.Binary_Expr:
@@ -257,6 +266,50 @@ count_symbol_usage_in_node :: proc(o: ^Optimizer, node: ^ast.Node) {
 			count_symbol_usage_in_node(o, n.body)
 			o.current_scope = saved_scope
 		}
+	}
+}
+
+collect_symbols_from_expr :: proc(o: ^Optimizer, expr: ^ast.Expr) {
+	if expr == nil { return }
+
+	#partial switch n in expr.derived {
+	case ^ast.Ident:
+		sym := find_symbol_in_scopes(o, n.name, o.current_scope)
+		if sym != nil {
+			o.anonymous_vars[sym.name] = true
+		}
+
+	case ^ast.Call_Expr:
+		if ident, is_ident := n.expr.derived.(^ast.Ident); is_ident {
+			sym := find_symbol_in_scopes(o, ident.name, o.current_scope)
+			if sym != nil {
+				o.anonymous_vars[sym.name] = true
+			}
+		}
+		for arg in n.args {
+			collect_symbols_from_expr(o, arg.value)
+		}
+
+	case ^ast.Binary_Expr:
+		collect_symbols_from_expr(o, n.left)
+		collect_symbols_from_expr(o, n.right)
+
+	case ^ast.Unary_Expr:
+		collect_symbols_from_expr(o, n.expr)
+
+	case ^ast.Paren_Expr:
+		collect_symbols_from_expr(o, n.expr)
+
+	case ^ast.Member_Access_Expr:
+		collect_symbols_from_expr(o, n.expr)
+
+	case ^ast.Index_Expr:
+		collect_symbols_from_expr(o, n.expr)
+		collect_symbols_from_expr(o, n.index)
+
+	case ^ast.Field_Value:
+		collect_symbols_from_expr(o, n.field)
+		collect_symbols_from_expr(o, n.value)
 	}
 }
 
@@ -765,6 +818,56 @@ find_symbol_in_scopes :: proc(o: ^Optimizer, name: string, start_scope: ^checker
 	return nil
 }
 
+mark_anonymous_vars_as_used :: proc(o: ^Optimizer) {
+	for name in o.anonymous_vars {
+		found := false
+
+		scope_stack := make([dynamic]^checker.Scope, o.alloc)
+		defer delete(scope_stack)
+
+		append(&scope_stack, o.symbols.global_scope)
+
+		for len(scope_stack) > 0 {
+			scope := pop(&scope_stack)
+
+			for sym in scope.symbols {
+				if sym.name == name {
+					mark_symbol_and_dependencies(o, sym)
+					found = true
+					break
+				}
+			}
+
+			if found {
+				break
+			}
+
+			for child in scope.children {
+				append(&scope_stack, child)
+			}
+		}
+
+		if !found {
+			scope := o.current_scope
+			for scope != nil {
+				for sym in scope.symbols {
+					if sym.name == name {
+						mark_symbol_and_dependencies(o, sym)
+						found = true
+						break
+					}
+				}
+
+				if found {
+					break
+				}
+
+				scope = scope.parent
+			}
+		}
+	}
+}
+
 mark_used_symbols :: proc(o: ^Optimizer) {
 	for scope, usage_map in o.scope_symbols_usage {
 		for name, used in usage_map {
@@ -779,6 +882,8 @@ mark_used_symbols :: proc(o: ^Optimizer) {
 	}
 
 	mark_builtin_and_native_as_used(o)
+
+	mark_anonymous_vars_as_used(o)
 }
 
 mark_symbol_and_dependencies :: proc(o: ^Optimizer, sym: ^checker.Symbol) {
@@ -908,6 +1013,10 @@ remove_unused_symbols :: proc(o: ^Optimizer) -> int {
 			sym := scope.symbols[i]
 
 			should_keep := false
+
+			if sym.name in o.anonymous_vars {
+				should_keep = true
+			}
 
 			if _, was_inlined := o.inlined_symbols[sym]; was_inlined {
 				if count, exists := &o.symbol_usage_count[sym]; exists && count^ <= 0 {
@@ -2884,6 +2993,50 @@ remove_inlined_symbols :: proc(o: ^Optimizer) -> int {
 	return removed_count
 }
 
+remove_anonymous_assignments :: proc(o: ^Optimizer) -> int {
+	removed_count := 0
+
+	for file in o.files {
+		o.current_file = file
+		removed_count += remove_anonymous_assignments_from_file(o, file)
+	}
+
+	if removed_count > 0 {
+		fmt.printfln("[DEBUG] Removed %d anonymous assignment(s)", removed_count)
+	}
+
+	return removed_count
+}
+
+remove_anonymous_assignments_from_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
+	removed_count := 0
+	i := 0
+
+	for i < len(file.decls) {
+		stmt := file.decls[i]
+
+		#partial switch s in stmt.derived {
+		case ^ast.Value_Decl:
+			decl := s
+			if decl.name == "_" && decl.value != nil {
+				new_decls := make([dynamic]^ast.Stmt, len(file.decls)-1, o.alloc)
+				copy(new_decls[:], file.decls[:i])
+				copy(new_decls[i:], file.decls[i+1:])
+				file.decls = new_decls
+
+				delete_key(&o.node_parent, stmt)
+
+				removed_count += 1
+				continue
+			}
+		}
+
+		i += 1
+	}
+
+	return removed_count
+}
+
 optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table) -> [dynamic]error.Error {
 	o.files = files
 	o.symbols = symbols
@@ -2894,6 +3047,8 @@ optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^c
 	analyze_usage(o)
 
 	count_all_symbol_usage(o)
+
+	remove_anonymous_assignments(o)
 
 	optimize_constant_expressions(o)
 
