@@ -4,12 +4,13 @@ package test
 
 //@export
 //B := 1 + A + 3
+{
+	B :: 2
 
-B :: 2
+	A :: (1 + 2 + 3 + number("1")) / B
 
-A :: (1 + 2 + 3 + number("1")) / B
-
-_ :: A
+	_ :: A
+}
 
 //{
 //	C := 1

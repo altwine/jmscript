@@ -448,6 +448,9 @@ _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 @(private="file")
 _type_check_visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	c := cast(^Checker)v.user_data
+	if node.name == "_" {
+		return
+	}
 	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
 	if found {
 		if sym.is_const {

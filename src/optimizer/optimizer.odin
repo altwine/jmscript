@@ -41,6 +41,9 @@ Optimizer :: struct {
 	inlined_symbols:   map[^checker.Symbol]bool,
 	symbol_usage_count: map[^checker.Symbol]int,
 	symbols_to_inline: [dynamic]^checker.Symbol,
+
+	func_calls:		  map[^checker.Symbol][dynamic]^ast.Call_Expr,
+	call_to_func:		map[^ast.Call_Expr]^checker.Symbol,
 }
 
 Constant_Value :: union {
@@ -73,6 +76,8 @@ optimizer_init :: proc(o: ^Optimizer, allocator := context.allocator) {
 	o.symbol_usage_count = make(map[^checker.Symbol]int, allocator)
 	o.symbols_to_inline = make([dynamic]^checker.Symbol, allocator)
 	o.anonymous_vars = make(map[string]bool, allocator)
+	o.func_calls = make(map[^checker.Symbol][dynamic]^ast.Call_Expr, allocator)
+	o.call_to_func = make(map[^ast.Call_Expr]^checker.Symbol, allocator)
 
 	o.walker_vtable = ast.Visitor_VTable{
 		visit_ident = _visit_ident,
@@ -171,26 +176,26 @@ count_symbol_usage_in_file :: proc(o: ^Optimizer, file: ^ast.File) {
 count_symbol_usage_in_node :: proc(o: ^Optimizer, node: ^ast.Node) {
 	if node == nil { return }
 
+	saved_scope := o.current_scope
+	saved_level := o.current_level
+
+	if scope, exists := o.symbols.node_scopes[node.id]; exists {
+		o.current_scope = scope
+		o.current_level = scope.level
+	}
+
 	#partial switch n in node.derived {
 	case ^ast.Ident:
 		sym := find_symbol_in_scopes(o, n.name, o.current_scope)
 		if sym != nil {
-			if count, exists := &o.symbol_usage_count[sym]; exists {
-				o.symbol_usage_count[sym] = count^ + 1
-			} else {
-				o.symbol_usage_count[sym] = 1
-			}
+			increment_symbol_usage(o, sym)
 		}
 
 	case ^ast.Call_Expr:
 		if ident, is_ident := n.expr.derived.(^ast.Ident); is_ident {
 			sym := find_symbol_in_scopes(o, ident.name, o.current_scope)
 			if sym != nil {
-				if count, exists := &o.symbol_usage_count[sym]; exists {
-					o.symbol_usage_count[sym] = count^ + 1
-				} else {
-					o.symbol_usage_count[sym] = 1
-				}
+				increment_symbol_usage(o, sym)
 			}
 		}
 		for arg in n.args {
@@ -210,11 +215,20 @@ count_symbol_usage_in_node :: proc(o: ^Optimizer, node: ^ast.Node) {
 	case ^ast.Value_Decl:
 		if n.name == "_" && n.value != nil {
 			count_symbol_usage_in_node(o, n.value)
-
 			collect_symbols_from_expr(o, n.value)
 		} else {
 			if n.value != nil {
 				count_symbol_usage_in_node(o, n.value)
+			}
+		}
+
+	case ^ast.Assign_Stmt:
+		if n.name == "_" && n.expr != nil {
+			count_symbol_usage_in_node(o, n.expr)
+			collect_symbols_from_expr(o, n.expr)
+		} else {
+			if n.expr != nil {
+				count_symbol_usage_in_node(o, n.expr)
 			}
 		}
 
@@ -229,48 +243,319 @@ count_symbol_usage_in_node :: proc(o: ^Optimizer, node: ^ast.Node) {
 		count_symbol_usage_in_node(o, n.expr)
 
 	case ^ast.If_Stmt:
+		if n.init != nil {
+			count_symbol_usage_in_node(o, n.init)
+		}
+
 		if n.cond != nil {
 			count_symbol_usage_in_node(o, n.cond)
 		}
+
 		if n.body != nil {
+			saved_if_scope := o.current_scope
+			saved_if_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[n.body.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
 			count_symbol_usage_in_node(o, n.body)
+
+			o.current_scope = saved_if_scope
+			o.current_level = saved_if_level
+		}
+
+		if n.else_stmt != nil {
+			saved_else_scope := o.current_scope
+			saved_else_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[n.else_stmt.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			count_symbol_usage_in_node(o, n.else_stmt)
+
+			o.current_scope = saved_else_scope
+			o.current_level = saved_else_level
+		}
+
+	case ^ast.For_Stmt:
+		if n.init != nil {
+			for ident in n.init {
+				count_symbol_usage_in_node(o, ident)
+			}
+		}
+
+		if n.cond != nil {
+			count_symbol_usage_in_node(o, n.cond)
+		}
+
+		if n.second_cond != nil {
+			count_symbol_usage_in_node(o, n.second_cond)
+		}
+
+		if n.post != nil {
+			count_symbol_usage_in_node(o, n.post)
+		}
+
+		if n.body != nil {
+			saved_for_scope := o.current_scope
+			saved_for_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[n.body.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			count_symbol_usage_in_node(o, n.body)
+
+			o.current_scope = saved_for_scope
+			o.current_level = saved_for_level
+		}
+
+	case ^ast.Func_Stmt:
+		if n.params != nil {
+			saved_params_scope := o.current_scope
+			saved_params_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[n.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			o.current_scope = saved_params_scope
+			o.current_level = saved_params_level
+		}
+
+		if n.body != nil {
+			saved_body_scope := o.current_scope
+			saved_body_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[n.body.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			count_symbol_usage_in_node(o, n.body)
+
+			o.current_scope = saved_body_scope
+			o.current_level = saved_body_level
+		}
+
+	case ^ast.Event_Stmt:
+		if n.params != nil {
+			saved_params_scope := o.current_scope
+			saved_params_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[n.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			o.current_scope = saved_params_scope
+			o.current_level = saved_params_level
+		}
+
+		if n.body != nil {
+			saved_body_scope := o.current_scope
+			saved_body_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[n.body.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			count_symbol_usage_in_node(o, n.body)
+
+			o.current_scope = saved_body_scope
+			o.current_level = saved_body_level
+		}
+
+	case ^ast.Member_Access_Expr:
+		count_symbol_usage_in_node(o, n.expr)
+		if ident, is_ident := n.field.derived.(^ast.Ident); is_ident {
+			sym := find_symbol_in_scopes(o, ident.name, o.current_scope)
+			if sym != nil {
+				increment_symbol_usage(o, sym)
+			}
+		}
+
+	case ^ast.Index_Expr:
+		count_symbol_usage_in_node(o, n.expr)
+		count_symbol_usage_in_node(o, n.index)
+
+	case ^ast.Field_Value:
+		count_symbol_usage_in_node(o, n.field)
+		count_symbol_usage_in_node(o, n.value)
+
+	case ^ast.Return_Stmt:
+		if n.result != nil {
+			count_symbol_usage_in_node(o, n.result)
+		}
+
+	case ^ast.Defer_Stmt:
+		count_symbol_usage_in_node(o, n.stmt)
+
+	case ^ast.Expr_Stmt:
+		if n.expr != nil {
+			count_symbol_usage_in_node(o, n.expr)
+		}
+	}
+
+	o.current_scope = saved_scope
+	o.current_level = saved_level
+}
+
+increment_symbol_usage :: proc(o: ^Optimizer, sym: ^checker.Symbol) {
+	if sym == nil { return }
+
+	if count, exists := o.symbol_usage_count[sym]; exists {
+		o.symbol_usage_count[sym] = count + 1
+	} else {
+		o.symbol_usage_count[sym] = 1
+	}
+}
+
+collect_function_calls :: proc(o: ^Optimizer) {
+	for file in o.files {
+		collect_calls_in_node(o, cast(^ast.Node)file)
+	}
+}
+
+collect_calls_in_node :: proc(o: ^Optimizer, node: ^ast.Node) {
+	if node == nil { return }
+
+	#partial switch n in node.derived {
+	case ^ast.Call_Expr:
+		call := n
+		if ident, is_ident := call.expr.derived.(^ast.Ident); is_ident {
+			sym := find_symbol_in_scopes(o, ident.name, o.current_scope)
+			if sym != nil && sym.type.kind == .Function {
+				o.call_to_func[call] = sym
+
+				if _, exists := o.func_calls[sym]; !exists {
+					o.func_calls[sym] = make([dynamic]^ast.Call_Expr, o.alloc)
+				}
+				append(&o.func_calls[sym], call)
+			}
+		}
+
+		for arg in call.args {
+			collect_calls_in_node(o, arg)
+		}
+
+	case ^ast.File:
+		for decl in n.decls {
+			collect_calls_in_node(o, decl)
+		}
+
+	case ^ast.Block_Stmt:
+		for stmt in n.stmts {
+			collect_calls_in_node(o, stmt)
+		}
+
+	case ^ast.If_Stmt:
+		if n.cond != nil {
+			collect_calls_in_node(o, n.cond)
+		}
+		if n.body != nil {
+			collect_calls_in_node(o, n.body)
 		}
 		if n.else_stmt != nil {
-			count_symbol_usage_in_node(o, n.else_stmt)
+			collect_calls_in_node(o, n.else_stmt)
 		}
 
 	case ^ast.For_Stmt:
 		if n.cond != nil {
-			count_symbol_usage_in_node(o, n.cond)
+			collect_calls_in_node(o, n.cond)
 		}
 		if n.body != nil {
-			count_symbol_usage_in_node(o, n.body)
+			collect_calls_in_node(o, n.body)
 		}
 
 	case ^ast.Func_Stmt:
 		if n.body != nil {
 			saved_scope := o.current_scope
+			saved_level := o.current_level
+
 			if scope, exists := o.symbols.node_scopes[n.id]; exists {
 				o.current_scope = scope
+				o.current_level = scope.level
 			}
-			count_symbol_usage_in_node(o, n.body)
+
+			collect_calls_in_node(o, n.body)
+
 			o.current_scope = saved_scope
+			o.current_level = saved_level
 		}
 
 	case ^ast.Event_Stmt:
 		if n.body != nil {
 			saved_scope := o.current_scope
+			saved_level := o.current_level
+
 			if scope, exists := o.symbols.node_scopes[n.id]; exists {
 				o.current_scope = scope
+				o.current_level = scope.level
 			}
-			count_symbol_usage_in_node(o, n.body)
+
+			collect_calls_in_node(o, n.body)
+
 			o.current_scope = saved_scope
+			o.current_level = saved_level
 		}
+
+	case ^ast.Value_Decl:
+		if n.value != nil {
+			collect_calls_in_node(o, n.value)
+		}
+
+	case ^ast.Expr_Stmt:
+		if n.expr != nil {
+			collect_calls_in_node(o, n.expr)
+		}
+
+	case ^ast.Assign_Stmt:
+		if n.expr != nil {
+			collect_calls_in_node(o, n.expr)
+		}
+
+	case ^ast.Return_Stmt:
+		if n.result != nil {
+			collect_calls_in_node(o, n.result)
+		}
+
+	case ^ast.Binary_Expr:
+		collect_calls_in_node(o, n.left)
+		collect_calls_in_node(o, n.right)
+
+	case ^ast.Unary_Expr:
+		collect_calls_in_node(o, n.expr)
+
+	case ^ast.Paren_Expr:
+		collect_calls_in_node(o, n.expr)
+
+	case ^ast.Index_Expr:
+		collect_calls_in_node(o, n.expr)
+		collect_calls_in_node(o, n.index)
+
+	case ^ast.Member_Access_Expr:
+		collect_calls_in_node(o, n.expr)
 	}
 }
 
 collect_symbols_from_expr :: proc(o: ^Optimizer, expr: ^ast.Expr) {
 	if expr == nil { return }
+
+	saved_scope := o.current_scope
+	saved_level := o.current_level
+
+	if scope, exists := o.symbols.node_scopes[expr.id]; exists {
+		o.current_scope = scope
+		o.current_level = scope.level
+	}
 
 	#partial switch n in expr.derived {
 	case ^ast.Ident:
@@ -311,6 +596,9 @@ collect_symbols_from_expr :: proc(o: ^Optimizer, expr: ^ast.Expr) {
 		collect_symbols_from_expr(o, n.field)
 		collect_symbols_from_expr(o, n.value)
 	}
+
+	o.current_scope = saved_scope
+	o.current_level = saved_level
 }
 
 can_inline_symbol :: proc(o: ^Optimizer, sym: ^checker.Symbol) -> bool {
@@ -822,14 +1110,8 @@ mark_anonymous_vars_as_used :: proc(o: ^Optimizer) {
 	for name in o.anonymous_vars {
 		found := false
 
-		scope_stack := make([dynamic]^checker.Scope, o.alloc)
-		defer delete(scope_stack)
-
-		append(&scope_stack, o.symbols.global_scope)
-
-		for len(scope_stack) > 0 {
-			scope := pop(&scope_stack)
-
+		scope := o.current_scope
+		for scope != nil {
 			for sym in scope.symbols {
 				if sym.name == name {
 					mark_symbol_and_dependencies(o, sym)
@@ -842,15 +1124,19 @@ mark_anonymous_vars_as_used :: proc(o: ^Optimizer) {
 				break
 			}
 
-			for child in scope.children {
-				append(&scope_stack, child)
-			}
+			scope = scope.parent
 		}
 
 		if !found {
-			scope := o.current_scope
-			for scope != nil {
-				for sym in scope.symbols {
+			scope_stack := make([dynamic]^checker.Scope, o.alloc)
+			defer delete(scope_stack)
+
+			append(&scope_stack, o.symbols.global_scope)
+
+			for len(scope_stack) > 0 {
+				scope2 := pop(&scope_stack)
+
+				for sym in scope2.symbols {
 					if sym.name == name {
 						mark_symbol_and_dependencies(o, sym)
 						found = true
@@ -862,7 +1148,9 @@ mark_anonymous_vars_as_used :: proc(o: ^Optimizer) {
 					break
 				}
 
-				scope = scope.parent
+				for child in scope.children {
+					append(&scope_stack, child)
+				}
 			}
 		}
 	}
@@ -1007,6 +1295,8 @@ check_for_unused_symbols :: proc(o: ^Optimizer) {
 remove_unused_symbols :: proc(o: ^Optimizer) -> int {
 	removed_count := 0
 
+	collect_function_calls(o)
+
 	for &scope in o.all_scopes {
 		i := 0
 		for i < len(scope.symbols) {
@@ -1025,6 +1315,17 @@ remove_unused_symbols :: proc(o: ^Optimizer) -> int {
 
 					if sym.decl_node != nil {
 						remove_node_from_parent(o, sym.decl_node)
+
+						if sym.type.kind == .Function {
+							if calls, exists2 := o.func_calls[sym]; exists2 {
+								for call in calls {
+									if parent, exists3 := o.node_parent[call]; exists3 {
+										remove_node_from_parent(o, cast(^ast.Node)call)
+									}
+								}
+								delete_key(&o.func_calls, sym)
+							}
+						}
 					}
 
 					delete_key(&o.symbol_deps, sym)
@@ -1059,6 +1360,17 @@ remove_unused_symbols :: proc(o: ^Optimizer) -> int {
 
 				if sym.decl_node != nil {
 					remove_node_from_parent(o, sym.decl_node)
+
+					if sym.type.kind == .Function {
+						if calls, exists := o.func_calls[sym]; exists {
+							for call in calls {
+								if parent, exists2 := o.node_parent[call]; exists2 {
+									remove_node_from_parent(o, cast(^ast.Node)call)
+								}
+							}
+							delete_key(&o.func_calls, sym)
+						}
+					}
 				}
 
 				delete_key(&o.symbol_deps, sym)
@@ -1183,44 +1495,66 @@ evaluate_identifier :: proc(o: ^Optimizer, ident: ^ast.Ident) -> Constant_Result
 	result: Constant_Result
 	result.is_constant = false
 
-	scope := o.current_scope
-	for scope != nil {
-		for sym in scope.symbols {
-			if sym.name == ident.name {
-				if sym.is_const {
-					if sym.decl_node != nil {
-						#partial switch decl in sym.decl_node.derived {
-						case ^ast.Value_Decl:
-							if decl.value != nil {
-								if can_inline_symbol(o, sym) {
-									if count, exists := &o.symbol_usage_count[sym]; exists && count^ > 0 {
-										o.symbol_usage_count[sym] = count^ - 1
-										o.inlined_symbols[sym] = true
-									}
-								}
+	sym := find_symbol_in_scopes(o, ident.name, o.current_scope)
+	if sym == nil {
+		return result
+	}
 
-								return evaluate_constant_expression(o, decl.value)
-							}
+	if sym.is_const {
+		if sym.decl_node != nil {
+			#partial switch decl in sym.decl_node.derived {
+			case ^ast.Value_Decl:
+				if decl.value != nil {
+					saved_scope := o.current_scope
+					saved_level := o.current_level
+
+					if scope, exists := o.symbols.node_scopes[sym.decl_node.id]; exists {
+						o.current_scope = scope
+						o.current_level = scope.level
+					}
+
+					expr_result := evaluate_constant_expression(o, decl.value)
+
+					o.current_scope = saved_scope
+					o.current_level = saved_level
+
+					if can_inline_symbol(o, sym) {
+						if count, exists := &o.symbol_usage_count[sym]; exists && count^ > 0 {
+							o.symbol_usage_count[sym] = count^ - 1
+							o.inlined_symbols[sym] = true
 						}
 					}
-				}
 
-				if flags_field, has := sym.metadata["flags"]; has {
-					if flags, ok := flags_field.(checker.Flags); ok && .PURE in flags {
-						if sym.decl_node != nil {
-							#partial switch decl in sym.decl_node.derived {
-							case ^ast.Value_Decl:
-								if decl.value != nil {
-									return evaluate_constant_expression(o, decl.value)
-								}
-							}
-						}
-					}
+					return expr_result
 				}
-				return result
 			}
 		}
-		scope = scope.parent
+	}
+
+	if flags_field, has := sym.metadata["flags"]; has {
+		if flags, ok := flags_field.(checker.Flags); ok && .PURE in flags {
+			if sym.decl_node != nil {
+				#partial switch decl in sym.decl_node.derived {
+				case ^ast.Value_Decl:
+					if decl.value != nil {
+						saved_scope := o.current_scope
+						saved_level := o.current_level
+
+						if scope, exists := o.symbols.node_scopes[sym.decl_node.id]; exists {
+							o.current_scope = scope
+							o.current_level = scope.level
+						}
+
+						expr_result := evaluate_constant_expression(o, decl.value)
+
+						o.current_scope = saved_scope
+						o.current_level = saved_level
+
+						return expr_result
+					}
+				}
+			}
+		}
 	}
 
 	return result
@@ -1715,13 +2049,6 @@ try_optimize_expression :: proc(o: ^Optimizer, expr: ^ast.Expr, parent: ^ast.Nod
 						return true, result
 					}
 				}
-			/* TODO:
-			^Member_Access_Expr
-
-			^Index_Expr
-
-			^Field_Value
-			*/
 			case ^ast.Paren_Expr:
 				p.expr = new_lit
 				o.node_parent[new_lit] = parent
@@ -2164,16 +2491,16 @@ optimize_constants_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> int {
 			}
 
 			if if_stmt.body != nil {
-				optimized_count += optimize_constants_in_block(o, if_stmt.body)
+				optimized_count += optimize_constants_in_block_with_scope(o, if_stmt.body)
 			}
 			if if_stmt.else_stmt != nil {
-				optimized_count += optimize_constants_in_block(o, if_stmt.else_stmt)
+				optimized_count += optimize_constants_in_block_with_scope(o, if_stmt.else_stmt)
 			}
 		}
 
 	case ^ast.Block_Stmt:
 		if block, ok := s.derived.(^ast.Block_Stmt); ok {
-			optimized_count += optimize_constants_in_block(o, block)
+			optimized_count += optimize_constants_in_block_with_scope(o, block)
 		}
 
 	case ^ast.For_Stmt:
@@ -2187,10 +2514,31 @@ optimize_constants_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> int {
 			}
 
 			if for_stmt.body != nil {
-				optimized_count += optimize_constants_in_block(o, for_stmt.body)
+				optimized_count += optimize_constants_in_block_with_scope(o, for_stmt.body)
 			}
 		}
 	}
+
+	return optimized_count
+}
+
+optimize_constants_in_block_with_scope :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> int {
+	if block == nil {
+		return 0
+	}
+
+	saved_scope := o.current_scope
+	saved_level := o.current_level
+
+	if scope, exists := o.symbols.node_scopes[block.id]; exists {
+		o.current_scope = scope
+		o.current_level = scope.level
+	}
+
+	optimized_count := optimize_constants_in_block(o, block)
+
+	o.current_scope = saved_scope
+	o.current_level = saved_level
 
 	return optimized_count
 }
@@ -2270,9 +2618,20 @@ fold_constants_after_factories :: proc(o: ^Optimizer, file: ^ast.File) -> int {
 
 		case ^ast.Block_Stmt:
 			block := n
+			saved_scope := o.current_scope
+			saved_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[block.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
 			for stmt in block.stmts {
 				traverse_and_fold(o, stmt, folded_count)
 			}
+
+			o.current_scope = saved_scope
+			o.current_level = saved_level
 
 		case ^ast.If_Stmt:
 			if_stmt := n
@@ -2295,13 +2654,35 @@ fold_constants_after_factories :: proc(o: ^Optimizer, file: ^ast.File) -> int {
 		case ^ast.Func_Stmt:
 			func_stmt := n
 			if func_stmt.body != nil {
+				saved_scope := o.current_scope
+				saved_level := o.current_level
+
+				if scope, exists := o.symbols.node_scopes[func_stmt.id]; exists {
+					o.current_scope = scope
+					o.current_level = scope.level
+				}
+
 				traverse_and_fold(o, func_stmt.body, folded_count)
+
+				o.current_scope = saved_scope
+				o.current_level = saved_level
 			}
 
 		case ^ast.Event_Stmt:
 			event_stmt := n
 			if event_stmt.body != nil {
+				saved_scope := o.current_scope
+				saved_level := o.current_level
+
+				if scope, exists := o.symbols.node_scopes[event_stmt.id]; exists {
+					o.current_scope = scope
+					o.current_level = scope.level
+				}
+
 				traverse_and_fold(o, event_stmt.body, folded_count)
+
+				o.current_scope = saved_scope
+				o.current_level = saved_level
 			}
 		}
 	}
@@ -2359,10 +2740,10 @@ optimize_constants_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> in
 						}
 					}
 
-					optimized_count += optimize_constants_in_block(o, if_stmt.body)
+					optimized_count += optimize_constants_in_block_with_scope(o, if_stmt.body)
 				}
 				if if_stmt.else_stmt != nil {
-					optimized_count += optimize_constants_in_block(o, if_stmt.else_stmt)
+					optimized_count += optimize_constants_in_block_with_scope(o, if_stmt.else_stmt)
 				}
 			}
 
@@ -2374,13 +2755,13 @@ optimize_constants_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> in
 					}
 				}
 				if for_stmt.body != nil {
-					optimized_count += optimize_constants_in_block(o, for_stmt.body)
+					optimized_count += optimize_constants_in_block_with_scope(o, for_stmt.body)
 				}
 			}
 
 		case ^ast.Block_Stmt:
 			if nested_block, ok := s.derived.(^ast.Block_Stmt); ok {
-				optimized_count += optimize_constants_in_block(o, nested_block)
+				optimized_count += optimize_constants_in_block_with_scope(o, nested_block)
 			}
 
 		case ^ast.Func_Stmt:
@@ -2420,6 +2801,16 @@ optimize_constants_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> in
 	return optimized_count
 }
 
+optimize_constants_in_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
+	optimized_count := 0
+
+	for stmt in file.decls {
+		optimized_count += optimize_constants_in_stmt(o, stmt)
+	}
+
+	return optimized_count
+}
+
 is_empty_block :: proc(block: ^ast.Block_Stmt) -> bool {
 	return block == nil || len(block.stmts) == 0
 }
@@ -2444,6 +2835,11 @@ remove_empty_blocks_in_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
 	nodes_to_process := make([dynamic]^ast.Node, o.alloc)
 	defer delete(nodes_to_process)
 
+	collect_function_calls(o)
+
+	funcs_to_remove := make([dynamic]^checker.Symbol, o.alloc)
+	defer delete(funcs_to_remove)
+
 	for decl in file.decls {
 		append(&nodes_to_process, decl)
 	}
@@ -2452,91 +2848,29 @@ remove_empty_blocks_in_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
 		node := pop(&nodes_to_process)
 
 		#partial switch n in node.derived {
-		case ^ast.Block_Stmt:
-			block := n
-			if is_empty_block(block) {
-				parent, exists := o.node_parent[block]
-				if exists {
-					#partial switch p in parent.derived {
-					case ^ast.File:
-						file_parent := p
-						for i in 0..<len(file_parent.decls) {
-							if cast(uintptr)file_parent.decls[i] == cast(uintptr)block {
-								new_decls := make([dynamic]^ast.Stmt, len(file_parent.decls)-1, o.alloc)
-								copy(new_decls[:], file_parent.decls[:i])
-								copy(new_decls[i:], file_parent.decls[i+1:])
-								file_parent.decls = new_decls
-								delete_key(&o.node_parent, block)
-								removed_count += 1
-								break
+		case ^ast.Func_Stmt:
+			func_stmt := n
+			if func_stmt.body != nil && is_empty_block(func_stmt.body) {
+				if scope, exists := o.symbols.node_scopes[func_stmt.id]; exists {
+					for sym in scope.parent.symbols {
+						if sym.name == func_stmt.name {
+							if !is_symbol_public(sym) {
+								append(&funcs_to_remove, sym)
 							}
-						}
-					case ^ast.Block_Stmt:
-						parent_block := p
-						for i in 0..<len(parent_block.stmts) {
-							if cast(uintptr)parent_block.stmts[i] == cast(uintptr)block {
-								new_stmts := make([]^ast.Stmt, len(parent_block.stmts)-1, o.alloc)
-								copy(new_stmts[:i], parent_block.stmts[:i])
-								copy(new_stmts[i:], parent_block.stmts[i+1:])
-								parent_block.stmts = new_stmts
-								delete_key(&o.node_parent, block)
-								removed_count += 1
-								break
-							}
-						}
-					case ^ast.Func_Stmt:
-						func_parent := p
-						if func_parent.body == block {
-							func_parent.body = nil
-							delete_key(&o.node_parent, block)
-							removed_count += 1
-						}
-					case ^ast.Event_Stmt:
-						event_parent := p
-						if event_parent.body == block {
-							event_parent.body = nil
-							delete_key(&o.node_parent, block)
-							removed_count += 1
-						}
-					case ^ast.If_Stmt:
-						if_parent := p
-						if if_parent.body == block {
-							if_parent.body = nil
-							delete_key(&o.node_parent, block)
-							removed_count += 1
-						} else if if_parent.else_stmt == block {
-							if_parent.else_stmt = nil
-							delete_key(&o.node_parent, block)
-							removed_count += 1
-						}
-					case ^ast.For_Stmt:
-						for_parent := p
-						if for_parent.body == block {
-							for_parent.body = nil
-							delete_key(&o.node_parent, block)
-							removed_count += 1
+							break
 						}
 					}
 				}
-				continue
 			}
 
-			i := 0
-			for i < len(block.stmts) {
-				stmt := block.stmts[i]
+			if func_stmt.body != nil {
+				append(&nodes_to_process, func_stmt.body)
+			}
 
-				if nested_block, is_block := stmt.derived.(^ast.Block_Stmt); is_block && is_empty_block(nested_block) {
-					new_stmts := make([]^ast.Stmt, len(block.stmts)-1, o.alloc)
-					copy(new_stmts[:i], block.stmts[:i])
-					copy(new_stmts[i:], block.stmts[i+1:])
-					block.stmts = new_stmts
-					delete_key(&o.node_parent, nested_block)
-					removed_count += 1
-					continue
-				}
-
-				append(&nodes_to_process, stmt)
-				i += 1
+		case ^ast.Event_Stmt:
+			event_stmt := n
+			if event_stmt.body != nil {
+				append(&nodes_to_process, event_stmt.body)
 			}
 
 		case ^ast.If_Stmt:
@@ -2554,16 +2888,53 @@ remove_empty_blocks_in_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
 				append(&nodes_to_process, for_stmt.body)
 			}
 
-		case ^ast.Func_Stmt:
-			func_stmt := n
-			if func_stmt.body != nil {
-				append(&nodes_to_process, func_stmt.body)
-			}
+		case ^ast.Block_Stmt:
+			block := n
+			i := 0
+			for i < len(block.stmts) {
+				stmt := block.stmts[i]
 
-		case ^ast.Event_Stmt:
-			event_stmt := n
-			if event_stmt.body != nil {
-				append(&nodes_to_process, event_stmt.body)
+				if nested_block, is_block := stmt.derived.(^ast.Block_Stmt); is_block && is_empty_block(nested_block) {
+					new_stmts := make([]^ast.Stmt, len(block.stmts)-1, o.alloc)
+					copy(new_stmts[:i], block.stmts[:i])
+					copy(new_stmts[i:], block.stmts[i+1:])
+					block.stmts = new_stmts
+					delete_key(&o.node_parent, nested_block)
+					removed_count += 1
+					continue
+				}
+
+				append(&nodes_to_process, stmt)
+				i += 1
+			}
+		}
+	}
+
+	for sym in funcs_to_remove {
+		if sym.decl_node != nil {
+			if remove_node_from_parent(o, sym.decl_node) {
+				removed_count += 1
+
+				scope := get_symbol_scope(o, sym)
+				if scope != nil {
+					for i in 0..<len(scope.symbols) {
+						if scope.symbols[i] == sym {
+							ordered_remove(&scope.symbols, i)
+							break
+						}
+					}
+				}
+
+				if calls, exists := o.func_calls[sym]; exists {
+					for call in calls {
+						if parent, exists2 := o.node_parent[call]; exists2 {
+							remove_node_from_parent(o, parent)
+							removed_count += 1
+						}
+					}
+
+					delete_key(&o.func_calls, sym)
+				}
 			}
 		}
 	}
@@ -2926,16 +3297,6 @@ evaluate_builtin_factory :: proc(o: ^Optimizer, name: string, args: []^ast.Argum
 	return result
 }
 
-optimize_constants_in_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
-	optimized_count := 0
-
-	for stmt in file.decls {
-		optimized_count += optimize_constants_in_stmt(o, stmt)
-	}
-
-	return optimized_count
-}
-
 analyze_usage :: proc(o: ^Optimizer) {
 	collect_all_scopes(o, o.symbols.global_scope)
 
@@ -2998,7 +3359,7 @@ remove_anonymous_assignments :: proc(o: ^Optimizer) -> int {
 
 	for file in o.files {
 		o.current_file = file
-		removed_count += remove_anonymous_assignments_from_file(o, file)
+		removed_count += remove_anonymous_assignments_from_node(o, cast(^ast.Node)file)
 	}
 
 	if removed_count > 0 {
@@ -3008,30 +3369,182 @@ remove_anonymous_assignments :: proc(o: ^Optimizer) -> int {
 	return removed_count
 }
 
-remove_anonymous_assignments_from_file :: proc(o: ^Optimizer, file: ^ast.File) -> int {
+remove_anonymous_assignments_from_node :: proc(o: ^Optimizer, node: ^ast.Node) -> int {
+	if node == nil { return 0 }
+
 	removed_count := 0
-	i := 0
 
-	for i < len(file.decls) {
-		stmt := file.decls[i]
+	#partial switch n in node.derived {
+	case ^ast.File:
+		file := n
+		i := 0
+		for i < len(file.decls) {
+			stmt := file.decls[i]
 
-		#partial switch s in stmt.derived {
-		case ^ast.Value_Decl:
-			decl := s
-			if decl.name == "_" && decl.value != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, stmt)
+
+			should_remove := false
+			#partial switch s in stmt.derived {
+			case ^ast.Value_Decl:
+				decl := s
+				if decl.name == "_" && decl.value != nil {
+					should_remove = true
+				}
+			case ^ast.Assign_Stmt:
+				assign := s
+				if assign.name == "_" && assign.expr != nil {
+					should_remove = true
+				}
+			}
+
+			if should_remove {
 				new_decls := make([dynamic]^ast.Stmt, len(file.decls)-1, o.alloc)
 				copy(new_decls[:], file.decls[:i])
 				copy(new_decls[i:], file.decls[i+1:])
 				file.decls = new_decls
 
 				delete_key(&o.node_parent, stmt)
-
 				removed_count += 1
 				continue
 			}
+
+			i += 1
 		}
 
-		i += 1
+	case ^ast.Block_Stmt:
+		block := n
+		i := 0
+		for i < len(block.stmts) {
+			stmt := block.stmts[i]
+
+			removed_count += remove_anonymous_assignments_from_node(o, stmt)
+
+			should_remove := false
+			#partial switch s in stmt.derived {
+			case ^ast.Value_Decl:
+				decl := s
+				if decl.name == "_" && decl.value != nil {
+					should_remove = true
+				}
+			case ^ast.Assign_Stmt:
+				assign := s
+				if assign.name == "_" && assign.expr != nil {
+					should_remove = true
+				}
+			}
+
+			if should_remove {
+				new_stmts := make([dynamic]^ast.Stmt, len(block.stmts)-1, o.alloc)
+				copy(new_stmts[:], block.stmts[:i])
+				copy(new_stmts[i:], block.stmts[i+1:])
+				block.stmts = new_stmts[:]
+
+				delete_key(&o.node_parent, stmt)
+				removed_count += 1
+				continue
+			}
+
+			i += 1
+		}
+
+	case ^ast.If_Stmt:
+		if_stmt := n
+
+		if if_stmt.init != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, if_stmt.init)
+		}
+
+		if if_stmt.body != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, if_stmt.body)
+		}
+
+		if if_stmt.else_stmt != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, if_stmt.else_stmt)
+		}
+
+	case ^ast.For_Stmt:
+		for_stmt := n
+		if for_stmt.body != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, for_stmt.body)
+		}
+
+	case ^ast.Func_Stmt:
+		func_stmt := n
+
+		if func_stmt.body != nil {
+			saved_scope := o.current_scope
+			saved_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[func_stmt.body.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			removed_count += remove_anonymous_assignments_from_node(o, func_stmt.body)
+
+			o.current_scope = saved_scope
+			o.current_level = saved_level
+		}
+
+	case ^ast.Event_Stmt:
+		event_stmt := n
+		if event_stmt.body != nil {
+			saved_scope := o.current_scope
+			saved_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[event_stmt.body.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			removed_count += remove_anonymous_assignments_from_node(o, event_stmt.body)
+
+			o.current_scope = saved_scope
+			o.current_level = saved_level
+		}
+
+	case ^ast.Value_Decl:
+		decl := n
+		if decl.value != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, decl.value)
+		}
+
+	case ^ast.Expr_Stmt:
+		expr_stmt := n
+		if expr_stmt.expr != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, expr_stmt.expr)
+		}
+
+	case ^ast.Assign_Stmt:
+		assign := n
+		if assign.expr != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, assign.expr)
+		}
+
+	case ^ast.Return_Stmt:
+		ret := n
+		if ret.result != nil {
+			removed_count += remove_anonymous_assignments_from_node(o, ret.result)
+		}
+
+	case ^ast.Call_Expr:
+		call := n
+		for arg in call.args {
+			removed_count += remove_anonymous_assignments_from_node(o, arg.value)
+		}
+
+	case ^ast.Binary_Expr:
+		binary := n
+		removed_count += remove_anonymous_assignments_from_node(o, binary.left)
+		removed_count += remove_anonymous_assignments_from_node(o, binary.right)
+
+	case ^ast.Unary_Expr:
+		unary := n
+		removed_count += remove_anonymous_assignments_from_node(o, unary.expr)
+
+	case ^ast.Paren_Expr:
+		paren := n
+		removed_count += remove_anonymous_assignments_from_node(o, paren.expr)
 	}
 
 	return removed_count
