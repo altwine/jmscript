@@ -801,6 +801,11 @@ check_anno_meanings :: proc(c: ^Checker, stmt: ^ast.Stmt, anno: ^ast.Annotation)
 		case ^ast.Func_Stmt:
 			return true
 		}
+	case "export":
+		#partial switch t in stmt.derived {
+		case ^ast.Value_Decl, ^ast.Func_Stmt:
+			return true
+		}
 	}
 
 	return false
