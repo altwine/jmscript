@@ -141,16 +141,9 @@ exit_scope_for_node :: proc(o: ^Optimizer, node: ^ast.Node) {
 		return
 	}
 
-	#partial switch t in node.derived {
-	case ^ast.Block_Stmt,
-		 ^ast.Func_Stmt,
-		 ^ast.Event_Stmt,
-		 ^ast.Defer_Stmt:
-
-		if scope, exists := o.symbols.node_scopes[node.id]; exists && scope.parent != nil {
-			o.current_scope = scope.parent
-			o.current_level = scope.parent.level
-		}
+	if scope, exists := o.symbols.node_scopes[node.id]; exists && scope.parent != nil {
+		o.current_scope = scope.parent
+		o.current_level = scope.parent.level
 	}
 }
 

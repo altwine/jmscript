@@ -4,6 +4,8 @@ func a() {
 	defer {
 		B :: 1
 
+		@export
+		D :: B
 		// B = 2
 	}
 
