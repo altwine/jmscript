@@ -585,6 +585,11 @@ print_inline_expr :: proc(expr: ^Expr) {
 		fmt.print(n.name)
 	case ^Basic_Lit:
 		fmt.print(n.tok.content)
+	case ^Argument:
+		if n.name != "" {
+			fmt.printf("%s: ", n.name)
+		}
+		print_inline_expr(n.value)
 	case ^Field_Access:
 		print_inline_expr(n.expr)
 		fmt.printf(".%s", n.field)
@@ -622,6 +627,10 @@ print_inline_expr :: proc(expr: ^Expr) {
 		fmt.print(": ")
 		print_inline_expr(n.value)
 		fmt.print(")")
+	case ^Member_Access_Expr:
+		print_inline_expr(n.expr)
+		fmt.print(".")
+		print_inline_expr(n.field)
 	}
 }
 
@@ -636,6 +645,12 @@ print_inline_expr_to_builder :: proc(sb: ^strings.Builder, expr: ^Expr) {
 		strings.write_string(sb, n.name)
 	case ^Basic_Lit:
 		strings.write_string(sb, n.tok.content)
+	case ^Argument:
+		if n.name != "" {
+			strings.write_string(sb, n.name)
+			strings.write_string(sb, ": ")
+		}
+		print_inline_expr_to_builder(sb, n.value)
 	case ^Field_Access:
 		print_inline_expr_to_builder(sb, n.expr)
 		strings.write_rune(sb, '.')
@@ -667,17 +682,7 @@ print_inline_expr_to_builder :: proc(sb: ^strings.Builder, expr: ^Expr) {
 			if i > 0 {
 				strings.write_string(sb, ", ")
 			}
-
-			#partial switch a in arg.derived {
-			case ^Argument:
-				if a.name != "" {
-					strings.write_string(sb, a.name)
-					strings.write_string(sb, ": ")
-				}
-				print_inline_expr_to_builder(sb, a.value)
-			case:
-				print_inline_expr_to_builder(sb, arg)
-			}
+			print_inline_expr_to_builder(sb, arg)
 		}
 		strings.write_rune(sb, ')')
 	case ^Field_Value:
