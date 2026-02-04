@@ -1580,11 +1580,9 @@ evaluate_binary_expression :: proc(o: ^Optimizer, expr: ^ast.Binary_Expr) -> Con
 			}
 		} else if (expr.op.kind == .Add || expr.op.kind == .Sub || expr.op.kind == .Mul || expr.op.kind == .Quo) &&
 				left_result.type_kind == .Number && right_result.type_kind == .Number {
-
 			result = perform_arithmetic(expr.op.kind, left_result, right_result)
 		} else if (expr.op.kind == .Gt || expr.op.kind == .Gt_Eq || expr.op.kind == .Lt || expr.op.kind == .Lt_Eq ||
-				 expr.op.kind == .Eq || expr.op.kind == .Not_Eq) {
-
+				 expr.op.kind == .Cmp_Eq || expr.op.kind == .Not_Eq) {
 			result = perform_comparison(expr.op.kind, left_result, right_result)
 		} else if (expr.op.kind == .Cmp_And || expr.op.kind == .Cmp_Or) {
 			result = perform_logical(expr.op.kind, left_result, right_result)
@@ -1690,7 +1688,7 @@ perform_comparison :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -
 		case .Gt_Eq: result.value = left_num >= right_num
 		case .Lt: result.value = left_num < right_num
 		case .Lt_Eq: result.value = left_num <= right_num
-		case .Eq: result.value = left_num == right_num
+		case .Cmp_Eq: result.value = left_num == right_num
 		case .Not_Eq: result.value = left_num != right_num
 		case:
 			result.is_constant = false
@@ -1699,7 +1697,7 @@ perform_comparison :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -
 		if left_str, left_ok := left.value.(string); left_ok {
 			if right_str, right_ok := right.value.(string); right_ok {
 				#partial switch op {
-				case .Eq: result.value = left_str == right_str
+				case .Cmp_Eq: result.value = left_str == right_str
 				case .Not_Eq: result.value = left_str != right_str
 				case:
 					result.is_constant = false
@@ -1714,7 +1712,7 @@ perform_comparison :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -
 		if left_bool, left_ok := left.value.(bool); left_ok {
 			if right_bool, right_ok := right.value.(bool); right_ok {
 				#partial switch op {
-				case .Eq: result.value = left_bool == right_bool
+				case .Cmp_Eq: result.value = left_bool == right_bool
 				case .Not_Eq: result.value = left_bool != right_bool
 				case:
 					result.is_constant = false
@@ -2116,42 +2114,133 @@ remove_constant_conditions :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> int {
 
 	#partial switch s in stmt.derived {
 	case ^ast.If_Stmt:
-		if s.cond != nil {
-			result := evaluate_constant_expression(o, s.cond)
+		if_stmt := s
+		if if_stmt.cond != nil {
+			result := evaluate_constant_expression(o, if_stmt.cond)
 			if result.is_constant && result.type_kind == .Boolean {
 				if bool_val, ok := result.value.(bool); ok {
+					parent_block := find_parent_block(o, cast(^ast.Node)stmt)
+					if parent_block == nil {
+						return 0
+					}
+
+					if_index := -1
+					for i in 0..<len(parent_block.stmts) {
+						if cast(uintptr)parent_block.stmts[i] == cast(uintptr)stmt {
+							if_index = i
+							break
+						}
+					}
+					if if_index == -1 {
+						return 0
+					}
+
 					if bool_val {
-						if s.else_stmt != nil {
-							removed_count += remove_block(o, s.else_stmt)
-							s.else_stmt = nil
+						if if_stmt.body != nil {
+							if if_stmt.else_stmt != nil {
+								removed_count += remove_block(o, if_stmt.else_stmt)
+								if_stmt.else_stmt = nil
+							}
+
+							new_block := ast.new(ast.Block_Stmt, if_stmt.pos, if_stmt.end, o.alloc)
+
+							body_stmts: []^ast.Stmt
+							if body_block, is_block := if_stmt.body.derived.(^ast.Block_Stmt); is_block {
+								body_stmts = body_block.stmts
+								body_block.stmts = nil
+							} else {
+								body_stmts = make([]^ast.Stmt, 1, o.alloc)
+								body_stmts[0] = if_stmt.body
+								if_stmt.body = nil
+							}
+
+							new_block.stmts = make([]^ast.Stmt, len(body_stmts), o.alloc)
+							copy(new_block.stmts[:], body_stmts[:])
+
+							for stmt2 in new_block.stmts {
+								o.node_parent[stmt2] = cast(^ast.Node)new_block
+							}
+							o.node_parent[new_block] = cast(^ast.Node)parent_block
+
+							parent_block.stmts[if_index] = new_block
+
+							delete_key(&o.node_parent, stmt)
+							if if_stmt.body != nil {
+								delete_key(&o.node_parent, if_stmt.body)
+							}
+
+							removed_count += 1
 						}
 					} else {
-						if s.body != nil {
-							removed_count += remove_block(o, s.body)
-							s.body = nil
+						if if_stmt.else_stmt != nil {
+							new_block := ast.new(ast.Block_Stmt, if_stmt.pos, if_stmt.end, o.alloc)
 
-							if s.else_stmt != nil {
-								s.body = s.else_stmt
-								s.else_stmt = nil
+							else_stmts: []^ast.Stmt
+							if else_block, is_block := if_stmt.else_stmt.derived.(^ast.Block_Stmt); is_block {
+								else_stmts = else_block.stmts
+								else_block.stmts = nil
+							} else {
+								else_stmts = make([]^ast.Stmt, 1, o.alloc)
+								else_stmts[0] = if_stmt.else_stmt
+								if_stmt.else_stmt = nil
 							}
+
+							new_block.stmts = make([]^ast.Stmt, len(else_stmts), o.alloc)
+							copy(new_block.stmts[:], else_stmts[:])
+
+							for stmt2 in new_block.stmts {
+								o.node_parent[stmt2] = cast(^ast.Node)new_block
+							}
+							o.node_parent[new_block] = cast(^ast.Node)parent_block
+
+							parent_block.stmts[if_index] = new_block
+						} else {
+							new_stmts := make([dynamic]^ast.Stmt, len(parent_block.stmts)-1, o.alloc)
+							copy(new_stmts[:if_index], parent_block.stmts[:if_index])
+							copy(new_stmts[if_index:], parent_block.stmts[if_index+1:])
+							parent_block.stmts = new_stmts[:]
 						}
+
+						if if_stmt.body != nil {
+							removed_count += remove_block(o, if_stmt.body)
+							delete_key(&o.node_parent, if_stmt.body)
+						}
+
+						delete_key(&o.node_parent, stmt)
+						if if_stmt.else_stmt != nil {
+							delete_key(&o.node_parent, if_stmt.else_stmt)
+						}
+
+						removed_count += 1
 					}
 				}
 			}
 		}
 
 	case ^ast.For_Stmt:
-		if s.cond != nil {
-			result := evaluate_constant_expression(o, s.cond)
+		for_stmt := s
+		if for_stmt.cond != nil {
+			result := evaluate_constant_expression(o, for_stmt.cond)
 			if result.is_constant && result.type_kind == .Boolean {
 				if bool_val, ok := result.value.(bool); ok && !bool_val {
-					if block := find_parent_block(o, stmt); block != nil {
+					if block := find_parent_block(o, cast(^ast.Node)stmt); block != nil {
 						for i in 0..<len(block.stmts) {
 							if cast(uintptr)block.stmts[i] == cast(uintptr)stmt {
+								if for_stmt.body != nil {
+									removed_count += remove_block(o, for_stmt.body)
+									for_stmt.body = nil
+								}
+
 								new_stmts := make([dynamic]^ast.Stmt, len(block.stmts)-1, o.alloc)
 								copy(new_stmts[:i], block.stmts[:i])
 								copy(new_stmts[i:], block.stmts[i+1:])
 								block.stmts = new_stmts[:]
+
+								delete_key(&o.node_parent, stmt)
+								if for_stmt.body != nil {
+									delete_key(&o.node_parent, for_stmt.body)
+								}
+
 								removed_count += 1
 								break
 							}
@@ -2517,6 +2606,39 @@ optimize_constants_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> int {
 				optimized_count += optimize_constants_in_block_with_scope(o, for_stmt.body)
 			}
 		}
+	case ^ast.Func_Stmt:
+		func_stmt := s
+		if func_stmt.body != nil {
+			saved_scope := o.current_scope
+			saved_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[func_stmt.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			optimized_count += optimize_constants_in_block_with_scope(o, func_stmt.body)
+
+			o.current_scope = saved_scope
+			o.current_level = saved_level
+		}
+
+	case ^ast.Event_Stmt:
+		event_stmt := s
+		if event_stmt.body != nil {
+			saved_scope := o.current_scope
+			saved_level := o.current_level
+
+			if scope, exists := o.symbols.node_scopes[event_stmt.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			optimized_count += optimize_constants_in_block_with_scope(o, event_stmt.body)
+
+			o.current_scope = saved_scope
+			o.current_level = saved_level
+		}
 	}
 
 	return optimized_count
@@ -2733,7 +2855,6 @@ optimize_constants_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> in
 		case ^ast.If_Stmt:
 			if if_stmt, ok := s.derived.(^ast.If_Stmt); ok {
 				if if_stmt.body != nil {
-
 					if if_stmt.cond != nil {
 						if optimized, _ := try_optimize_expression(o, if_stmt.cond, cast(^ast.Node)if_stmt); optimized {
 							optimized_count += 1

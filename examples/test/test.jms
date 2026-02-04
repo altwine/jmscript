@@ -1,17 +1,15 @@
 package test
 
-//A := 2
-
-//@export
-//B := 1 + A + 3
-{
-	B :: 2
-
-	A :: (1 + 2 + 3 + number("1")) / B
-
-	_ :: A
+func a() {
+	if true {
+		player_send_message("test1", "CONCATENATION")
+	} else {
+		player_send_message("test2", "CONCATENATION")
+	}
+	player_send_message("test3", "CONCATENATION")
 }
 
-//{
-//	C := 1
-//}
+event player_join() {
+	player_send_message("test0", "CONCATENATION")
+	a()
+}
