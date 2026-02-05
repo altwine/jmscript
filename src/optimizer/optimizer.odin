@@ -4,6 +4,7 @@ import "core:mem"
 import "core:fmt"
 import "core:strconv"
 import "core:strings"
+import "core:math"
 
 import "../ast"
 import "../checker"
@@ -46,6 +47,8 @@ Optimizer :: struct {
 	call_to_func:		map[^ast.Call_Expr]^checker.Symbol,
 }
 
+EPSILON :: 1e-12
+
 Constant_Value :: union {
 	bool,
 	i64,
@@ -85,6 +88,7 @@ optimizer_init :: proc(o: ^Optimizer, allocator := context.allocator) {
 		visit_func_stmt = _visit_func_stmt,
 		visit_event_stmt = _visit_event_stmt,
 		visit_value_decl = _visit_value_decl,
+		visit_basic_lit = _visit_basic_lit,
 		before_visit_node = _before_visit_node,
 		after_visit_node = _after_visit_node,
 		before_visit_child = _before_visit_child,
@@ -128,6 +132,14 @@ _before_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) -> bool {
 _after_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) {
 	o := cast(^Optimizer)v.user_data
 	exit_scope_for_node(o, node)
+}
+
+@(private="file")
+_visit_basic_lit :: proc(v: ^ast.Visitor, node: ^ast.Basic_Lit) {
+	o := cast(^Optimizer)v.user_data
+	if node.tok.kind == .Number {
+		check_numeric_literal_overflow(o, node.tok.content, node.pos, node.end)
+	}
 }
 
 enter_scope_for_node :: proc(o: ^Optimizer, node: ^ast.Node) -> bool {
@@ -771,20 +783,6 @@ find_parent_block :: proc(o: ^Optimizer, node: ^ast.Node) -> ^ast.Block_Stmt {
 	return nil
 }
 
-find_parent_file :: proc(o: ^Optimizer, node: ^ast.Node) -> ^ast.File {
-	current := node
-	for current != nil {
-		parent, exists := o.node_parent[current]
-		if !exists { break }
-
-		if file, is_file := parent.derived.(^ast.File); is_file {
-			return file
-		}
-		current = parent
-	}
-	return nil
-}
-
 remove_node_from_parent :: proc(o: ^Optimizer, node: ^ast.Node) -> bool {
 	parent, exists := o.node_parent[node]
 	if !exists || parent == nil { return false }
@@ -1394,8 +1392,44 @@ create_constant_literal :: proc(o: ^Optimizer, const_result: Constant_Result, po
 	case .Number:
 		#partial switch val in const_result.value {
 		case i64:
+			f64_val := f64(val)
+			if math.is_inf(f64_val) || math.is_nan(f64_val) {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = pos,
+					cause_end = end,
+					message = fmt.tprintf(
+						"number overflow: integer value %d too large for double precision",
+						val,
+					),
+					severity = .Error,
+				})
+				return nil
+			}
 			return ast.create_number_lit(fmt.tprintf("%d", val), pos, end, o.alloc)
 		case f64:
+			if math.is_inf(val) {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = pos,
+					cause_end = end,
+					message = fmt.tprintf(
+						"number overflow: value results in %v",
+						val > 0 ? "+Infinity" : "-Infinity",
+					),
+					severity = .Error,
+				})
+				return nil
+			} else if math.is_nan(val) {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = pos,
+					cause_end = end,
+					message = "number error: value results in NaN",
+					severity = .Error,
+				})
+				return nil
+			}
 			return ast.create_number_lit(fmt.tprintf("%f", val), pos, end, o.alloc)
 		}
 
@@ -1457,14 +1491,36 @@ evaluate_basic_literal :: proc(o: ^Optimizer, lit: ^ast.Basic_Lit) -> Constant_R
 
 	#partial switch lit.tok.kind {
 	case .Number:
-		if val, ok := strconv.parse_i64(lit.tok.content); ok {
+		if val, ok := strconv.parse_f64(lit.tok.content); ok {
 			result.value = val
 			result.type_kind = .Number
 			result.is_constant = true
-		} else if val, ok2 := strconv.parse_f64(lit.tok.content); ok2 {
-			result.value = val
-			result.type_kind = .Number
-			result.is_constant = true
+
+			if math.is_inf(val) {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = lit.pos,
+					cause_end = lit.end,
+					message = fmt.tprintf(
+						"number overflow/underflow: '%s' results in Infinity",
+						lit.tok.content,
+					),
+					severity = .Error,
+				})
+				result.is_constant = false
+			} else if math.is_nan(val) {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = lit.pos,
+					cause_end = lit.end,
+					message = fmt.tprintf(
+						"invalid number: '%s' results in NaN",
+						lit.tok.content,
+					),
+					severity = .Error,
+				})
+				result.is_constant = false
+			}
 		}
 
 	case .Text:
@@ -1569,7 +1625,7 @@ evaluate_binary_expression :: proc(o: ^Optimizer, expr: ^ast.Binary_Expr) -> Con
 
 	if left_result.is_constant && right_result.is_constant {
 		if expr.op.kind == .Add && left_result.type_kind == .Number && right_result.type_kind == .Number {
-			result = add_numbers(left_result, right_result)
+			result = add_numbers(left_result, right_result, o, expr)
 		} else if expr.op.kind == .Add && left_result.type_kind == .Text && right_result.type_kind == .Text {
 			if left_str, left_ok := left_result.value.(string); left_ok {
 				if right_str, right_ok := right_result.value.(string); right_ok {
@@ -1580,7 +1636,7 @@ evaluate_binary_expression :: proc(o: ^Optimizer, expr: ^ast.Binary_Expr) -> Con
 			}
 		} else if (expr.op.kind == .Add || expr.op.kind == .Sub || expr.op.kind == .Mul || expr.op.kind == .Quo) &&
 				left_result.type_kind == .Number && right_result.type_kind == .Number {
-			result = perform_arithmetic(expr.op.kind, left_result, right_result)
+			result = perform_arithmetic(expr.op.kind, left_result, right_result, o, expr)
 		} else if (expr.op.kind == .Gt || expr.op.kind == .Gt_Eq || expr.op.kind == .Lt || expr.op.kind == .Lt_Eq ||
 				 expr.op.kind == .Cmp_Eq || expr.op.kind == .Not_Eq) {
 			result = perform_comparison(expr.op.kind, left_result, right_result)
@@ -1592,7 +1648,7 @@ evaluate_binary_expression :: proc(o: ^Optimizer, expr: ^ast.Binary_Expr) -> Con
 	return result
 }
 
-add_numbers :: proc(left, right: Constant_Result) -> Constant_Result {
+add_numbers :: proc(left, right: Constant_Result, o: ^Optimizer, expr: ^ast.Binary_Expr) -> Constant_Result {
 	result: Constant_Result
 	result.is_constant = true
 	result.type_kind = .Number
@@ -1600,20 +1656,53 @@ add_numbers :: proc(left, right: Constant_Result) -> Constant_Result {
 	#partial switch left_val in left.value {
 	case i64:
 		#partial switch right_val in right.value {
-		case i64: result.value = left_val + right_val
-		case f64: result.value = f64(left_val) + right_val
+		case i64:
+			result.value = left_val + right_val
+		case f64:
+			result.value = f64(left_val) + right_val
 		}
 	case f64:
 		#partial switch right_val in right.value {
-		case i64: result.value = left_val + f64(right_val)
-		case f64: result.value = left_val + right_val
+		case i64:
+			result.value = left_val + f64(right_val)
+		case f64:
+			result.value = left_val + right_val
+		}
+	}
+
+	if f64_val, is_f64 := result.value.(f64); is_f64 {
+		if math.is_inf(f64_val) {
+			if o != nil && expr != nil {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = expr.pos,
+					cause_end = expr.end,
+					message = fmt.tprintf(
+						"addition overflow: operation results in %v",
+						f64_val > 0 ? "+Infinity" : "-Infinity",
+					),
+					severity = .Error,
+				})
+			}
+			result.is_constant = false
+		} else if math.is_nan(f64_val) {
+			if o != nil && expr != nil {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = expr.pos,
+					cause_end = expr.end,
+					message = "addition error: operation results in NaN",
+					severity = .Error,
+				})
+			}
+			result.is_constant = false
 		}
 	}
 
 	return result
 }
 
-perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -> Constant_Result {
+perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result, o: ^Optimizer, expr: ^ast.Binary_Expr) -> Constant_Result {
 	result: Constant_Result
 	result.is_constant = true
 	result.type_kind = .Number
@@ -1640,20 +1729,129 @@ perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -
 	}
 
 	#partial switch op {
-	case .Add: result.value = left_num + right_num
-	case .Sub: result.value = left_num - right_num
-	case .Mul: result.value = left_num * right_num
+	case .Add:
+		result.value = left_num + right_num
+
+	case .Sub:
+		result.value = left_num - right_num
+
+	case .Mul:
+		result.value = left_num * right_num
+
 	case .Quo:
-		if right_num == 0.0 {
+		if abs(right_num) < EPSILON {
 			result.is_constant = false
+			if o != nil && expr != nil {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = expr.pos,
+					cause_end = expr.end,
+					message = "division by zero",
+					severity = .Error,
+				})
+			}
 		} else {
 			result.value = left_num / right_num
 		}
+
 	case:
 		result.is_constant = false
 	}
 
+	if result.is_constant {
+		if f64_val, is_f64 := result.value.(f64); is_f64 {
+			if math.is_inf(f64_val) {
+				if o != nil && expr != nil {
+					append(&o.errs, error.Error{
+						file = o.current_file,
+						cause_pos = expr.pos,
+						cause_end = expr.end,
+						message = fmt.tprintf(
+							"arithmetic overflow: operation results in %v",
+							f64_val > 0 ? "+Infinity" : "-Infinity",
+						),
+						severity = .Error,
+					})
+				}
+				result.is_constant = false
+			} else if math.is_nan(f64_val) {
+				if o != nil && expr != nil {
+					append(&o.errs, error.Error{
+						file = o.current_file,
+						cause_pos = expr.pos,
+						cause_end = expr.end,
+						message = "arithmetic error: operation results in NaN",
+						severity = .Error,
+					})
+				}
+				result.is_constant = false
+			}
+		} else if i64_val, is_i64 := result.value.(i64); is_i64 {
+			f64_val2 := f64(i64_val)
+			if math.is_inf(f64_val2) || math.is_nan(f64_val2) {
+				if o != nil && expr != nil {
+					append(&o.errs, error.Error{
+						file = o.current_file,
+						cause_pos = expr.pos,
+						cause_end = expr.end,
+						message = fmt.tprintf(
+							"arithmetic overflow: integer value %d too large for double precision",
+							i64_val,
+						),
+						severity = .Error,
+					})
+				}
+				result.is_constant = false
+			}
+		}
+	}
+
 	return result
+}
+
+check_numeric_literal_overflow :: proc(o: ^Optimizer, content: string, pos, end: lexer.Pos) -> bool {
+	val, parse_ok := strconv.parse_f64(content)
+
+	if !parse_ok {
+		append(&o.errs, error.Error{
+			file = o.current_file,
+			cause_pos = pos,
+			cause_end = end,
+			message = fmt.tprintf(
+				"number overflow/underflow or invalid format: '%s' cannot be represented as double",
+				content,
+			),
+			severity = .Error,
+		})
+		return true
+	}
+
+	if math.is_inf(val) {
+		append(&o.errs, error.Error{
+			file = o.current_file,
+			cause_pos = pos,
+			cause_end = end,
+			message = fmt.tprintf(
+				"number overflow/underflow: '%s' results in Infinity",
+				content,
+			),
+			severity = .Error,
+		})
+		return true
+	}
+
+	if math.is_nan(val) {
+		append(&o.errs, error.Error{
+			file = o.current_file,
+			cause_pos = pos,
+			cause_end = end,
+			message = fmt.tprintf("invalid number: '%s' results in NaN", content),
+			severity = .Error,
+		})
+		return true
+	}
+
+	return false
 }
 
 perform_comparison :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -> Constant_Result {
@@ -1788,21 +1986,6 @@ perform_logical :: proc(op: lexer.Token_Kind, left, right: Constant_Result) -> C
 	}
 
 	return result
-}
-
-compare_numbers :: proc(op: lexer.Token_Kind, left, right: f64) -> bool {
-	#partial switch op {
-	case .Gt:
-		return left > right
-	case .Gt_Eq:
-		return left >= right
-	case .Lt:
-		return left < right
-	case .Lt_Eq:
-		return left <= right
-	case:
-		return false
-	}
 }
 
 evaluate_unary_expression :: proc(o: ^Optimizer, expr: ^ast.Unary_Expr) -> Constant_Result {
@@ -2434,12 +2617,43 @@ create_binary_expression_for_constants :: proc(o: ^Optimizer, left, right: ^ast.
 		return ast.create_binary_expr(left, op, right, left.pos, right.end, o.alloc)
 	}
 
+	temp_expr := ast.Binary_Expr{
+		left = left,
+		right = right,
+		op = op,
+		pos = left.pos,
+		end = right.end,
+	}
+
 	combined_result: Constant_Result
 	#partial switch op.kind {
 	case .Add:
-		combined_result = add_numbers(left_result, right_result)
+		combined_result = add_numbers(left_result, right_result, o, &temp_expr)
 	case .Mul:
-		combined_result = perform_arithmetic(.Mul, left_result, right_result)
+		combined_result = perform_arithmetic(.Mul, left_result, right_result, o, &temp_expr)
+	case .Sub:
+		combined_result = perform_arithmetic(.Sub, left_result, right_result, o, &temp_expr)
+	case .Quo:
+		if right_result.type_kind == .Number {
+			if f64_val, is_f64 := right_result.value.(f64); is_f64 && abs(f64_val) < EPSILON {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = temp_expr.pos,
+					cause_end = temp_expr.end,
+					message = "division by zero",
+					severity = .Error,
+				})
+			} else if i64_val, is_i64 := right_result.value.(i64); is_i64 && i64_val == 0 {
+				append(&o.errs, error.Error{
+					file = o.current_file,
+					cause_pos = temp_expr.pos,
+					cause_end = temp_expr.end,
+					message = "division by zero",
+					severity = .Error,
+				})
+			}
+		}
+		combined_result = perform_arithmetic(.Quo, left_result, right_result, o, &temp_expr)
 	case:
 		return ast.create_binary_expr(left, op, right, left.pos, right.end, o.alloc)
 	}
@@ -3443,36 +3657,6 @@ remove_unused :: proc(o: ^Optimizer) -> int {
 	}
 
 	return removed
-}
-
-remove_inlined_symbols :: proc(o: ^Optimizer) -> int {
-	removed_count := 0
-
-	for sym in o.symbols_to_inline {
-		if _, was_inlined := o.inlined_symbols[sym]; was_inlined {
-			scope := get_symbol_scope(o, sym)
-			if scope == nil { continue }
-
-			for i in 0..<len(scope.symbols) {
-				if scope.symbols[i] == sym {
-					ordered_remove(&scope.symbols, i)
-					removed_count += 1
-
-					if sym.decl_node != nil {
-						remove_node_from_parent(o, sym.decl_node)
-					}
-
-					break
-				}
-			}
-		}
-	}
-
-	if removed_count > 0 {
-		fmt.printfln("[DEBUG] Removed %d inlined constant(s)", removed_count)
-	}
-
-	return removed_count
 }
 
 remove_anonymous_assignments :: proc(o: ^Optimizer) -> int {

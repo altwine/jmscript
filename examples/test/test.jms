@@ -1,15 +1,4 @@
 package test
 
-func a() {
-	if true {
-		player_send_message("test1", "CONCATENATION")
-	} else {
-		player_send_message("test2", "CONCATENATION")
-	}
-	player_send_message("test3", "CONCATENATION")
-}
-
-event player_join() {
-	player_send_message("test0", "CONCATENATION")
-	a()
-}
+A :: 1 / 1
+_ :: A
