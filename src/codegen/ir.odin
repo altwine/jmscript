@@ -3,26 +3,62 @@ package codegen
 Handler :: struct {
 	type:        string,
 	position:    int,
-	operations:  [dynamic]Operation,
-	values:      [dynamic]NamedValue, // can be empty
+	operations:  [dynamic]^Operation,
+	values:      [dynamic]^NamedValue, // can be empty
 	name:        string, // can be empty
 	event:       string, // can be empty
 }
 
+make_handlers :: proc(allocator := context.allocator) -> [dynamic]^Handler {
+	return make([dynamic]^Handler, allocator)
+}
+
+create_event_handler :: proc(event: string, operations: [dynamic]^Operation, allocator := context.allocator) -> ^Handler {
+	event_handler := new(Handler, allocator)
+	event_handler.event = event
+	event_handler.type = "event"
+	event_handler.operations = operations
+	return event_handler
+}
+
+create_func_handler :: proc(name: string, operations: [dynamic]^Operation, allocator := context.allocator) -> ^Handler {
+	func_handler := new(Handler, allocator)
+	func_handler.name = name
+	func_handler.type = "function"
+	func_handler.operations = operations
+	return func_handler
+}
+
 Operation :: struct {
 	action:      string,
-	values:      [dynamic]NamedValue,
-	selection:   Operation_Selection, // can be empty
-	operations:  [dynamic]Operation, // can be empty
-	is_inverted: bool, // can be empty
+	values:      [dynamic]^NamedValue,
+	selection:   ^Operation_Selection, // can be empty
+	operations:  [dynamic]^Operation, // can be empty
+	is_inverted: bool,
 }
 
-basic_operation :: proc(action: string, values: [dynamic]NamedValue, selection := Operation_Selection{type=""}) -> Operation {
-	return Operation{action=action, values=values, selection=selection}
+make_operations :: proc(allocator := context.allocator) -> [dynamic]^Operation {
+	return make([dynamic]^Operation, allocator)
 }
 
-container_operation :: proc(action: string, values: [dynamic]NamedValue, operations: [dynamic]Operation, is_inverted := false, selection := Operation_Selection{type=""}) -> Operation {
-	return Operation{action, values, selection, operations, is_inverted}
+create_basic_operation :: proc(action: string, values: [dynamic]^NamedValue, selection := "", allocator := context.allocator) -> ^Operation {
+	basic_operation := new(Operation, allocator)
+	basic_operation.action = action
+	basic_operation.values = values
+	basic_operation.selection = new(Operation_Selection, allocator)
+	basic_operation.selection.type = selection
+	return basic_operation
+}
+
+create_container_operation :: proc(action: string, values: [dynamic]^NamedValue, operations: [dynamic]^Operation, is_inverted := false, selection := "", allocator := context.allocator) -> ^Operation {
+	container_operation := new(Operation, allocator)
+	container_operation.action = action
+	container_operation.values = values
+	container_operation.selection = new(Operation_Selection, allocator)
+	container_operation.selection.type = selection
+	container_operation.operations = operations
+	container_operation.is_inverted = is_inverted
+	return container_operation
 }
 
 Operation_Selection :: struct {
@@ -34,8 +70,17 @@ NamedValue :: struct {
 	value: Value,
 }
 
-named_value :: proc(name: string, value: Value) -> NamedValue {
-	return NamedValue{name, value}
+make_named_values :: proc(allocator := context.allocator) -> [dynamic]^NamedValue {
+	return make([dynamic]^NamedValue, allocator)
+}
+
+create_named_value :: proc(name: string, value: Value, allocator := context.allocator) -> ^NamedValue {
+	named_value := new(NamedValue, allocator)
+	named_value.name = name
+	heap_value := new(Value, allocator)
+	heap_value^ = value
+	named_value.value = heap_value^
+	return named_value
 }
 
 BaseValue :: struct {
@@ -47,8 +92,11 @@ NumberValue :: struct {
 	number: f64,
 }
 
-number_value :: proc(number: f64) -> NumberValue {
-	return NumberValue{type="number", number=number}
+create_number_value :: proc(number: f64, allocator := context.allocator) -> ^NumberValue {
+	number_value := new(NumberValue, allocator)
+	number_value.type = "number"
+	number_value.number = number
+	return number_value
 }
 
 TextValue :: struct {
@@ -57,8 +105,12 @@ TextValue :: struct {
 	parsing: string,
 }
 
-text_value :: proc(text: string, parsing: string) -> TextValue {
-	return TextValue{type="text", text=text, parsing=parsing}
+create_text_value :: proc(text: string, parsing: string, allocator := context.allocator) -> ^TextValue {
+	text_value := new(TextValue, allocator)
+	text_value.type = "text"
+	text_value.text = text
+	text_value.parsing = parsing
+	return text_value
 }
 
 PARSING_JSON     :: "json"
@@ -72,8 +124,12 @@ VariableValue :: struct {
 	scope:    string,
 }
 
-variable_value :: proc(variable: string, scope: string) -> VariableValue {
-	return VariableValue{type="variable", variable=variable, scope=scope}
+create_variable_value :: proc(variable: string, scope: string, allocator := context.allocator) -> ^VariableValue {
+	variable_value := new(VariableValue, allocator)
+	variable_value.type = "variable"
+	variable_value.variable = variable
+	variable_value.scope = scope
+	return variable_value
 }
 
 SCOPE_LINE  :: "line"
@@ -86,8 +142,11 @@ ArrayValue :: struct {
 	values: [dynamic]Value,
 }
 
-array_value :: proc(values: [dynamic]Value) -> ArrayValue {
-	return ArrayValue{type="array", values=values}
+create_array_value :: proc(values: [dynamic]Value, allocator := context.allocator) -> ^ArrayValue {
+	array_value := new(ArrayValue, allocator)
+	array_value.type = "array"
+	array_value.values = values
+	return array_value
 }
 
 EnumValue :: struct {
@@ -95,8 +154,11 @@ EnumValue :: struct {
 	_enum: string, // original key is 'enum'
 }
 
-enum_value :: proc(_enum: string) -> EnumValue {
-	return EnumValue{type="enum", _enum=_enum}
+create_enum_value :: proc(_enum: string, allocator := context.allocator) -> ^EnumValue {
+	enum_value := new(EnumValue, allocator)
+	enum_value.type = "enum"
+	enum_value._enum = _enum
+	return enum_value
 }
 
 LocationValue :: struct {
@@ -104,8 +166,15 @@ LocationValue :: struct {
 	x, y, z, yaw, pitch: f64,
 }
 
-location_value :: proc(x, y, z, yaw, pitch: f64) -> LocationValue {
-	return LocationValue{type="location", x=x, y=y, z=z, yaw=yaw, pitch=pitch}
+create_location_value :: proc(x, y, z, yaw, pitch: f64, allocator := context.allocator) -> ^LocationValue {
+	location_value := new(LocationValue, allocator)
+	location_value.type = "location"
+	location_value.x = x
+	location_value.y = y
+	location_value.z = z
+	location_value.yaw = yaw
+	location_value.pitch = pitch
+	return location_value
 }
 
 VectorValue :: struct {
@@ -113,8 +182,13 @@ VectorValue :: struct {
 	x, y, z: f64,
 }
 
-vector_value :: proc(x: f64, y: f64, z: f64) -> VectorValue {
-	return VectorValue{type="vector", x=x, y=y, z=z}
+create_vector_value :: proc(x: f64, y: f64, z: f64, allocator := context.allocator) -> ^VectorValue {
+	vector_value := new(VectorValue, allocator)
+	vector_value.type = "vector"
+	vector_value.x = x
+	vector_value.y = y
+	vector_value.z = z
+	return vector_value
 }
 
 SoundValue :: struct {
@@ -126,8 +200,15 @@ SoundValue :: struct {
 	source:    string,
 }
 
-sound_value :: proc(sound: string, pitch: f64, volume: f64, variation: string, source: string) -> SoundValue {
-	return SoundValue{type="sound", sound=sound, pitch=pitch, volume=volume, variation=variation, source=source}
+create_sound_value :: proc(sound: string, pitch: f64, volume: f64, variation: string, source: string, allocator := context.allocator) -> ^SoundValue {
+	sound_value := new(SoundValue, allocator)
+	sound_value.type = "sound"
+	sound_value.sound = sound
+	sound_value.pitch = pitch
+	sound_value.volume = volume
+	sound_value.variation = variation
+	sound_value.source = source
+	return sound_value
 }
 
 ParticleValue :: struct {
@@ -143,8 +224,19 @@ ParticleValue :: struct {
 	size:          f64,
 }
 
-particle_value :: proc(particle_type: string, count: int, first_spread: f64, second_spread: f64, x_motion: f64, y_motion: f64, z_motion: f64, color: int, size: f64) -> ParticleValue {
-	return ParticleValue{type="particle", particle_type=particle_type, count=count, first_spread=first_spread, second_spread=second_spread, x_motion=x_motion, y_motion=y_motion, z_motion=z_motion, color=color, size=size}
+create_particle_value :: proc(particle_type: string, count: int, first_spread: f64, second_spread: f64, x_motion: f64, y_motion: f64, z_motion: f64, color: int, size: f64, allocator := context.allocator) -> ^ParticleValue {
+	particle_value := new(ParticleValue, allocator)
+	particle_value.type = "particle"
+	particle_value.particle_type = particle_type
+	particle_value.count = count
+	particle_value.first_spread = first_spread
+	particle_value.second_spread = second_spread
+	particle_value.x_motion = x_motion
+	particle_value.y_motion = y_motion
+	particle_value.z_motion = z_motion
+	particle_value.color = color
+	particle_value.size = size
+	return particle_value
 }
 
 ItemValue :: struct {
@@ -152,8 +244,11 @@ ItemValue :: struct {
 	item: string,
 }
 
-item_value :: proc(item: string) -> ItemValue {
-	return ItemValue{type="item", item=item}
+create_item_value :: proc(item: string, allocator := context.allocator) -> ^ItemValue {
+	item_value := new(ItemValue, allocator)
+	item_value.type = "item"
+	item_value.item = item
+	return item_value
 }
 
 GameValue :: struct {
@@ -162,19 +257,28 @@ GameValue :: struct {
 	selection:  string,  // "{\"type\":\"default\"}" ???
 }
 
-game_value :: proc(game_value: string, selection: string) -> GameValue {
-	return GameValue{type="game_value", game_value=game_value, selection=selection}
+create_game_value :: proc(game_value: string, selection: string, allocator := context.allocator) -> ^GameValue {
+	game_value_value := new(GameValue, allocator)
+	game_value_value.type = "game_value"
+	game_value_value.game_value = game_value
+	game_value_value.selection = selection
+	return game_value_value
 }
 
 PotionValue :: struct {
 	using base: BaseValue,
-	potion:    string,
-	amplifier: int,
-	duration:  int,
+	potion:     string,
+	amplifier:  int,
+	duration:   int,
 }
 
-potion_value :: proc(potion: string, amplifier: int, duration: int) -> PotionValue {
-	return PotionValue{type="potion", potion=potion, amplifier=amplifier, duration=duration}
+create_potion_value :: proc(potion: string, amplifier: int, duration: int, allocator := context.allocator) -> ^PotionValue {
+	potion_value := new(PotionValue, allocator)
+	potion_value.type = "potion"
+	potion_value.potion = potion
+	potion_value.amplifier = amplifier
+	potion_value.duration = duration
+	return potion_value
 }
 
 BlockValue :: struct {
@@ -182,8 +286,11 @@ BlockValue :: struct {
 	block: string,
 }
 
-block_value :: proc(block: string) -> BlockValue {
-	return BlockValue{type="block", block=block}
+create_block_value :: proc(block: string, allocator := context.allocator) -> ^BlockValue {
+	block_value := new(BlockValue, allocator)
+	block_value.type = "block"
+	block_value.block = block
+	return block_value
 }
 
 LocalizedTextValue :: struct {
@@ -191,30 +298,35 @@ LocalizedTextValue :: struct {
 	data: string,
 }
 
-localized_text_value :: proc(data: string) -> LocalizedTextValue {
-	return LocalizedTextValue{type="localized_text", data=data}
+create_localized_text_value :: proc(data: string, allocator := context.allocator) -> ^LocalizedTextValue {
+	localized_text_value := new(LocalizedTextValue, allocator)
+	localized_text_value.type = "localized_text"
+	localized_text_value.data = data
+	return localized_text_value
+
 }
 
 NullValue :: struct {}
 
-null_value :: proc() -> NullValue {
-	return NullValue{}
+create_null_value :: proc(allocator := context.allocator) -> ^NullValue {
+	null_value := new(NullValue, allocator)
+	return null_value
 }
 
 Value :: union {
-	NullValue,
-	NumberValue,
-	TextValue,
-	VariableValue,
-	ArrayValue,
-	EnumValue,
-	LocationValue,
-	VectorValue,
-	SoundValue,
-	ParticleValue,
-	ItemValue,
-	GameValue,
-	PotionValue,
-	BlockValue,
-	LocalizedTextValue,
+	^NullValue,
+	^NumberValue,
+	^TextValue,
+	^VariableValue,
+	^ArrayValue,
+	^EnumValue,
+	^LocationValue,
+	^VectorValue,
+	^SoundValue,
+	^ParticleValue,
+	^ItemValue,
+	^GameValue,
+	^PotionValue,
+	^BlockValue,
+	^LocalizedTextValue,
 }
