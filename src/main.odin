@@ -106,17 +106,17 @@ command_compile :: proc() {
 	defer vmem.arena_destroy(&arena)
 
 	assets.init_actions(alloc)
-	defer assets.cleanup_actions()
 	assets.init_entities(alloc)
-	defer assets.cleanup_entities()
 	assets.init_events(alloc)
-	defer assets.cleanup_events()
 	assets.init_mc_items(alloc)
-	defer assets.cleanup_mc_items()
 	assets.init_particles(alloc)
-	defer assets.cleanup_particles()
 	assets.init_instruments(alloc)
-	defer assets.cleanup_instruments()
+	// defer assets.cleanup_actions()
+	// defer assets.cleanup_entities()
+	// defer assets.cleanup_events()
+	// defer assets.cleanup_mc_items()
+	// defer assets.cleanup_particles()
+	// defer assets.cleanup_instruments()
 
 	c: compiler.Compiler
 	compiler.compiler_init(&c, alloc)
