@@ -1,6 +1,5 @@
 package build_prod
 
-import "core:strings"
 import "core:path/filepath"
 import "core:os"
 import "core:os/os2"
@@ -31,7 +30,6 @@ main :: proc() {
     append(&build_prod_cmd, src_dir)
     append(&build_prod_cmd, "-build-mode:exe")
 	append(&build_prod_cmd, "-target:windows_amd64")
-	append(&build_prod_cmd, "-extra-linker-flags:/LTCG")
 	append(&build_prod_cmd, "-subsystem:console")
 	append(&build_prod_cmd, "-o:speed")
 	append(&build_prod_cmd, "-no-bounds-check")
