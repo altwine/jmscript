@@ -129,6 +129,7 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 	fmt.fprintln(fd, "actions: map[string]Action\n")
 
 	fmt.fprintln(fd, "init_actions :: proc(allocator := context.allocator) {")
+	fmt.fprintln(fd, "\tcontext.allocator = allocator")
 	actions_count := len(actions) - len(ACTIONS_BLACKLIST)
 	fmt.fprintfln(fd, "\tactions = make(map[string]Action, %d, allocator)", actions_count)
 	for action in actions {

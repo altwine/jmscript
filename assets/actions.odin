@@ -26,7 +26,8 @@ Slot :: struct {
 actions: map[string]Action
 
 init_actions :: proc(allocator := context.allocator) {
-	actions = make(map[string]Action, 814, allocator)
+	context.allocator = allocator
+	actions = make(map[string]Action, 812, allocator)
 	actions["call_function"] = Action{
 		"call_function",
 		nil,
@@ -2182,18 +2183,6 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"block", "block", nil},
 			Slot{"locations", "location", nil},
 			Slot{"update_blocks", "enum", {"TRUE", "FALSE"}},
-		},
-	}
-	actions["game_set_block_custom_tag"] = Action{
-		"game_set_block_custom_tag",
-		nil,
-		nil,
-		false,
-		.BASIC,
-		[dynamic]Slot{
-			Slot{"location", "location", nil},
-			Slot{"tag_name", "text", nil},
-			Slot{"tag_value", "text", nil},
 		},
 	}
 	actions["game_set_block_data"] = Action{
@@ -6479,20 +6468,6 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"vector_1", "vec3", nil},
 			Slot{"vector_2", "vec3", nil},
 			Slot{"angle_units", "enum", {"DEGREES", "RADIANS"}},
-		},
-	}
-	actions["set_variable_get_block_custom_tag"] = Action{
-		"set_variable_get_block_custom_tag",
-		nil,
-		nil,
-		false,
-		.BASIC,
-		[dynamic]Slot{
-			Slot{"variable", "any", nil},
-			Slot{"location", "location", nil},
-			Slot{"tag_name", "text", nil},
-			Slot{"tag_value", "text", nil},
-			Slot{"default_value", "any", nil},
 		},
 	}
 	actions["set_variable_get_block_data"] = Action{
