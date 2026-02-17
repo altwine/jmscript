@@ -16,7 +16,7 @@ Optimizer :: struct {
 	files:		[dynamic]^ast.File,
 	symbols:	  ^checker.Symbol_Table,
 	current_file: ^ast.File,
-	errs:		 [dynamic]error.Error,
+	ec: ^error.Collector,
 
 	scope_symbols_usage: map[^checker.Scope]map[string]bool,
 	all_scopes:		  [dynamic]^checker.Scope,
@@ -62,9 +62,9 @@ Constant_Result :: struct {
 	type_kind:   checker.Type_Kind,
 }
 
-optimizer_init :: proc(o: ^Optimizer, allocator := context.allocator) {
+optimizer_init :: proc(o: ^Optimizer, ec: ^error.Collector, allocator := context.allocator) {
 	o.alloc = allocator
-	o.errs = make([dynamic]error.Error, o.alloc)
+	o.ec = ec
 	o.scope_symbols_usage = make(map[^checker.Scope]map[string]bool, allocator)
 	o.all_scopes = make([dynamic]^checker.Scope, allocator)
 
@@ -1277,13 +1277,7 @@ check_for_unused_symbols :: proc(o: ^Optimizer) {
 				o.unused_warnings[sym] = true
 
 				if sym.decl_node != nil {
-					append(&o.errs, error.Error{
-						file = o.current_file,
-						cause_pos = sym.decl_node.pos,
-						cause_end = sym.decl_node.end,
-						message = fmt.tprintf("unused symbol '%s'", sym.name),
-						severity = .Warning,
-					})
+					error.add_warning(o.ec, o.current_file, fmt.tprintf("unused symbol '%s'", sym.name), sym.decl_node.pos, sym.decl_node.end)
 				}
 			}
 		}
@@ -1394,40 +1388,16 @@ create_constant_literal :: proc(o: ^Optimizer, const_result: Constant_Result, po
 		case i64:
 			f64_val := f64(val)
 			if math.is_inf(f64_val) || math.is_nan(f64_val) {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = pos,
-					cause_end = end,
-					message = fmt.tprintf(
-						"number overflow: integer value %d too large for double precision",
-						val,
-					),
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, fmt.tprintf("number overflow: integer value %d too large for double precision", val), pos, end)
 				return nil
 			}
 			return ast.create_number_lit(fmt.tprintf("%d", val), pos, end, o.alloc)
 		case f64:
 			if math.is_inf(val) {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = pos,
-					cause_end = end,
-					message = fmt.tprintf(
-						"number overflow: value results in %v",
-						val > 0 ? "+Infinity" : "-Infinity",
-					),
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, fmt.tprintf("number overflow: value results in %v", val > 0 ? "+Infinity" : "-Infinity"), pos, end)
 				return nil
 			} else if math.is_nan(val) {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = pos,
-					cause_end = end,
-					message = "number error: value results in NaN",
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, "number error: value results in NaN", pos, end)
 				return nil
 			}
 			return ast.create_number_lit(fmt.tprintf("%f", val), pos, end, o.alloc)
@@ -1497,28 +1467,10 @@ evaluate_basic_literal :: proc(o: ^Optimizer, lit: ^ast.Basic_Lit) -> Constant_R
 			result.is_constant = true
 
 			if math.is_inf(val) {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = lit.pos,
-					cause_end = lit.end,
-					message = fmt.tprintf(
-						"number overflow/underflow: '%s' results in Infinity",
-						lit.tok.content,
-					),
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, fmt.tprintf("number overflow/underflow: '%s' results in Infinity", lit.tok.content), lit.pos, lit.end)
 				result.is_constant = false
 			} else if math.is_nan(val) {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = lit.pos,
-					cause_end = lit.end,
-					message = fmt.tprintf(
-						"invalid number: '%s' results in NaN",
-						lit.tok.content,
-					),
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, fmt.tprintf("invalid number: '%s' results in NaN", lit.tok.content), lit.pos, lit.end)
 				result.is_constant = false
 			}
 		}
@@ -1673,27 +1625,12 @@ add_numbers :: proc(left, right: Constant_Result, o: ^Optimizer, expr: ^ast.Bina
 	if f64_val, is_f64 := result.value.(f64); is_f64 {
 		if math.is_inf(f64_val) {
 			if o != nil && expr != nil {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = expr.pos,
-					cause_end = expr.end,
-					message = fmt.tprintf(
-						"addition overflow: operation results in %v",
-						f64_val > 0 ? "+Infinity" : "-Infinity",
-					),
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, fmt.tprintf("addition overflow: operation results in %v", f64_val > 0 ? "+Infinity" : "-Infinity"), expr.pos, expr.end)
 			}
 			result.is_constant = false
 		} else if math.is_nan(f64_val) {
 			if o != nil && expr != nil {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = expr.pos,
-					cause_end = expr.end,
-					message = "addition error: operation results in NaN",
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, "addition error: operation results in NaN", expr.pos, expr.end)
 			}
 			result.is_constant = false
 		}
@@ -1742,13 +1679,7 @@ perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result, o
 		if abs(right_num) < EPSILON {
 			result.is_constant = false
 			if o != nil && expr != nil {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = expr.pos,
-					cause_end = expr.end,
-					message = "division by zero",
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, "division by zero", expr.pos, expr.end)
 			}
 		} else {
 			result.value = left_num / right_num
@@ -1762,27 +1693,12 @@ perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result, o
 		if f64_val, is_f64 := result.value.(f64); is_f64 {
 			if math.is_inf(f64_val) {
 				if o != nil && expr != nil {
-					append(&o.errs, error.Error{
-						file = o.current_file,
-						cause_pos = expr.pos,
-						cause_end = expr.end,
-						message = fmt.tprintf(
-							"arithmetic overflow: operation results in %v",
-							f64_val > 0 ? "+Infinity" : "-Infinity",
-						),
-						severity = .Error,
-					})
+					error.add_error(o.ec, o.current_file, fmt.tprintf("arithmetic overflow: operation results in %v", f64_val > 0 ? "+Infinity" : "-Infinity"), expr.pos, expr.end)
 				}
 				result.is_constant = false
 			} else if math.is_nan(f64_val) {
 				if o != nil && expr != nil {
-					append(&o.errs, error.Error{
-						file = o.current_file,
-						cause_pos = expr.pos,
-						cause_end = expr.end,
-						message = "arithmetic error: operation results in NaN",
-						severity = .Error,
-					})
+					error.add_error(o.ec, o.current_file, "arithmetic error: operation results in NaN", expr.pos, expr.end)
 				}
 				result.is_constant = false
 			}
@@ -1790,16 +1706,7 @@ perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result, o
 			f64_val2 := f64(i64_val)
 			if math.is_inf(f64_val2) || math.is_nan(f64_val2) {
 				if o != nil && expr != nil {
-					append(&o.errs, error.Error{
-						file = o.current_file,
-						cause_pos = expr.pos,
-						cause_end = expr.end,
-						message = fmt.tprintf(
-							"arithmetic overflow: integer value %d too large for double precision",
-							i64_val,
-						),
-						severity = .Error,
-					})
+					error.add_error(o.ec, o.current_file, fmt.tprintf("arithmetic overflow: integer value %d too large for double precision", i64_val), expr.pos, expr.end)
 				}
 				result.is_constant = false
 			}
@@ -1813,41 +1720,17 @@ check_numeric_literal_overflow :: proc(o: ^Optimizer, content: string, pos, end:
 	val, parse_ok := strconv.parse_f64(content)
 
 	if !parse_ok {
-		append(&o.errs, error.Error{
-			file = o.current_file,
-			cause_pos = pos,
-			cause_end = end,
-			message = fmt.tprintf(
-				"number overflow/underflow or invalid format: '%s' cannot be represented as double",
-				content,
-			),
-			severity = .Error,
-		})
+		error.add_error(o.ec, o.current_file, fmt.tprintf("number overflow/underflow or invalid format: '%s' cannot be represented as double", content), pos, end)
 		return true
 	}
 
 	if math.is_inf(val) {
-		append(&o.errs, error.Error{
-			file = o.current_file,
-			cause_pos = pos,
-			cause_end = end,
-			message = fmt.tprintf(
-				"number overflow/underflow: '%s' results in Infinity",
-				content,
-			),
-			severity = .Error,
-		})
+		error.add_error(o.ec, o.current_file, fmt.tprintf("number overflow/underflow: '%s' results in Infinity", content), pos, end)
 		return true
 	}
 
 	if math.is_nan(val) {
-		append(&o.errs, error.Error{
-			file = o.current_file,
-			cause_pos = pos,
-			cause_end = end,
-			message = fmt.tprintf("invalid number: '%s' results in NaN", content),
-			severity = .Error,
-		})
+		error.add_error(o.ec, o.current_file, fmt.tprintf("invalid number: '%s' results in NaN", content), pos, end)
 		return true
 	}
 
@@ -2636,21 +2519,9 @@ create_binary_expression_for_constants :: proc(o: ^Optimizer, left, right: ^ast.
 	case .Quo:
 		if right_result.type_kind == .Number {
 			if f64_val, is_f64 := right_result.value.(f64); is_f64 && abs(f64_val) < EPSILON {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = temp_expr.pos,
-					cause_end = temp_expr.end,
-					message = "division by zero",
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, "division by zero", temp_expr.pos, temp_expr.end)
 			} else if i64_val, is_i64 := right_result.value.(i64); is_i64 && i64_val == 0 {
-				append(&o.errs, error.Error{
-					file = o.current_file,
-					cause_pos = temp_expr.pos,
-					cause_end = temp_expr.end,
-					message = "division by zero",
-					severity = .Error,
-				})
+				error.add_error(o.ec, o.current_file, "division by zero", temp_expr.pos, temp_expr.end)
 			}
 		}
 		combined_result = perform_arithmetic(.Quo, left_result, right_result, o, &temp_expr)
@@ -3855,7 +3726,7 @@ remove_anonymous_assignments_from_node :: proc(o: ^Optimizer, node: ^ast.Node) -
 	return removed_count
 }
 
-optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table) -> [dynamic]error.Error {
+optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table) {
 	o.files = files
 	o.symbols = symbols
 
@@ -3876,6 +3747,4 @@ optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^c
 
 	remove_empty_blocks(o)
 	flatten_nested_blocks(o)
-
-	return o.errs
 }

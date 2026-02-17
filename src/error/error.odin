@@ -19,6 +19,53 @@ Error :: struct {
 	severity:  Error_Severity,
 }
 
+Collector :: struct {
+	errs: [dynamic]Error,
+}
+
+collector_init :: proc(c: ^Collector, allocator := context.allocator) {
+	c.errs = make([dynamic]Error, allocator)
+}
+
+add_error :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos_to: lexer.Pos) {
+	append(&c.errs, Error{
+		file=file,
+		cause_pos=pos_from,
+		cause_end=pos_to,
+		message=message,
+		severity=.Error,
+	})
+}
+
+add_warning :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos_to: lexer.Pos) {
+	append(&c.errs, Error{
+		file=file,
+		cause_pos=pos_from,
+		cause_end=pos_to,
+		message=message,
+		severity=.Warning,
+	})
+}
+
+is_empty :: proc(c: ^Collector) -> bool {
+	return len(c.errs) == 0
+}
+
+has_errors :: proc(c: ^Collector) -> bool {
+	for err in c.errs {
+		if err.severity == .Error {
+			return true
+		}
+	}
+	return false
+}
+
+print_all :: proc(c: ^Collector) {
+	for err in c.errs {
+		print(err)
+	}
+}
+
 print :: proc(error: Error) {
 	error_type: string
 	switch error.severity {

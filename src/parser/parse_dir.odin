@@ -7,7 +7,7 @@ import "core:os/os2"
 import "../ast"
 import "../error"
 
-parse_dir :: proc(dir_path: string, allocator := context.allocator) -> ([dynamic]^ast.File, [dynamic]error.Error) {
+parse_dir :: proc(ec: ^error.Collector, dir_path: string, allocator := context.allocator) -> ([dynamic]^ast.File, [dynamic]error.Error) {
 	files := make([dynamic]^ast.File, allocator)
 	errs := make([dynamic]error.Error, allocator)
 
@@ -24,12 +24,9 @@ parse_dir :: proc(dir_path: string, allocator := context.allocator) -> ([dynamic
 		}
 
 		p: Parser
-		parser_init(&p, allocator)
+		parser_init(&p, ec, allocator)
 		file_path, _ := strings.clone(file_info.fullpath, p.alloc)
-		file_node, file_errs := parse_file(&p, file_path)
-		for err in file_errs {
-			append(&errs, err)
-		}
+		file_node := parse_file(&p, file_path)
 		append(&files, file_node)
 	}
 

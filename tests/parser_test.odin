@@ -12,13 +12,16 @@ import "src:error"
 
 @(test)
 test_parser_init :: proc(t: ^testing.T) {
+	ec: error.Collector
+	error.collector_init(&ec, context.temp_allocator)
+
 	p: parser.Parser
-	parser.parser_init(&p, context.temp_allocator)
+	parser.parser_init(&p, &ec, context.temp_allocator)
 
 	testing.expect(t, p.offset == 0, "Parser offset should be 0 after init")
 	testing.expect(t, p.tokens == nil, "Tokens should be nil after init")
 	testing.expect(t, p.file == nil, "File should be nil after init")
-	testing.expect(t, len(p.errs) == 0, "Error list should be empty after init")
+	testing.expect(t, error.is_empty(&ec), "Error list should be empty after init")
 }
 
 @(test)
@@ -26,8 +29,11 @@ test_parse_file_tags :: proc(t: ^testing.T) {
 	allocator := context.temp_allocator
 	source := "#+tag1\n#+tag2\npackage test"
 
+	ec: error.Collector
+	error.collector_init(&ec, allocator)
+
 	p: parser.Parser
-	parser.parser_init(&p, allocator)
+	parser.parser_init(&p, &ec, allocator)
 
 	l: lexer.Lexer
 	lexer.lexer_init(&l, "test.jms", allocator)
@@ -50,8 +56,6 @@ test_parse_file_tags :: proc(t: ^testing.T) {
 
 @(test)
 test_parse_package :: proc(t: ^testing.T) {
-
-
 	test_cases := []struct {
 		source: string,
 		expected_pkg: string,
@@ -65,8 +69,11 @@ test_parse_package :: proc(t: ^testing.T) {
 
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
+		ec: error.Collector
+		error.collector_init(&ec, allocator)
+
 		p: parser.Parser
-		parser.parser_init(&p, allocator)
+		parser.parser_init(&p, &ec, allocator)
 
 		l: lexer.Lexer
 		lexer.lexer_init(&l, "test.jms", allocator)
@@ -82,9 +89,9 @@ test_parse_package :: proc(t: ^testing.T) {
 		testing.expect(t, pkg_name == tc.expected_pkg, fmt.tprintf("Package name should be '%s', got '%s'", tc.expected_pkg, pkg_name))
 
 		if tc.should_error {
-			testing.expect(t, len(p.errs) > 0, "Should have errors for invalid package declaration")
+			testing.expect(t, !error.is_empty(&ec), "Should have errors for invalid package declaration")
 		} else {
-			testing.expect(t, len(p.errs) == 0, "Should not have errors for valid package declaration")
+			testing.expect(t, error.is_empty(&ec), "Should not have errors for valid package declaration")
 		}
 	}
 }
@@ -94,8 +101,11 @@ test_parse_ident_expression :: proc(t: ^testing.T) {
 	source := "my_variable"
 
 	allocator := context.temp_allocator
+	ec: error.Collector
+	error.collector_init(&ec, allocator)
+
 	p: parser.Parser
-	parser.parser_init(&p, allocator)
+	parser.parser_init(&p, &ec, allocator)
 
 	l: lexer.Lexer
 	lexer.lexer_init(&l, "test.jms", allocator)
@@ -136,8 +146,11 @@ test_parse_binary_expression :: proc(t: ^testing.T) {
 
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
+		ec: error.Collector
+		error.collector_init(&ec, allocator)
+
 		p: parser.Parser
-		parser.parser_init(&p, allocator)
+		parser.parser_init(&p, &ec, allocator)
 
 		l: lexer.Lexer
 		lexer.lexer_init(&l, "test.jms", allocator)
@@ -174,8 +187,11 @@ test_parse_assignment_statement :: proc(t: ^testing.T) {
 
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
+		ec: error.Collector
+		error.collector_init(&ec, allocator)
+
 		p: parser.Parser
-		parser.parser_init(&p, allocator)
+		parser.parser_init(&p, &ec, allocator)
 
 		l: lexer.Lexer
 		lexer.lexer_init(&l, "test.jms", allocator)
@@ -209,8 +225,11 @@ test_parse_if_statement :: proc(t: ^testing.T) {
 }`
 
 	allocator := context.temp_allocator
+	ec: error.Collector
+	error.collector_init(&ec, allocator)
+
 	p: parser.Parser
-	parser.parser_init(&p, allocator)
+	parser.parser_init(&p, &ec, allocator)
 
 	l: lexer.Lexer
 	lexer.lexer_init(&l, "test.jms", allocator)
@@ -241,8 +260,11 @@ test_parse_function_statement :: proc(t: ^testing.T) {
 }`
 
 	allocator := context.temp_allocator
+	ec: error.Collector
+	error.collector_init(&ec, allocator)
+
 	p: parser.Parser
-	parser.parser_init(&p, allocator)
+	parser.parser_init(&p, &ec, allocator)
 
 	l: lexer.Lexer
 	lexer.lexer_init(&l, "test.jms", allocator)
@@ -287,8 +309,11 @@ test_parse_for_statement :: proc(t: ^testing.T) {
 
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
+		ec: error.Collector
+		error.collector_init(&ec, allocator)
+
 		p: parser.Parser
-		parser.parser_init(&p, allocator)
+		parser.parser_init(&p, &ec, allocator)
 
 		l: lexer.Lexer
 		lexer.lexer_init(&l, "test.jms", allocator)
@@ -319,8 +344,11 @@ func old_func() {
 }`
 
     allocator := context.temp_allocator
-    p: parser.Parser
-    parser.parser_init(&p, allocator)
+    ec: error.Collector
+	error.collector_init(&ec, allocator)
+
+	p: parser.Parser
+    parser.parser_init(&p, &ec, allocator)
 
     l: lexer.Lexer
     lexer.lexer_init(&l, "test.jms", allocator)
@@ -375,8 +403,11 @@ test_parse_call_expression :: proc(t: ^testing.T) {
 
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
+		ec: error.Collector
+		error.collector_init(&ec, allocator)
+
 		p: parser.Parser
-		parser.parser_init(&p, allocator)
+		parser.parser_init(&p, &ec, allocator)
 
 		l: lexer.Lexer
 		lexer.lexer_init(&l, "test.jms", allocator)
@@ -422,8 +453,11 @@ test_parse_variable_declaration :: proc(t: ^testing.T) {
 
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
+		ec: error.Collector
+		error.collector_init(&ec, allocator)
+
 		p: parser.Parser
-		parser.parser_init(&p, allocator)
+		parser.parser_init(&p, &ec, allocator)
 
 		l: lexer.Lexer
 		lexer.lexer_init(&l, "test.jms", allocator)
@@ -461,8 +495,11 @@ if {
 }`
 
 	allocator := context.temp_allocator
+	ec: error.Collector
+	error.collector_init(&ec, allocator)
+
 	p: parser.Parser
-	parser.parser_init(&p, allocator)
+	parser.parser_init(&p, &ec, allocator)
 
 	l: lexer.Lexer
 	lexer.lexer_init(&l, "test.jms", allocator)
@@ -477,7 +514,7 @@ if {
 
 	stmts := parser.parse_top_level_stmt_list(&p)
 
-	testing.expect(t, len(p.errs) > 0, "Should have parsing errors")
+	testing.expect(t, !error.is_empty(&ec), "Should have parsing errors")
 	testing.expect(t, len(stmts) > 0, "Should still parse some statements despite errors")
 }
 
@@ -519,15 +556,18 @@ func calculate() {
 
 	os.write_entire_file(temp_file, transmute([]u8)source)
 
-	p: parser.Parser
-	parser.parser_init(&p, context.allocator)
+	ec: error.Collector
+	error.collector_init(&ec, context.allocator)
 
-	file_node, errs := parser.parse_file(&p, temp_file)
+	p: parser.Parser
+	parser.parser_init(&p, &ec, context.allocator)
+
+	file_node := parser.parse_file(&p, temp_file)
 
 	testing.expect(t, file_node != nil, "Should parse complete file")
-	testing.expect(t, len(errs) == 0, "Should parse without errors")
-	if len(errs) != 0 {
-		for e in errs {
+	testing.expect(t, error.is_empty(&ec), "Should parse without errors")
+	if !error.is_empty(&ec) {
+		for e in ec.errs {
 	 		log.info(e)
 	 	}
 	}

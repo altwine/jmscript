@@ -18,7 +18,7 @@ Codegen :: struct {
 	jb: Json_Builder,
 	walker: ast.Walker,
 	symbols: ^checker.Symbol_Table,
-	errs: [dynamic]error.Error,
+	ec: ^error.Collector,
 
 	entry_handler: ^Handler,
 	exit_handler: ^Handler,
@@ -46,12 +46,12 @@ next_unique_id :: proc(c: ^Codegen) -> string {
 	return fmt.tprintf("jms.%d", c.unique_id)
 }
 
-codegen_init :: proc(c: ^Codegen, allocator := context.allocator) {
+codegen_init :: proc(c: ^Codegen, ec: ^error.Collector, allocator := context.allocator) {
+	c.ec = ec
 	c.handlers = make_handlers(allocator)
 	c.entry_handler = create_event_handler("world_start", make_operations(allocator), allocator)
 	c.current_operations = &c.entry_handler.operations
 	c.exit_handler = create_event_handler("world_stop", make_operations(allocator), allocator)
-	c.errs = make([dynamic]error.Error, allocator)
 
 	c.current_operations_stack = make([dynamic]^[dynamic]^Operation, allocator)
 	c.unique_id = 0
@@ -355,7 +355,7 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node) -> (Value, checker.
 	return nil, nil
 }
 
-codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table, minify: bool, unique_id: string) -> (string, [dynamic]error.Error) {
+codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table, minify: bool, unique_id: string) -> string {
 	c.symbols = symbols
 
 	for file in files {
@@ -371,15 +371,5 @@ codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Sy
 	}
 
 	json_builder_init(&c.jb, minify, c.alloc)
-	return handlers_to_string(&c.jb, c.handlers), c.errs
-}
-
-add_error :: proc(c: ^Codegen, message: string, file: ^ast.File, cause: ^ast.Node) {
-	err := error.Error{file=file, message=message, cause_pos=cause.pos, cause_end=cause.end}
-	append(&c.errs, err)
-}
-
-add_warning :: proc(c: ^Codegen, message: string, file: ^ast.File, cause: ^ast.Node) {
-	warn := error.Error{file=file, message=message, cause_pos=cause.pos, cause_end=cause.end, severity=.Warning}
-	append(&c.errs, warn)
+	return handlers_to_string(&c.jb, c.handlers)
 }

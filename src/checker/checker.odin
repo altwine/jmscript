@@ -20,7 +20,7 @@ Checker :: struct {
 	alloc:			  mem.Allocator,
 	symbol_table:	  ^Symbol_Table,
 	files:			  [dynamic]^ast.File,
-	errs:			  [dynamic]error.Error,
+	ec:  ^error.Collector,
 	current_file:	  ^ast.File,
 	current_file_idx: int,
 
@@ -31,9 +31,9 @@ Checker :: struct {
 	type_checker_vtable: ast.Visitor_VTable,
 }
 
-checker_init :: proc(c: ^Checker, allocator := context.allocator) {
+checker_init :: proc(c: ^Checker, ec: ^error.Collector, allocator := context.allocator) {
 	c.alloc = allocator
-	c.errs = make([dynamic]error.Error, allocator)
+	c.ec = ec
 	c.symbol_table = new(Symbol_Table, allocator)
 	c.symbol_table.scope_level = -1
 	c.symbol_table.node_scopes = make(map[int]^Scope, 0, allocator)
@@ -103,7 +103,7 @@ get_node_annotations :: proc(node: ^ast.Node) -> (annotations: [dynamic]ast.Anno
 @(private="file")
 check_annotation_purity :: proc(c: ^Checker, anno: ast.Annotation, node: ^ast.Node) {
 	if anno.value != nil && !check_expression_is_pure(c, anno.value) {
-		add_error(c, fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), node)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("annotation param with name '%s' is not a constant time expression", anno.name), node.pos, node.end)
 	}
 }
 
@@ -132,7 +132,7 @@ check_node_annotations :: proc(c: ^Checker, node: ^ast.Node) {
 			if is_stmt {
 				check_annotation_purity(c, anno, &anno.anno_base)
 				if !check_anno_meanings(c, cast(^ast.Stmt)node, &anno) {
-					add_warning(c, fmt.tprintf("annotation '%s' likely has no effect on this kind of stmt", anno.name), cast(^ast.Node)&anno)
+					error.add_warning(c.ec, c.files[c.current_file_idx], fmt.tprintf("annotation '%s' likely has no effect on this kind of stmt", anno.name), anno.anno_base.pos, anno.anno_base.end)
 				}
 			}
 		}
@@ -251,7 +251,7 @@ _type_check_before_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) -> bool 
 	return true
 }
 
-checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table, [dynamic]error.Error) {
+checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> ^Symbol_Table {
 	c.files = files
 
 	enter_scope(c)
@@ -272,7 +272,7 @@ checker_check :: proc(c: ^Checker, files: [dynamic]^ast.File) -> (^Symbol_Table,
 	}
 
 	exit_scope(c)
-	return c.symbol_table, c.errs
+	return c.symbol_table
 }
 
 @(private="file")
@@ -280,7 +280,7 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	c := cast(^Checker)v.user_data
 
 	if c.symbol_table.scope_level > 0 {
-		add_error(c, "can't define function in nested scope", node)
+		error.add_error(c.ec, c.files[c.current_file_idx], "can't define function in nested scope", node.pos, node.end)
 		return
 	}
 
@@ -288,7 +288,7 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	symbol := create_symbol(node.name, make_type_func(c, ret_type), node, c.alloc)
 
 	if !add_symbol(c, symbol) {
-		add_error(c, fmt.tprintf("function '%s' is already defined", node.name), node)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("function '%s' is already defined", node.name), node.pos, node.end)
 		return
 	}
 
@@ -314,14 +314,14 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 	c := cast(^Checker)v.user_data
 
 	if c.symbol_table.scope_level > 0 {
-		add_error(c, "can't define event in nested scope", node)
+		error.add_error(c.ec, c.files[c.current_file_idx], "can't define event in nested scope", node.pos, node.end)
 		return
 	}
 
 	symbol := create_symbol(node.name, make_type_event(c), node, c.alloc)
 
 	if !add_symbol(c, symbol) {
-		add_error(c, fmt.tprintf("event '%s' is already defined", node.name), node)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("event '%s' is already defined", node.name), node.pos, node.end)
 		return
 	}
 
@@ -353,7 +353,7 @@ _collect_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 
 	if _, already_defined := lookup_local_symbol(c.symbol_table.current_scope, node.name);
 		already_defined {
-		add_error(c, fmt.tprintf("variable '%s' is already defined", node.name), node)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' is already defined", node.name), node.pos, node.end)
 		return
 	}
 
@@ -362,8 +362,8 @@ _collect_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	if node.type != "" && type_info.kind != .Any {
 		provided_type_kind := string_to_type_kind(c, node.type, node)
 		if type_info.kind != provided_type_kind {
-			add_error(c, fmt.tprintf("explicitly stated type doesn't match variable content: '%s' != '%s'",
-				type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), node)
+			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("explicitly stated type doesn't match variable content: '%s' != '%s'",
+				type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), node.pos, node.end)
 		}
 	}
 
@@ -389,7 +389,7 @@ _type_check_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	}
 
 	if anno_is_true(cast(^ast.Stmt)node, "pure") && !check_function_is_pure(c, node.name) {
-		add_error(c, fmt.tprintf("function '%s' marked as @pure but has non-pure content", node.name), &node.stmt_base)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("function '%s' marked as @pure but has non-pure content", node.name), node.pos, node.end)
 	}
 }
 
@@ -410,7 +410,7 @@ _type_check_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 	}
 
 	if anno_is_true(cast(^ast.Stmt)node, "pure") && !check_function_is_pure(c, node.name) {
-		add_error(c, fmt.tprintf("event '%s' marked as @pure but has non-pure content", node.name), &node.stmt_base)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("event '%s' marked as @pure but has non-pure content", node.name), node.pos, node.end)
 	}
 }
 
@@ -423,8 +423,8 @@ _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	}
 
 	if node.is_const && !check_expression_is_pure(c, node.value) {
-		add_error(c, fmt.tprintf("cannot initialize constant '%s' with non-constant value '%s'",
-			node.name, ast.expr_to_string(node.value, context.temp_allocator)), &node.stmt_base)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("cannot initialize constant '%s' with non-constant value '%s'",
+			node.name, ast.expr_to_string(node.value, context.temp_allocator)), node.pos, node.end)
 	}
 
 	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
@@ -439,8 +439,8 @@ _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 				sym.metadata["flags"] = Flags{.PURE}
 			}
 		} else if anno_is_true(cast(^ast.Stmt)node, "pure") {
-			add_error(c, fmt.tprintf("variable '%s' marked as @pure but initialized with non-pure expression",
-				node.name), &node.stmt_base)
+			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' marked as @pure but initialized with non-pure expression",
+				node.name), node.pos, node.end)
 		}
 	}
 }
@@ -454,18 +454,18 @@ _type_check_visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
 	if found {
 		if sym.is_const {
-			add_error(c, fmt.tprintf("cannot assign to constant variable '%s'", node.name), node)
+			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("cannot assign to constant variable '%s'", node.name), node.pos, node.end)
 		}
 
 		if flags_field, has := sym.metadata["flags"]; has {
 			if flags, ok := flags_field.(Flags); ok && .PURE in flags {
 				if !check_expression_is_pure(c, node.expr) {
-					add_error(c, fmt.tprintf("cannot assign non-pure value to pure variable '%s'", node.name), &node.stmt_base)
+					error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("cannot assign non-pure value to pure variable '%s'", node.name), node.pos, node.end)
 				}
 			}
 		}
 	} else {
-		add_error(c, fmt.tprintf("variable '%s' is not declared", node.name), node)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' is not declared", node.name), node.pos, node.end)
 	}
 }
 
@@ -475,7 +475,7 @@ _type_check_visit_ident :: proc(v: ^ast.Visitor, node: ^ast.Ident) {
 
 	sym, exists := lookup_symbol(c.symbol_table.current_scope, node.name)
 	if !exists {
-		add_error(c, fmt.tprintf("variable '%s' is not declared", node.name), node)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' is not declared", node.name), node.pos, node.end)
 	}
 }
 
@@ -486,13 +486,13 @@ _type_check_visit_call_expr :: proc(v: ^ast.Visitor, node: ^ast.Call_Expr) {
 	if ident, is_ident := node.expr.derived.(^ast.Ident); is_ident {
 		sym, exists := lookup_symbol(c.symbol_table.current_scope, ident.name)
 		if !exists {
-			add_error(c, fmt.tprintf("function '%s' is not defined", ident.name), ident)
+			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("function '%s' is not defined", ident.name), ident.pos, ident.end)
 			return
 		}
 
 		if len(node.args) != len(sym.type.param_types) {
-			add_error(c, fmt.tprintf("invalid arguments count in function call: %d != %d",
-				len(node.args), len(sym.type.param_types)), node)
+			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid arguments count in function call: %d != %d",
+				len(node.args), len(sym.type.param_types)), node.pos, node.end)
 			return
 		}
 
@@ -514,7 +514,7 @@ _type_check_visit_call_expr :: proc(v: ^ast.Visitor, node: ^ast.Call_Expr) {
 
 				if real_index == -1 {
 					closest := _find_closest(c, arg.name, sym.type.param_names[:])
-					add_error(c, fmt.tprintf("invalid named argument: '%s', maybe '%s'?", arg.name, closest), node)
+					error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid named argument: '%s', maybe '%s'?", arg.name, closest), node.pos, node.end)
 					continue
 				}
 
@@ -525,7 +525,7 @@ _type_check_visit_call_expr :: proc(v: ^ast.Visitor, node: ^ast.Call_Expr) {
 			if arg_type.kind == .Text && param_type.kind == .Enum {
 				action, action_exists := assets.action_native_from_mapped(ident.name)
 				if !action_exists {
-					add_error(c, "enum validation not implemented for this function", node)
+					error.add_error(c.ec, c.files[c.current_file_idx], "enum validation not implemented for this function", node.pos, node.end)
 					continue
 				}
 
@@ -533,12 +533,12 @@ _type_check_visit_call_expr :: proc(v: ^ast.Visitor, node: ^ast.Call_Expr) {
 					content := text_lit.tok.content[1:len(text_lit.tok.content)-1]
 					if !slice.contains(action.slots[real_index]._enum[:], content) {
 						closest := _find_closest(c, content, action.slots[real_index]._enum[:])
-						add_error(c, fmt.tprintf("invalid value for enum: '%s', maybe '%s'?", content, closest), text_lit)
+						error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid value for enum: '%s', maybe '%s'?", content, closest), text_lit.pos, text_lit.end)
 					}
 				}
 			} else if arg_type.kind != param_type.kind && !can_casted(arg_type.kind, param_type.kind) {
-				add_error(c, fmt.tprintf("invalid argument type: '%s' != '%s'",
-					type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), ident)
+				error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid argument type: '%s' != '%s'",
+					type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), node.pos, node.end)
 			}
 		}
 	}
@@ -558,7 +558,7 @@ _type_check_visit_binary_expr :: proc(v: ^ast.Visitor, node: ^ast.Binary_Expr) {
 	if left_kind != right_kind {
 		left_str := type_kind_to_string(c, left_kind)
 		right_str := type_kind_to_string(c, right_kind)
-		add_error(c, fmt.tprintf("incompatible types: '%s' and '%s'", left_str, right_str), node)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("incompatible types: '%s' and '%s'", left_str, right_str), node.pos, node.end)
 	}
 }
 
@@ -1255,24 +1255,6 @@ exit_scope :: proc(c: ^Checker) {
 		c.symbol_table.current_scope = c.symbol_table.current_scope.parent
 		c.symbol_table.scope_level -= 1
 	}
-}
-
-add_error :: proc(c: ^Checker, message: string, cause: ^ast.Node) {
-	append(&c.errs, error.Error{
-		file = c.files[c.current_file_idx],
-		cause_pos = cause.pos,
-		cause_end = cause.end,
-		message = message,
-	})
-}
-
-add_warning :: proc(c: ^Checker, message: string, cause: ^ast.Node) {
-	append(&c.errs, error.Error{
-		file=c.files[c.current_file_idx],
-		cause_pos=cause.pos, cause_end=cause.end,
-		message=message,
-		severity=.Warning,
-	})
 }
 
 @(private="file")

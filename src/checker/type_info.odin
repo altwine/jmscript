@@ -3,6 +3,7 @@ package checker
 import "core:fmt"
 
 import "../ast"
+import "../error"
 
 Type_Kind :: enum {
 	Invalid,
@@ -65,24 +66,24 @@ string_to_type_kind :: proc(c: ^Checker, type: string, origin: ^ast.Node) -> Typ
 	case "void", "":   return .Void
 
 	case "vector", "vector3":
-		add_error(c, fmt.tprintf("invalid type %s, maybe 'vec3'?", type), origin)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'vec3'?", type), origin.pos, origin.end)
 
 	case "int", "float":
-		add_error(c, fmt.tprintf("invalid type %s, maybe 'number'?", type), origin)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'number'?", type), origin.pos, origin.end)
 
 	case "string":
-		add_error(c, fmt.tprintf("invalid type %s, maybe 'text'?", type), origin)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'text'?", type), origin.pos, origin.end)
 
 	case "vector2", "vec2":
-		add_error(c, fmt.tprintf("invalid type %s, two components vector isn't supported", type), origin)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, two components vector isn't supported", type), origin.pos, origin.end)
 
 	case "quat", "quaternion":
-		add_error(c, fmt.tprintf("invalid type %s, quaternions isn't supported", type), origin)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, quaternions isn't supported", type), origin.pos, origin.end)
 
 	case "complex":
-		add_error(c, fmt.tprintf("invalid type %s, complex numbers isn't supported", type), origin)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, complex numbers isn't supported", type), origin.pos, origin.end)
 	}
-	add_error(c, fmt.tprintf("invalid type: %s", type), origin)
+	error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type: %s", type), origin.pos, origin.end)
 	return .Invalid
 }
 
