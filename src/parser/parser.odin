@@ -70,14 +70,6 @@ skip_optional_semicolon :: proc(p: ^Parser) {
 	}
 }
 
-// add_error :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
-// 	error.add_error(p.ec, p.file, message, token_from.pos, token_to.pos)
-// }
-
-// add_warning :: proc(p: ^Parser, message: string, token_from, token_to: lexer.Token) {
-// 	error.add_warning(p.ec, p.file, message, token_from.pos, token_to.pos)
-// }
-
 match :: proc(p: ^Parser, kind: lexer.Token_Kind) -> bool {
 	return current(p).kind == kind
 }
