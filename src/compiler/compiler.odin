@@ -14,8 +14,8 @@ Compiler :: struct {
 	ec: error.Collector,
 }
 
-compiler_init :: proc(c: ^Compiler, allocator := context.allocator) {
-	error.collector_init(&c.ec, allocator)
+compiler_init :: proc(c: ^Compiler, warnings_as_errors: bool, allocator := context.allocator) {
+	error.collector_init(&c.ec, warnings_as_errors, allocator)
 	c.alloc = allocator
 }
 
@@ -25,6 +25,7 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 	if error.has_errors(&c.ec) {
 		return "", false
 	}
+	error.collector_clear(&c.ec)
 
 	ch: checker.Checker
 	checker.checker_init(&ch, &c.ec, c.alloc)
@@ -33,6 +34,7 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 	if error.has_errors(&c.ec) {
 		return "", false
 	}
+	error.collector_clear(&c.ec)
 
 	op: optimizer.Optimizer
 	optimizer.optimizer_init(&op, &c.ec, c.alloc)
@@ -41,6 +43,7 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 	if error.has_errors(&c.ec) {
 		return "", false
 	}
+	error.collector_clear(&c.ec)
 
 	cg: codegen.Codegen
 	codegen.codegen_init(&cg, &c.ec, c.alloc)
@@ -49,6 +52,7 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 	if error.has_errors(&c.ec) {
 		return "", false
 	}
+	error.collector_clear(&c.ec)
 
 	return json_ir, true
 }

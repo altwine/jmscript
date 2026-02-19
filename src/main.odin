@@ -118,8 +118,10 @@ command_compile :: proc() {
 	// defer assets.cleanup_particles()
 	// defer assets.cleanup_instruments()
 
+	warnings_as_errors := slice.contains(os.args, "-warnings-as-errors")
+
 	c: compiler.Compiler
-	compiler.compiler_init(&c, alloc)
+	compiler.compiler_init(&c, warnings_as_errors, alloc)
 
 	minify := slice.contains(os.args, "-m")
 	unique_id_raw := transmute([16]byte)rand.uint128()

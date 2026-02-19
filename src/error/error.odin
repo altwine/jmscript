@@ -20,11 +20,13 @@ Error :: struct {
 }
 
 Collector :: struct {
+	warnings_as_errors: bool,
 	errs: [dynamic]Error,
 }
 
-collector_init :: proc(c: ^Collector, allocator := context.allocator) {
+collector_init :: proc(c: ^Collector, warnings_as_errors: bool, allocator := context.allocator) {
 	c.errs = make([dynamic]Error, allocator)
+	c.warnings_as_errors = warnings_as_errors
 }
 
 add_error :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos_to: lexer.Pos) {
@@ -38,13 +40,18 @@ add_error :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos
 }
 
 add_warning :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos_to: lexer.Pos) {
+	severity := Error_Severity.Error if c.warnings_as_errors else Error_Severity.Warning
 	append(&c.errs, Error{
 		file=file,
 		cause_pos=pos_from,
 		cause_end=pos_to,
 		message=message,
-		severity=.Warning,
+		severity=severity,
 	})
+}
+
+collector_clear :: proc(c: ^Collector) {
+	clear(&c.errs)
 }
 
 is_empty :: proc(c: ^Collector) -> bool {

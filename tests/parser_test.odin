@@ -13,7 +13,7 @@ import "src:error"
 @(test)
 test_parser_init :: proc(t: ^testing.T) {
 	ec: error.Collector
-	error.collector_init(&ec, context.temp_allocator)
+	error.collector_init(&ec, false, context.temp_allocator)
 
 	p: parser.Parser
 	parser.parser_init(&p, &ec, context.temp_allocator)
@@ -30,7 +30,7 @@ test_parse_file_tags :: proc(t: ^testing.T) {
 	source := "#+tag1\n#+tag2\npackage test"
 
 	ec: error.Collector
-	error.collector_init(&ec, allocator)
+	error.collector_init(&ec, false, allocator)
 
 	p: parser.Parser
 	parser.parser_init(&p, &ec, allocator)
@@ -70,7 +70,7 @@ test_parse_package :: proc(t: ^testing.T) {
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
 		ec: error.Collector
-		error.collector_init(&ec, allocator)
+		error.collector_init(&ec, false, allocator)
 
 		p: parser.Parser
 		parser.parser_init(&p, &ec, allocator)
@@ -102,7 +102,7 @@ test_parse_ident_expression :: proc(t: ^testing.T) {
 
 	allocator := context.temp_allocator
 	ec: error.Collector
-	error.collector_init(&ec, allocator)
+	error.collector_init(&ec, false, allocator)
 
 	p: parser.Parser
 	parser.parser_init(&p, &ec, allocator)
@@ -147,7 +147,7 @@ test_parse_binary_expression :: proc(t: ^testing.T) {
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
 		ec: error.Collector
-		error.collector_init(&ec, allocator)
+		error.collector_init(&ec, false, allocator)
 
 		p: parser.Parser
 		parser.parser_init(&p, &ec, allocator)
@@ -188,7 +188,7 @@ test_parse_assignment_statement :: proc(t: ^testing.T) {
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
 		ec: error.Collector
-		error.collector_init(&ec, allocator)
+		error.collector_init(&ec, false, allocator)
 
 		p: parser.Parser
 		parser.parser_init(&p, &ec, allocator)
@@ -226,7 +226,7 @@ test_parse_if_statement :: proc(t: ^testing.T) {
 
 	allocator := context.temp_allocator
 	ec: error.Collector
-	error.collector_init(&ec, allocator)
+	error.collector_init(&ec, false, allocator)
 
 	p: parser.Parser
 	parser.parser_init(&p, &ec, allocator)
@@ -261,7 +261,7 @@ test_parse_function_statement :: proc(t: ^testing.T) {
 
 	allocator := context.temp_allocator
 	ec: error.Collector
-	error.collector_init(&ec, allocator)
+	error.collector_init(&ec, false, allocator)
 
 	p: parser.Parser
 	parser.parser_init(&p, &ec, allocator)
@@ -310,7 +310,7 @@ test_parse_for_statement :: proc(t: ^testing.T) {
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
 		ec: error.Collector
-		error.collector_init(&ec, allocator)
+		error.collector_init(&ec, false, allocator)
 
 		p: parser.Parser
 		parser.parser_init(&p, &ec, allocator)
@@ -345,7 +345,7 @@ func old_func() {
 
     allocator := context.temp_allocator
     ec: error.Collector
-	error.collector_init(&ec, allocator)
+	error.collector_init(&ec, false, allocator)
 
 	p: parser.Parser
     parser.parser_init(&p, &ec, allocator)
@@ -404,7 +404,7 @@ test_parse_call_expression :: proc(t: ^testing.T) {
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
 		ec: error.Collector
-		error.collector_init(&ec, allocator)
+		error.collector_init(&ec, false, allocator)
 
 		p: parser.Parser
 		parser.parser_init(&p, &ec, allocator)
@@ -454,7 +454,7 @@ test_parse_variable_declaration :: proc(t: ^testing.T) {
 	for tc, i in test_cases {
 		allocator := context.temp_allocator
 		ec: error.Collector
-		error.collector_init(&ec, allocator)
+		error.collector_init(&ec, false, allocator)
 
 		p: parser.Parser
 		parser.parser_init(&p, &ec, allocator)
@@ -496,7 +496,7 @@ if {
 
 	allocator := context.temp_allocator
 	ec: error.Collector
-	error.collector_init(&ec, allocator)
+	error.collector_init(&ec, false, allocator)
 
 	p: parser.Parser
 	parser.parser_init(&p, &ec, allocator)
@@ -557,7 +557,7 @@ func calculate() {
 	os.write_entire_file(temp_file, transmute([]u8)source)
 
 	ec: error.Collector
-	error.collector_init(&ec, context.allocator)
+	error.collector_init(&ec, false, context.allocator)
 
 	p: parser.Parser
 	parser.parser_init(&p, &ec, context.allocator)
