@@ -349,20 +349,26 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false
 			return result_var, .Boolean
 
 		case left_type == .Boolean && right_type == .Boolean && operator == .Cmp_And:
-			value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
-			append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
-			append(c.current_operations, value_decl_op)
+			set_false := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+			append(&set_false.values, create_named_value("variable", result_var, c.alloc))
+			append(&set_false.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+			append(c.current_operations, set_false)
 
-			value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
-			append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+			set_true := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+			append(&set_true.values, create_named_value("variable", result_var, c.alloc))
+			append(&set_true.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
 
-			op := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
-			append(&op.values, create_named_value("value", left_val, c.alloc))
-			append(&op.values, create_named_value("compare", right_val, c.alloc))
-			append(&op.operations, value_decl_op_inner)
-			append(c.current_operations, op)
+			if_right := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
+			append(&if_right.values, create_named_value("value", right_val, c.alloc))
+			append(&if_right.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
+			append(&if_right.operations, set_true)
+
+			if_left := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
+			append(&if_left.values, create_named_value("value", left_val, c.alloc))
+			append(&if_left.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
+			append(&if_left.operations, if_right)
+			append(c.current_operations, if_left)
+
 			return result_var, .Boolean
 
 		case left_type == .Boolean && right_type == .Boolean && operator == .Cmp_Or:
