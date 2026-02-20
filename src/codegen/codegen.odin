@@ -178,7 +178,7 @@ visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	append(c.current_operations, value_decl_op)
 }
 
-codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node) -> (Value, checker.Type_Kind) {
+codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false) -> (Value, checker.Type_Kind) {
 	#partial switch typed_node in node.derived {
 	case ^ast.Call_Expr:
 		result_var := create_variable_value(next_unique_id(c), SCOPE_GAME, c.alloc)
@@ -207,11 +207,7 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node) -> (Value, checker.
 				}
 				arg_name := action.slots[real_index].name
 				param_type := action.slots[real_index].type
-				arg_value, _ := codegen_gen_expression(c, arg)
-				if param_type == "enum" {
-					text_val, _ := arg_value.(^TextValue)
-					arg_value = create_enum_value(text_val.text, c.alloc)
-				}
+				arg_value, _ := codegen_gen_expression(c, arg, waits_enum=param_type=="enum")
 				append(&op.values, create_named_value(arg_name, arg_value, c.alloc))
 			}
 			append(c.current_operations, op)
@@ -221,7 +217,7 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node) -> (Value, checker.
 			unimplemented("generation of default function")
 		}
 	case ^ast.Argument:
-		return codegen_gen_expression(c, typed_node.value)
+		return codegen_gen_expression(c, typed_node.value, waits_enum)
 
 	case ^ast.Ident:
 		sym, _ := checker.lookup_symbol(c.current_scope, typed_node.name)
@@ -231,7 +227,11 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node) -> (Value, checker.
 		content := typed_node.tok.content
 		#partial switch typed_node.tok.kind {
 		case .Text:
-			return create_text_value(content[1:len(content)-1], PARSING_COLORED, c.alloc), .Text
+			text_content := content[1:len(content)-1]
+			if waits_enum {
+				return create_enum_value(text_content, c.alloc), .Enum
+			}
+			return create_text_value(text_content, get_parsing_type(text_content), c.alloc), .Text
 		case .Number:
 			num, _ := strconv.parse_f64(content)
 			return create_number_value(num, c.alloc), .Number
@@ -243,8 +243,8 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node) -> (Value, checker.
 	case ^ast.Binary_Expr:
 		result_var := create_variable_value(next_unique_id(c), SCOPE_GAME, c.alloc)
 		operator := typed_node.op.kind
-		left_val, left_type := codegen_gen_expression(c, typed_node.left)
-		right_val, right_type := codegen_gen_expression(c, typed_node.right)
+		left_val, left_type := codegen_gen_expression(c, typed_node.left, waits_enum)
+		right_val, right_type := codegen_gen_expression(c, typed_node.right, waits_enum)
 
 		switch { // TODO: get rid of duplicate code
 		case left_type == .Text && right_type == .Text && operator == .Add:

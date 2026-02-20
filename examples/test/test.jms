@@ -1,4 +1,20 @@
 package test
 
-A :: 1 / 1
-_ :: A
+
+a := 500
+event player_join() {
+	b := 600
+	if a == b || a != b {
+		player_send_message("Hello World", "SPACES");
+		player_send_message("Math: 5 < 10", "SPACES");
+		player_send_message("<#FF0000>Hex</#FF0000>", "SPACES");
+		player_send_message("Invalid < red>", "SPACES");
+		player_send_message("<red>Text</red>", "SPACES");
+		player_send_message( "Math: a < b", "SPACES");
+		player_send_message("<hover:show_text:'Hi'>Hover", "SPACES");
+		player_send_message("Broken <tag", "SPACES");
+		player_send_message("Later <green>text", "SPACES");
+		player_send_message("Tes&k!!!", "SPACES");
+		player_send_message('{"test":"bubub"}', "SPACES");
+	}
+}
