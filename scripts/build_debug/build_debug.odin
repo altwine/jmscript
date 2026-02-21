@@ -1,11 +1,14 @@
 package build_debug
 
+import "core:slice"
 import "core:path/filepath"
 import "core:os"
 import "core:os/os2"
 import "core:fmt"
 
 main :: proc() {
+	is_legacy := slice.contains(os.args, "-l") || slice.contains(os.args, "--legacy")
+
 	exe_path, _ := filepath.abs(os.args[0])
     exe_dir := filepath.dir(exe_path)
 
@@ -16,30 +19,36 @@ main :: proc() {
     	os.make_directory(bin_dir)
     }
 
-    output_file_path := filepath.join({bin_dir, "jmscript-win.exe"})
+    output_file_path := filepath.join({bin_dir, "jmscript-win.exe" if !is_legacy else "jmscript-win-compat.exe"})
 
-    build_debug_cmd: []string = {
-	    "odin",
-	    "build",
-	    src_dir,
-	    "-build-mode:exe",
-		"-target:windows_amd64",
-		"-subsystem:console",
-		"-debug",
-		"-o:none",
-		"-vet-shadowing",
-		"-vet-tabs",
-		"-vet-cast",
-		"-vet-unused-imports",
-		"-vet-using-stmt",
-		"-vet-semicolon",
-		"-strict-style",
-		"-disallow-do",
-		"-warnings-as-errors",
-		"-linker:lld",
-		"-sanitize:address",
-		fmt.tprintf("-out:%s", output_file_path),
-    }
+    build_debug_cmd := make([dynamic]string, context.allocator)
+    defer delete(build_debug_cmd)
+	append(&build_debug_cmd, "odin")
+	append(&build_debug_cmd, "build")
+	append(&build_debug_cmd, src_dir)
+	append(&build_debug_cmd, "-build-mode:exe")
+	append(&build_debug_cmd, "-target:windows_amd64")
+	append(&build_debug_cmd, "-subsystem:console")
+	append(&build_debug_cmd, "-debug")
+	append(&build_debug_cmd, "-o:none")
+	append(&build_debug_cmd, "-vet-shadowing")
+	append(&build_debug_cmd, "-vet-tabs")
+	append(&build_debug_cmd, "-vet-cast")
+	append(&build_debug_cmd, "-vet-unused-imports")
+	append(&build_debug_cmd, "-vet-using-stmt")
+	append(&build_debug_cmd, "-vet-semicolon")
+	append(&build_debug_cmd, "-strict-style")
+	append(&build_debug_cmd, "-disallow-do")
+	append(&build_debug_cmd, "-warnings-as-errors")
+	append(&build_debug_cmd, "-sanitize:address")
+	append(&build_debug_cmd, fmt.tprintf("-out:%s", output_file_path))
+
+	if is_legacy {
+		append(&build_debug_cmd, "-microarch:x86-64-v2")
+	} else {
+		append(&build_debug_cmd, "-linker:lld")
+		append(&build_debug_cmd, "-microarch:x86-64-v3")
+	}
 
 	proc_state, stdout, stderr, err := os2.process_exec(
 		os2.Process_Desc{command=build_debug_cmd[:]},
