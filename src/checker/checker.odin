@@ -363,7 +363,7 @@ _collect_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 		provided_type_kind := string_to_type_kind(c, node.type, node)
 		if type_info.kind != provided_type_kind {
 			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("explicitly stated type doesn't match variable content: '%s' != '%s'",
-				type_kind_to_string(c, type_info.kind), type_kind_to_string(c, provided_type_kind)), node.pos, node.end)
+				type_kind_to_string(type_info.kind), type_kind_to_string(provided_type_kind)), node.pos, node.end)
 		}
 	}
 
@@ -538,7 +538,7 @@ _type_check_visit_call_expr :: proc(v: ^ast.Visitor, node: ^ast.Call_Expr) {
 				}
 			} else if arg_type.kind != param_type.kind && !can_casted(arg_type.kind, param_type.kind) {
 				error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid argument type: '%s' != '%s'",
-					type_kind_to_string(c, arg_type.kind), type_kind_to_string(c, param_type.kind)), node.pos, node.end)
+					type_kind_to_string(arg_type.kind), type_kind_to_string(param_type.kind)), node.pos, node.end)
 			}
 		}
 	}
@@ -556,8 +556,8 @@ _type_check_visit_binary_expr :: proc(v: ^ast.Visitor, node: ^ast.Binary_Expr) {
 	}
 
 	if left_kind != right_kind {
-		left_str := type_kind_to_string(c, left_kind)
-		right_str := type_kind_to_string(c, right_kind)
+		left_str := type_kind_to_string(left_kind)
+		right_str := type_kind_to_string(right_kind)
 		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("incompatible types: '%s' and '%s'", left_str, right_str), node.pos, node.end)
 	}
 }

@@ -87,7 +87,7 @@ string_to_type_kind :: proc(c: ^Checker, type: string, origin: ^ast.Node) -> Typ
 	return .Invalid
 }
 
-type_kind_to_string :: proc(c: ^Checker, kind: Type_Kind) -> string {
+type_kind_to_string :: proc(kind: Type_Kind) -> string {
 	switch kind {
 	case .Void:          return "void"
 	case .Any:           return "any"
