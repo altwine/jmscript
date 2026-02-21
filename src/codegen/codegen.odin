@@ -5,6 +5,7 @@ import "core:strconv"
 import "core:mem"
 
 import "../ast"
+import "../lexer"
 import "../checker"
 import "../error"
 import "../../assets"
@@ -139,7 +140,65 @@ visit_expr_stmt :: proc(v: ^ast.Visitor, node: ^ast.Expr_Stmt) {
 
 visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	c := cast(^Codegen)v.user_data
-	// codegen_gen_expression(c, node.expr)
+
+	result_value, result_type := codegen_gen_expression(c, node.expr)
+	origin_sym, _ := checker.lookup_symbol(c.current_scope, node.name)
+	origin_type := origin_sym.type.kind
+
+	if origin_type != .Number || result_type != .Number {
+		unimplemented(fmt.tprintf("assignment with %s and %s", checker.type_kind_to_string(origin_type), checker.type_kind_to_string(result_type)))
+	}
+
+	op: ^Operation
+	current_var := create_variable_value(origin_sym.name, SCOPE_GAME, c.alloc)
+
+	#partial switch node.op.kind { // TODO: get rid of duplicate code
+	case .Add_Eq:
+		op = create_basic_operation("set_variable_add", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", current_var, c.alloc))
+		array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		append(&array_value.values, current_var)
+		append(&array_value.values, result_value)
+		append(&op.values, create_named_value("value", array_value, c.alloc))
+
+	case .Sub_Eq:
+		op = create_basic_operation("set_variable_subtract", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", current_var, c.alloc))
+		array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		append(&array_value.values, current_var)
+		append(&array_value.values, result_value)
+		append(&op.values, create_named_value("value", array_value, c.alloc))
+
+	case .Mul_Eq:
+		op = create_basic_operation("set_variable_multiply", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", current_var, c.alloc))
+		array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		append(&array_value.values, current_var)
+		append(&array_value.values, result_value)
+		append(&op.values, create_named_value("value", array_value, c.alloc))
+
+	case .Quo_Eq:
+		op = create_basic_operation("set_variable_divide", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", current_var, c.alloc))
+		array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		append(&array_value.values, current_var)
+		append(&array_value.values, result_value)
+		append(&op.values, create_named_value("value", array_value, c.alloc))
+		append(&op.values, create_named_value("division_mode", create_enum_value("default", c.alloc), c.alloc))
+
+	case .Mod_Eq:
+		op = create_basic_operation("set_variable_remainder", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", current_var, c.alloc))
+		append(&op.values, create_named_value("dividend", current_var, c.alloc))
+		append(&op.values, create_named_value("divisor", result_value, c.alloc))
+		append(&op.values, create_named_value("remainder_mode", create_enum_value("REMAINDER", c.alloc), c.alloc))
+		append(c.current_operations, op)
+
+	case:
+		unimplemented(fmt.tprintf("assignment with %s operator", lexer.to_string(node.op.kind)))
+	}
+
+	append(c.current_operations, op)
 }
 
 visit_if_stmt :: proc(v: ^ast.Visitor, node: ^ast.If_Stmt) {
