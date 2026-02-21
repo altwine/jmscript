@@ -192,7 +192,6 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 		append(&op.values, create_named_value("dividend", current_var, c.alloc))
 		append(&op.values, create_named_value("divisor", result_value, c.alloc))
 		append(&op.values, create_named_value("remainder_mode", create_enum_value("REMAINDER", c.alloc), c.alloc))
-		append(c.current_operations, op)
 
 	case:
 		unimplemented(fmt.tprintf("assignment with %s operator", lexer.to_string(node.op.kind)))
