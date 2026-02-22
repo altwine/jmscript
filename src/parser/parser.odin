@@ -180,7 +180,7 @@ parse_annotation_or_list :: proc(p: ^Parser, annos: ^[dynamic]ast.Annotation) {
 		}
 
 		if !match(p, .Close_Paren) {
-			error.add_error(p.ec, p.file, "Expected ')' after annotation list", current(p).pos, current(p).pos)
+			error.add_error(p.ec, p.file, "Expected ')' after annotation list", current(p).pos)
 			skip_to_close_paren(p)
 			return
 		}
@@ -188,7 +188,7 @@ parse_annotation_or_list :: proc(p: ^Parser, annos: ^[dynamic]ast.Annotation) {
 
 	} else {
 		if !match(p, .Ident) {
-			error.add_error(p.ec, p.file, "Expected annotation name after '@'", current(p).pos, current(p).pos)
+			error.add_error(p.ec, p.file, "Expected annotation name after '@'", current(p).pos)
 			return
 		}
 
@@ -201,13 +201,13 @@ parse_annotation_or_list :: proc(p: ^Parser, annos: ^[dynamic]ast.Annotation) {
 
 			value := parse_expression(p)
 			if value == nil {
-				error.add_error(p.ec, p.file, "Expected expression inside parentheses", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "Expected expression inside parentheses", current(p).pos)
 				skip_to_close_paren(p)
 				return
 			}
 
 			if !match(p, .Close_Paren) {
-				error.add_error(p.ec, p.file, "Expected ')' after annotation value", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "Expected ')' after annotation value", current(p).pos)
 				skip_to_close_paren(p)
 				return
 			}
@@ -231,7 +231,7 @@ parse_annotation_or_list :: proc(p: ^Parser, annos: ^[dynamic]ast.Annotation) {
 
 parse_single_annotation_in_paren :: proc(p: ^Parser, start_pos: lexer.Pos, annos: ^[dynamic]ast.Annotation) {
 	if !match(p, .Ident) {
-		error.add_error(p.ec, p.file, "Expected annotation name", current(p).pos, current(p).pos)
+		error.add_error(p.ec, p.file, "Expected annotation name", current(p).pos)
 		return
 	}
 
@@ -244,19 +244,19 @@ parse_single_annotation_in_paren :: proc(p: ^Parser, start_pos: lexer.Pos, annos
 		advance(p)
 		value = parse_expression(p)
 		if value == nil {
-			error.add_error(p.ec, p.file, "Expected expression after '='", current(p).pos, current(p).pos)
+			error.add_error(p.ec, p.file, "Expected expression after '='", current(p).pos)
 		}
 	} else if match(p, .Open_Paren) {
 		advance(p)
 		value = parse_expression(p)
 		if value == nil {
-			error.add_error(p.ec, p.file, "Expected expression inside parentheses", current(p).pos, current(p).pos)
+			error.add_error(p.ec, p.file, "Expected expression inside parentheses", current(p).pos)
 			skip_to_close_paren(p)
 			return
 		}
 
 		if !match(p, .Close_Paren) {
-			error.add_error(p.ec, p.file, "Expected ')' after annotation value", current(p).pos, current(p).pos)
+			error.add_error(p.ec, p.file, "Expected ')' after annotation value", current(p).pos)
 			skip_to_close_paren(p)
 			return
 		}
@@ -537,7 +537,7 @@ parse_block_stmt :: proc(p: ^Parser) -> ^ast.Block_Stmt {
 	}
 
 	if !match(p, .Close_Brace) {
-		error.add_error(p.ec, p.file, "expected '}'", current(p).pos, current(p).pos)
+		error.add_error(p.ec, p.file, "expected '}'", current(p).pos)
 		return nil
 	}
 
@@ -568,7 +568,7 @@ parse_logical_or :: proc(p: ^Parser) -> ^ast.Expr {
 		advance(p)
 		right := parse_logical_and(p)
 		if right == nil {
-			error.add_error(p.ec, p.file, "expected expression after '||'", current(p).pos, current(p).pos)
+			error.add_error(p.ec, p.file, "expected expression after '||'", current(p).pos)
 			return left
 		}
 
@@ -592,7 +592,7 @@ parse_logical_and :: proc(p: ^Parser) -> ^ast.Expr {
 		advance(p)
 		right := parse_comparison(p)
 		if right == nil {
-			error.add_error(p.ec, p.file, "expected expression after '&&'", current(p).pos, current(p).pos)
+			error.add_error(p.ec, p.file, "expected expression after '&&'", current(p).pos)
 			return left
 		}
 
@@ -618,7 +618,7 @@ parse_comparison :: proc(p: ^Parser) -> ^ast.Expr {
 			advance(p)
 			right := parse_addition(p)
 			if right == nil {
-				error.add_error(p.ec, p.file, "expected expression after operator", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "expected expression after operator", current(p).pos)
 				return left
 			}
 
@@ -646,7 +646,7 @@ parse_addition :: proc(p: ^Parser) -> ^ast.Expr {
 			advance(p)
 			right := parse_multiplication(p)
 			if right == nil {
-				error.add_error(p.ec, p.file, "expected expression after operator", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "expected expression after operator", current(p).pos)
 				return left
 			}
 
@@ -674,7 +674,7 @@ parse_multiplication :: proc(p: ^Parser) -> ^ast.Expr {
 			advance(p)
 			right := parse_unary(p)
 			if right == nil {
-				error.add_error(p.ec, p.file, "expected expression after operator", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "expected expression after operator", current(p).pos)
 				return left
 			}
 
@@ -705,11 +705,11 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 				advance(p)
 				advance(p)
 			} else if positional_args_started {
-				error.add_error(p.ec, p.file, "positional arguments not allowed after keyword arguments in function call", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "positional arguments not allowed after keyword arguments in function call", current(p).pos)
 			}
 			arg := parse_expression(p)
 			if arg == nil {
-				error.add_error(p.ec, p.file, "expected expression in function call argument", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "expected expression in function call argument", current(p).pos)
 				break
 			}
 			pos_arg := ast.new(ast.Argument, arg.pos, arg.end, p.file.alloc)
@@ -725,7 +725,7 @@ parse_call_expression :: proc(p: ^Parser, func_expr: ^ast.Expr) -> ^ast.Expr {
 	}
 
 	if !match(p, .Close_Paren) {
-		error.add_error(p.ec, p.file, "expected ')' after function call arguments", current(p).pos, current(p).pos)
+		error.add_error(p.ec, p.file, "expected ')' after function call arguments", current(p).pos)
 		return func_expr
 	}
 
@@ -769,7 +769,7 @@ parse_access_chain :: proc(p: ^Parser) -> ^ast.Expr {
 			dot_token := current(p)
 			advance(p)
 			if !match(p, .Ident) {
-				error.add_error(p.ec, p.file, "expected identifier after '.'", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "expected identifier after '.'", current(p).pos)
 				return expr
 			}
 			field_token := current(p)
@@ -785,11 +785,11 @@ parse_access_chain :: proc(p: ^Parser) -> ^ast.Expr {
 			advance(p)
 			index_expr := parse_expression(p)
 			if index_expr == nil {
-				error.add_error(p.ec, p.file, "expected expression inside brackets", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "expected expression inside brackets", current(p).pos)
 				return expr
 			}
 			if !match(p, .Close_Bracket) {
-				error.add_error(p.ec, p.file, "expected ']'", current(p).pos, current(p).pos)
+				error.add_error(p.ec, p.file, "expected ']'", current(p).pos)
 				return expr
 			}
 			close_bracket := current(p)
@@ -840,7 +840,7 @@ parse_primary :: proc(p: ^Parser) -> ^ast.Expr {
 			return nil
 		}
 		if !match(p, .Close_Paren) {
-			error.add_error(p.ec, p.file, "expected ')'", current(p).pos, current(p).pos)
+			error.add_error(p.ec, p.file, "expected ')'", current(p).pos)
 			return nil
 		}
 		close_token := current(p)
@@ -853,7 +853,7 @@ parse_primary :: proc(p: ^Parser) -> ^ast.Expr {
 		return paren_expr
 
 	case:
-		error.add_error(p.ec, p.file, "unexpected token in expression", token.pos, token.pos)
+		error.add_error(p.ec, p.file, "unexpected token in expression", token.pos)
 		return nil
 	}
 }

@@ -66,24 +66,24 @@ string_to_type_kind :: proc(c: ^Checker, type: string, origin: ^ast.Node) -> Typ
 	case "void", "":   return .Void
 
 	case "vector", "vector3":
-		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'vec3'?", type), origin.pos, origin.end)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'vec3'?", type), origin)
 
 	case "int", "float":
-		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'number'?", type), origin.pos, origin.end)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'number'?", type), origin)
 
 	case "string":
-		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'text'?", type), origin.pos, origin.end)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, maybe 'text'?", type), origin)
 
 	case "vector2", "vec2":
-		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, two components vector isn't supported", type), origin.pos, origin.end)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, two components vector isn't supported", type), origin)
 
 	case "quat", "quaternion":
-		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, quaternions isn't supported", type), origin.pos, origin.end)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, quaternions isn't supported", type), origin)
 
 	case "complex":
-		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, complex numbers isn't supported", type), origin.pos, origin.end)
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type %s, complex numbers isn't supported", type), origin)
 	}
-	error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type: %s", type), origin.pos, origin.end)
+	error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid type: %s", type), origin)
 	return .Invalid
 }
 

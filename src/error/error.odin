@@ -29,7 +29,14 @@ collector_init :: proc(c: ^Collector, warnings_as_errors: bool, allocator := con
 	c.warnings_as_errors = warnings_as_errors
 }
 
-add_error :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos_to: lexer.Pos) {
+add_error :: proc {
+	add_error_from_pos,
+	add_error_from_node,
+	add_error_from_single_pos,
+	add_error_from_single_node,
+}
+
+add_error_from_pos :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos_to: lexer.Pos) {
 	append(&c.errs, Error{
 		file=file,
 		cause_pos=pos_from,
@@ -39,7 +46,26 @@ add_error :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos
 	})
 }
 
-add_warning :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos_to: lexer.Pos) {
+add_error_from_node :: proc(c: ^Collector, file: ^ast.File, message: string, node_from, node_to: ^ast.Node) {
+	add_error_from_pos(c, file, message, node_from.pos, node_to.pos)
+}
+
+add_error_from_single_pos :: proc(c: ^Collector, file: ^ast.File, message: string, pos: lexer.Pos) {
+	add_error_from_pos(c, file, message, pos, pos)
+}
+
+add_error_from_single_node :: proc(c: ^Collector, file: ^ast.File, message: string, node: ^ast.Node) {
+	add_error_from_pos(c, file, message, node.pos, node.end)
+}
+
+add_warning :: proc {
+	add_warning_from_pos,
+	add_warning_from_node,
+	add_warning_from_single_pos,
+	add_warning_from_single_node,
+}
+
+add_warning_from_pos :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, pos_to: lexer.Pos) {
 	severity := Error_Severity.Error if c.warnings_as_errors else Error_Severity.Warning
 	append(&c.errs, Error{
 		file=file,
@@ -48,6 +74,18 @@ add_warning :: proc(c: ^Collector, file: ^ast.File, message: string, pos_from, p
 		message=message,
 		severity=severity,
 	})
+}
+
+add_warning_from_node :: proc(c: ^Collector, file: ^ast.File, message: string, node_from, node_to: ^ast.Node) {
+	add_warning_from_pos(c, file, message, node_from.pos, node_to.pos)
+}
+
+add_warning_from_single_pos :: proc(c: ^Collector, file: ^ast.File, message: string, pos: lexer.Pos) {
+	add_warning_from_pos(c, file, message, pos, pos)
+}
+
+add_warning_from_single_node :: proc(c: ^Collector, file: ^ast.File, message: string, node: ^ast.Node) {
+	add_warning_from_pos(c, file, message, node.pos, node.end)
 }
 
 collector_clear :: proc(c: ^Collector) {

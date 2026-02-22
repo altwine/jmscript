@@ -1277,7 +1277,7 @@ check_for_unused_symbols :: proc(o: ^Optimizer) {
 				o.unused_warnings[sym] = true
 
 				if sym.decl_node != nil {
-					error.add_warning(o.ec, o.current_file, fmt.tprintf("unused symbol '%s'", sym.name), sym.decl_node.pos, sym.decl_node.end)
+					error.add_warning(o.ec, o.current_file, fmt.tprintf("unused symbol '%s'", sym.name), sym.decl_node)
 				}
 			}
 		}
@@ -1467,10 +1467,10 @@ evaluate_basic_literal :: proc(o: ^Optimizer, lit: ^ast.Basic_Lit) -> Constant_R
 			result.is_constant = true
 
 			if math.is_inf(val) {
-				error.add_error(o.ec, o.current_file, fmt.tprintf("number overflow/underflow: '%s' results in Infinity", lit.tok.content), lit.pos, lit.end)
+				error.add_error(o.ec, o.current_file, fmt.tprintf("number overflow/underflow: '%s' results in Infinity", lit.tok.content), lit)
 				result.is_constant = false
 			} else if math.is_nan(val) {
-				error.add_error(o.ec, o.current_file, fmt.tprintf("invalid number: '%s' results in NaN", lit.tok.content), lit.pos, lit.end)
+				error.add_error(o.ec, o.current_file, fmt.tprintf("invalid number: '%s' results in NaN", lit.tok.content), lit)
 				result.is_constant = false
 			}
 		}
@@ -1625,12 +1625,12 @@ add_numbers :: proc(left, right: Constant_Result, o: ^Optimizer, expr: ^ast.Bina
 	if f64_val, is_f64 := result.value.(f64); is_f64 {
 		if math.is_inf(f64_val) {
 			if o != nil && expr != nil {
-				error.add_error(o.ec, o.current_file, fmt.tprintf("addition overflow: operation results in %v", f64_val > 0 ? "+Infinity" : "-Infinity"), expr.pos, expr.end)
+				error.add_error(o.ec, o.current_file, fmt.tprintf("addition overflow: operation results in %v", f64_val > 0 ? "+Infinity" : "-Infinity"), expr)
 			}
 			result.is_constant = false
 		} else if math.is_nan(f64_val) {
 			if o != nil && expr != nil {
-				error.add_error(o.ec, o.current_file, "addition error: operation results in NaN", expr.pos, expr.end)
+				error.add_error(o.ec, o.current_file, "addition error: operation results in NaN", expr)
 			}
 			result.is_constant = false
 		}
@@ -1679,7 +1679,7 @@ perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result, o
 		if abs(right_num) < EPSILON {
 			result.is_constant = false
 			if o != nil && expr != nil {
-				error.add_error(o.ec, o.current_file, "division by zero", expr.pos, expr.end)
+				error.add_error(o.ec, o.current_file, "division by zero", expr)
 			}
 		} else {
 			result.value = left_num / right_num
@@ -1698,7 +1698,7 @@ perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result, o
 				result.is_constant = false
 			} else if math.is_nan(f64_val) {
 				if o != nil && expr != nil {
-					error.add_error(o.ec, o.current_file, "arithmetic error: operation results in NaN", expr.pos, expr.end)
+					error.add_error(o.ec, o.current_file, "arithmetic error: operation results in NaN", expr)
 				}
 				result.is_constant = false
 			}
@@ -1706,7 +1706,7 @@ perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result, o
 			f64_val2 := f64(i64_val)
 			if math.is_inf(f64_val2) || math.is_nan(f64_val2) {
 				if o != nil && expr != nil {
-					error.add_error(o.ec, o.current_file, fmt.tprintf("arithmetic overflow: integer value %d too large for double precision", i64_val), expr.pos, expr.end)
+					error.add_error(o.ec, o.current_file, fmt.tprintf("arithmetic overflow: integer value %d too large for double precision", i64_val), expr)
 				}
 				result.is_constant = false
 			}
@@ -2519,9 +2519,9 @@ create_binary_expression_for_constants :: proc(o: ^Optimizer, left, right: ^ast.
 	case .Quo:
 		if right_result.type_kind == .Number {
 			if f64_val, is_f64 := right_result.value.(f64); is_f64 && abs(f64_val) < EPSILON {
-				error.add_error(o.ec, o.current_file, "division by zero", temp_expr.pos, temp_expr.end)
+				error.add_error(o.ec, o.current_file, "division by zero", &temp_expr)
 			} else if i64_val, is_i64 := right_result.value.(i64); is_i64 && i64_val == 0 {
-				error.add_error(o.ec, o.current_file, "division by zero", temp_expr.pos, temp_expr.end)
+				error.add_error(o.ec, o.current_file, "division by zero", &temp_expr)
 			}
 		}
 		combined_result = perform_arithmetic(.Quo, left_result, right_result, o, &temp_expr)
