@@ -5078,6 +5078,20 @@ create_union_expression :: proc(
 	expressions: [dynamic]Deep_Expression,
 	is_exhaustive: bool,
 ) -> ^Deep_Union_Expression {
+	normalized := make([dynamic]Deep_Expression, o.alloc)
+	defer delete(normalized)
+
+	for expr in expressions {
+		normalize_expression(o, expr, &normalized)
+	}
+
+	unique := make([dynamic]Deep_Expression, o.alloc)
+	for expr in normalized {
+		if !is_expression_in_list(o, expr, unique[:]) {
+			append(&unique, expr)
+		}
+	}
+
 	union_expr := new(Deep_Union_Expression, o.alloc)
 	union_expr.kind = .Union
 	union_expr.expressions = make([dynamic]Deep_Expression, o.alloc)
@@ -5088,7 +5102,7 @@ create_union_expression :: proc(
 	ranges := make([dynamic]Variable_Range, o.alloc)
 	defer delete(ranges)
 
-	for expr, i in expressions {
+	for expr in unique {
 		cloned := deep_clone_expression(o, expr)
 		append(&union_expr.expressions, cloned)
 
@@ -5135,12 +5149,28 @@ combine_return_expressions :: proc(o: ^Optimizer, exprs: [dynamic]Deep_Expressio
 	if len(exprs) == 0 { return nil }
 	if len(exprs) == 1 { return deep_clone_expression(o, exprs[0]) }
 
-	all_constants := true
+	normalized := make([dynamic]Deep_Expression, o.alloc)
+	defer delete(normalized)
+
 	for expr in exprs {
-		if expr == nil {
-			all_constants = false
-			break
+		normalize_expression(o, expr, &normalized)
+	}
+
+	unique := make([dynamic]Deep_Expression, o.alloc)
+	defer delete(unique)
+
+	for expr in normalized {
+		if !is_expression_in_list(o, expr, unique[:]) {
+			append(&unique, expr)
 		}
+	}
+
+	if len(unique) == 1 {
+		return unique[0]
+	}
+
+	all_constants := true
+	for expr in unique {
 		#partial switch e in expr {
 		case ^Deep_Constant_Value:
 			continue
@@ -5158,24 +5188,52 @@ combine_return_expressions :: proc(o: ^Optimizer, exprs: [dynamic]Deep_Expressio
 		seen := make(map[Variable_Value]bool, o.alloc)
 		defer delete(seen)
 
-		for expr in exprs {
+		for expr in unique {
 			#partial switch e in expr {
 			case ^Deep_Constant_Value:
 				if !seen[e.value] {
 					seen[e.value] = true
 					append(&discrete_set.values, e.value)
 				}
+				deep_free_expression(o, expr)
 			}
 		}
 
-		for expr in exprs {
-			deep_free_expression(o, expr)
+		if len(discrete_set.values) == 1 {
+			const_expr := new(Deep_Constant_Value, o.alloc)
+			const_expr.kind = .Constant
+			const_expr.value = discrete_set.values[0]
+			delete(discrete_set.values)
+			free(discrete_set, o.alloc)
+			return const_expr
 		}
 
 		return cast(Deep_Expression)discrete_set
 	}
 
-	return create_union_expression(o, exprs, true)
+	return create_union_expression(o, unique, true)
+}
+
+normalize_expression :: proc(o: ^Optimizer, expr: Deep_Expression, result: ^[dynamic]Deep_Expression) {
+	if expr == nil { return }
+
+	#partial switch e in expr {
+	case ^Deep_Union_Expression:
+		for sub_expr in e.expressions {
+			normalize_expression(o, sub_expr, result)
+		}
+	case:
+		append(result, expr)
+	}
+}
+
+is_expression_in_list :: proc(o: ^Optimizer, expr: Deep_Expression, list: []Deep_Expression) -> bool {
+	for item in list {
+		if deep_expressions_equal(o, expr, item) {
+			return true
+		}
+	}
+	return false
 }
 
 deep_expressions_equal :: proc(o: ^Optimizer, a, b: Deep_Expression) -> bool {
@@ -5240,12 +5298,40 @@ deep_expressions_equal :: proc(o: ^Optimizer, a, b: Deep_Expression) -> bool {
 			if len(a_expr.expressions) != len(b_expr.expressions) {
 				return false
 			}
-			for i in 0..<len(a_expr.expressions) {
-				if !deep_expressions_equal(o, a_expr.expressions[i], b_expr.expressions[i]) {
+			for a_sub in a_expr.expressions {
+				found := false
+				for b_sub in b_expr.expressions {
+					if deep_expressions_equal(o, a_sub, b_sub) {
+						found = true
+						break
+					}
+				}
+				if !found {
 					return false
 				}
 			}
 			return true
+		}
+
+	case ^Deep_Discrete_Set:
+		#partial switch b_expr in b {
+		case ^Deep_Discrete_Set:
+			if len(a_expr.values) != len(b_expr.values) {
+				return false
+			}
+			for a_val in a_expr.values {
+				found := false
+				for b_val in b_expr.values {
+					if compare_values(a_val, b_val) == 0 {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return false
+				}
+			}
+			return a_expr.is_exhaustive == b_expr.is_exhaustive
 		}
 	}
 
@@ -6089,6 +6175,10 @@ resolve_with_history :: proc(
 		if e.var_id == current_var {
 			if prev_value != nil {
 				return resolve_with_history(o, prev_value, current_var, nil, visited_ptr, depth + 1)
+			}
+
+			if current_val := get_current_value(o, current_var); current_val != nil {
+				return resolve_with_history(o, current_val, current_var, nil, visited_ptr, depth + 1)
 			}
 
 			unknown := new(Deep_Constant_Value, o.alloc)
@@ -7325,11 +7415,42 @@ _deep_visit_assign_stmt_expr :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	if node.name != "" && node.name != "_" {
 		var_id := get_variable_id_for_name(o, node.name, cast(^ast.Node)node)
 
-		right_expr := deep_create_expression(o, node.expr)
-		if right_expr == nil { return }
+		effective_expr := node.expr
+		temp_expr: ^ast.Expr = nil
+
+		if node.op.kind != .Eq {
+			var_ident := ast.create_ident(node.name, node.pos, node.end, o.alloc)
+
+			binary := ast.create_binary_expr(
+				cast(^ast.Expr)var_ident,
+				lexer.Token{kind = op_to_binary_op(node.op.kind)},
+				node.expr,
+				node.pos,
+				node.end,
+				o.alloc,
+			)
+
+			temp_expr = cast(^ast.Expr)binary
+			effective_expr = temp_expr
+		}
+
+		right_expr := deep_create_expression(o, effective_expr)
+
+		if right_expr == nil {
+			if temp_expr != nil {
+				free(temp_expr, o.alloc)
+			}
+			return
+		}
+
+		if temp_expr != nil {
+			free(temp_expr, o.alloc)
+		}
 
 		resolved_right := resolve_with_history(o, right_expr, var_id, get_previous_value(o, var_id))
 		if resolved_right == nil { return }
+
+		push_value(o, var_id, resolved_right)
 
 		ctx := o.deep_analyzer.current_expression_context
 
@@ -7352,6 +7473,17 @@ _deep_visit_assign_stmt_expr :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 			ctx.variables[var_id] = resolved_right
 			ctx.name_to_var_id[node.name] = var_id
 		}
+	}
+}
+
+op_to_binary_op :: proc(op: lexer.Token_Kind) -> lexer.Token_Kind {
+	#partial switch op {
+	case .Add_Eq: return .Add
+	case .Sub_Eq: return .Sub
+	case .Mul_Eq: return .Mul
+	case .Quo_Eq: return .Quo
+	case .Mod_Eq: return .Mod
+	case: return .Add
 	}
 }
 
@@ -7881,10 +8013,28 @@ merge_or_contexts :: proc(
 		delete(possible_values)
 	}
 
+	possible_constraints := make(map[Variable_ID][dynamic][dynamic]Predicate, o.alloc)
+	defer {
+		for _, constraints in possible_constraints {
+			for preds in constraints {
+				delete(preds)
+			}
+			delete(constraints)
+		}
+		delete(possible_constraints)
+	}
+
+	parent_vars := make(map[Variable_ID]bool, o.alloc)
+	defer delete(parent_vars)
+	for var_id in parent_ctx.variables {
+		parent_vars[var_id] = true
+	}
+
 	for state in all_states {
 		for var_id, expr in state.variables {
 			if _, exists := possible_values[var_id]; !exists {
 				possible_values[var_id] = make([dynamic]Deep_Expression, o.alloc)
+				possible_constraints[var_id] = make([dynamic][dynamic]Predicate, o.alloc)
 			}
 
 			found := false
@@ -7897,95 +8047,122 @@ merge_or_contexts :: proc(
 			if !found {
 				append(&possible_values[var_id], expr)
 			}
+
+			constraints := deep_get_all_constraints_for_var_id(o, state, var_id)
+			append(&possible_constraints[var_id], constraints)
+		}
+	}
+
+	for var_id in parent_vars {
+		values, has_values := possible_values[var_id]
+		constraints_set, has_constraints := possible_constraints[var_id]
+
+		if has_values {
+			if len(values) == 1 {
+				parent_ctx.variables[var_id] = deep_clone_expression(o, values[0])
+
+				if has_constraints {
+					common_constraints := find_common_constraints_across_states(o, constraints_set[:])
+					if len(common_constraints) > 0 {
+						if _, exists := parent_ctx.constraints[var_id]; !exists {
+							parent_ctx.constraints[var_id] = make([dynamic]Predicate, o.alloc)
+						}
+						clear(&parent_ctx.constraints[var_id])
+						for pred in common_constraints {
+							append(&parent_ctx.constraints[var_id], pred)
+						}
+					}
+				}
+			} else {
+				exprs := make([dynamic]Deep_Expression, o.alloc)
+				for expr in values {
+					append(&exprs, deep_clone_expression(o, expr))
+				}
+				parent_ctx.variables[var_id] = combine_return_expressions(o, exprs)
+			}
 		}
 	}
 
 	for var_id, values in possible_values {
-		if len(values) == 1 {
-			parent_ctx.variables[var_id] = deep_clone_expression(o, values[0])
-		} else {
-			exprs := make([dynamic]Deep_Expression, o.alloc)
-			for expr in values {
-				append(&exprs, deep_clone_expression(o, expr))
-			}
-			parent_ctx.variables[var_id] = combine_return_expressions(o, exprs)
-		}
-	}
+		if parent_vars[var_id] { continue }
 
-	filter_or_constraints(o, all_states[:], parent_ctx)
-}
+		constraints_set := possible_constraints[var_id]
 
-filter_or_constraints :: proc(
-	o: ^Optimizer,
-	states: []^Deep_Expression_Context,
-	parent_ctx: ^Deep_Expression_Context,
-) {
-	if len(states) == 0 { return }
-
-	all_vars := make(map[Variable_ID]bool, o.alloc)
-	defer delete(all_vars)
-
-	for state in states {
-		for var_id in state.constraints {
-			all_vars[var_id] = true
-		}
-		for var_id in state.transformed_predicates {
-			all_vars[var_id] = true
-		}
-	}
-
-	for var_id in all_vars {
-		common_constraints := make(map[Predicate]bool, o.alloc)
-		defer delete(common_constraints)
-
-		if first_state := states[0]; first_state != nil {
-			if preds, exists := first_state.constraints[var_id]; exists {
-				for pred in preds {
-					common_constraints[pred] = true
-				}
-			}
-			if preds, exists := first_state.transformed_predicates[var_id]; exists {
-				for pred in preds {
-					common_constraints[pred] = true
-				}
-			}
-		}
-
-		for i := 1; i < len(states); i += 1 {
-			state := states[i]
-			state_constraints := make(map[Predicate]bool, o.alloc)
-
-			if preds, exists := state.constraints[var_id]; exists {
-				for pred in preds {
-					state_constraints[pred] = true
-				}
-			}
-			if preds, exists := state.transformed_predicates[var_id]; exists {
-				for pred in preds {
-					state_constraints[pred] = true
-				}
-			}
-
-			for pred in common_constraints {
-				if !state_constraints[pred] {
-					delete_key(&common_constraints, pred)
-				}
-			}
-
-			if len(common_constraints) == 0 {
+		exists_in_all_states := true
+		for state in all_states {
+			if _, exists := state.variables[var_id]; !exists {
+				exists_in_all_states = false
 				break
 			}
 		}
 
-		if len(common_constraints) > 0 {
-			if _, exists := parent_ctx.constraints[var_id]; !exists {
-				parent_ctx.constraints[var_id] = make([dynamic]Predicate, o.alloc)
+		if exists_in_all_states {
+			if len(values) == 1 {
+				parent_ctx.variables[var_id] = deep_clone_expression(o, values[0])
+
+				common_constraints := find_common_constraints_across_states(o, constraints_set[:])
+				if len(common_constraints) > 0 {
+					if _, exists := parent_ctx.constraints[var_id]; !exists {
+						parent_ctx.constraints[var_id] = make([dynamic]Predicate, o.alloc)
+					}
+					clear(&parent_ctx.constraints[var_id])
+					for pred in common_constraints {
+						append(&parent_ctx.constraints[var_id], pred)
+					}
+				}
+			} else {
+				exprs := make([dynamic]Deep_Expression, o.alloc)
+				for expr in values {
+					append(&exprs, deep_clone_expression(o, expr))
+				}
+				parent_ctx.variables[var_id] = combine_return_expressions(o, exprs)
 			}
-			for pred in common_constraints {
-				append(&parent_ctx.constraints[var_id], pred)
+
+			for state in all_states {
+				for name, id in state.name_to_var_id {
+					if variable_id_eq(id, var_id) {
+						parent_ctx.name_to_var_id[name] = var_id
+						break
+					}
+				}
 			}
 		}
 	}
+}
+
+find_common_constraints_across_states :: proc(
+	o: ^Optimizer,
+	states_constraints: [][dynamic]Predicate,
+) -> [dynamic]Predicate {
+	common := make([dynamic]Predicate, o.alloc)
+
+	if len(states_constraints) == 0 {
+		return common
+	}
+
+	for pred in states_constraints[0] {
+		is_common := true
+
+		for i := 1; i < len(states_constraints); i += 1 {
+			found := false
+			for other_pred in states_constraints[i] {
+				if predicates_equal(pred, other_pred) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				is_common = false
+				break
+			}
+		}
+
+		if is_common {
+			append(&common, pred)
+		}
+	}
+
+	return common
 }
 
 merge_and_contexts :: proc(
@@ -8004,67 +8181,94 @@ merge_and_contexts :: proc(
 
 	for var_id in parent_vars {
 		then_expr := contexts.if_context.variables[var_id]
-		else_expr: Deep_Expression
-		if contexts.else_context != nil {
-			else_expr = contexts.else_context.variables[var_id]
-		}
-		parent_expr := parent_ctx.variables[var_id]
+		else_exists := contexts.else_context != nil
 
 		then_constraints := deep_get_all_constraints_for_var_id(o, contexts.if_context, var_id)
 		defer delete(then_constraints)
 
+		else_expr: Deep_Expression
 		else_constraints: [dynamic]Predicate
-		if contexts.else_context != nil {
+
+		if else_exists {
+			else_expr = contexts.else_context.variables[var_id]
 			else_constraints = deep_get_all_constraints_for_var_id(o, contexts.else_context, var_id)
 			defer delete(else_constraints)
 		}
 
-		merged_vars, merged_constraints := merge_branch_values(o,
-			then_expr, then_constraints,
-			else_expr, else_constraints,
-			parent_expr, var_id)
+		parent_expr := parent_ctx.variables[var_id]
 
-		if merged_vars != nil {
-			if !has_conflict_with_value(o, merged_vars, merged_constraints[:], var_id) {
-				deep_free_expression(o, parent_ctx.variables[var_id])
-				parent_ctx.variables[var_id] = merged_vars
-			} else {
-				deep_free_expression(o, merged_vars)
-			}
-		}
+		has_then := then_expr != nil
+		has_else := else_exists && else_expr != nil
 
-		if len(merged_constraints) > 0 {
-			filtered := filter_conflicting_constraints(o, merged_vars, merged_constraints[:], var_id)
-			if len(filtered) > 0 {
-				if _, exists := parent_ctx.constraints[var_id]; !exists {
-					parent_ctx.constraints[var_id] = make([dynamic]Predicate, o.alloc)
-				}
-				clear(&parent_ctx.constraints[var_id])
-				for pred in filtered {
-					append(&parent_ctx.constraints[var_id], pred)
+		if has_then && has_else {
+			merged_vars, merged_constraints := merge_branch_values(o,
+				then_expr, then_constraints,
+				else_expr, else_constraints,
+				parent_expr, var_id)
+
+			if merged_vars != nil {
+				if !has_conflict_with_value(o, merged_vars, merged_constraints[:], var_id) {
+					deep_free_expression(o, parent_ctx.variables[var_id])
+					parent_ctx.variables[var_id] = merged_vars
+
+					if len(merged_constraints) > 0 {
+						if _, exists := parent_ctx.constraints[var_id]; !exists {
+							parent_ctx.constraints[var_id] = make([dynamic]Predicate, o.alloc)
+						}
+						clear(&parent_ctx.constraints[var_id])
+						for pred in merged_constraints {
+							append(&parent_ctx.constraints[var_id], pred)
+						}
+					}
+				} else {
+					deep_free_expression(o, merged_vars)
 				}
 			}
-			delete(filtered)
+		} else if has_then && !has_else {
+			exprs := make([dynamic]Deep_Expression, o.alloc)
+			defer delete(exprs)
+
+			append(&exprs, deep_clone_expression(o, then_expr))
+			append(&exprs, deep_clone_expression(o, parent_expr))
+
+			merged_vars := combine_return_expressions(o, exprs)
+
+			deep_free_expression(o, parent_ctx.variables[var_id])
+			parent_ctx.variables[var_id] = merged_vars
+
+		} else if !has_then && has_else {
+			exprs := make([dynamic]Deep_Expression, o.alloc)
+			defer delete(exprs)
+
+			append(&exprs, deep_clone_expression(o, else_expr))
+			append(&exprs, deep_clone_expression(o, parent_expr))
+
+			merged_vars := combine_return_expressions(o, exprs)
+
+			deep_free_expression(o, parent_ctx.variables[var_id])
+			parent_ctx.variables[var_id] = merged_vars
 		}
 	}
 
 	for var_id, then_expr in contexts.if_context.variables {
 		if parent_vars[var_id] { continue }
 
+		else_exists := contexts.else_context != nil
 		else_expr: Deep_Expression
-		if contexts.else_context != nil {
+
+		if else_exists {
 			else_expr = contexts.else_context.variables[var_id]
 		}
 
-		if then_expr != nil && else_expr != nil {
+		has_then := then_expr != nil
+		has_else := else_exists && else_expr != nil
+
+		if has_then && has_else {
 			then_constraints := deep_get_all_constraints_for_var_id(o, contexts.if_context, var_id)
 			defer delete(then_constraints)
 
-			else_constraints: [dynamic]Predicate
-			if contexts.else_context != nil {
-				else_constraints = deep_get_all_constraints_for_var_id(o, contexts.else_context, var_id)
-				defer delete(else_constraints)
-			}
+			else_constraints := deep_get_all_constraints_for_var_id(o, contexts.else_context, var_id)
+			defer delete(else_constraints)
 
 			merged_vars, merged_constraints := merge_branch_values(o,
 				then_expr, then_constraints,
@@ -8072,32 +8276,27 @@ merge_and_contexts :: proc(
 				nil, var_id)
 
 			if merged_vars != nil {
-				if !has_conflict_with_value(o, merged_vars, merged_constraints[:], var_id) {
-					parent_ctx.variables[var_id] = merged_vars
-				} else {
-					deep_free_expression(o, merged_vars)
-				}
-			}
+				parent_ctx.variables[var_id] = merged_vars
 
-			if len(merged_constraints) > 0 {
-				filtered := filter_conflicting_constraints(o, merged_vars, merged_constraints[:], var_id)
-				if len(filtered) > 0 {
+				if len(merged_constraints) > 0 {
 					if _, exists := parent_ctx.constraints[var_id]; !exists {
 						parent_ctx.constraints[var_id] = make([dynamic]Predicate, o.alloc)
 					}
-					for pred in filtered {
+					clear(&parent_ctx.constraints[var_id])
+					for pred in merged_constraints {
 						append(&parent_ctx.constraints[var_id], pred)
 					}
 				}
-				delete(filtered)
-			}
 
-			for name, id in contexts.if_context.name_to_var_id {
-				if variable_id_eq(id, var_id) {
-					parent_ctx.name_to_var_id[name] = var_id
-					break
+				for name, id in contexts.if_context.name_to_var_id {
+					if variable_id_eq(id, var_id) {
+						parent_ctx.name_to_var_id[name] = var_id
+						break
+					}
 				}
 			}
+		} else if has_then && !has_else {
+			continue
 		}
 	}
 }

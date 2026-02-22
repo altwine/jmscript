@@ -23,8 +23,14 @@ func t() {
 
 event player_join() {
 	a := 1
-	b := a + 2
-	if b == 3 {
+
+	b := a % 2
+
+	if b == 1 {
 		player_send_message("test", "CONCATENATION")
+	}
+
+	if b == 1 {
+		player_send_message("test2", "CONCATENATION")
 	}
 }
