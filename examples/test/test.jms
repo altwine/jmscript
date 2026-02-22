@@ -23,8 +23,6 @@ func ge() -> number {
 	c := 1
 	if c == 1 {
 		return 1
-	} else {
-		return 3
 	}
 	return 4
 }
