@@ -1807,7 +1807,7 @@ evaluate_binary_expression :: proc(o: ^Optimizer, expr: ^ast.Binary_Expr) -> Con
 					result.is_constant = true
 				}
 			}
-		} else if (expr.op.kind == .Add || expr.op.kind == .Sub || expr.op.kind == .Mul || expr.op.kind == .Quo) &&
+		} else if (expr.op.kind == .Add || expr.op.kind == .Sub || expr.op.kind == .Mul || expr.op.kind == .Quo || expr.op.kind == .Mod) &&
 				left_result.type_kind == .Number && right_result.type_kind == .Number {
 			result = perform_arithmetic(expr.op.kind, left_result, right_result, o, expr)
 		} else if (expr.op.kind == .Gt || expr.op.kind == .Gt_Eq || expr.op.kind == .Lt || expr.op.kind == .Lt_Eq ||
@@ -1904,6 +1904,15 @@ perform_arithmetic :: proc(op: lexer.Token_Kind, left, right: Constant_Result, o
 			}
 		} else {
 			result.value = left_num / right_num
+		}
+	case .Mod:
+		if abs(right_num) < EPSILON {
+			result.is_constant = false
+			if o != nil && expr != nil {
+				error.add_error(o.ec, o.current_file, "modulo by zero", expr)
+			}
+		} else {
+			result.value = math.mod(left_num, right_num)
 		}
 
 	case:
@@ -2492,6 +2501,15 @@ create_binary_expression_for_constants :: proc(o: ^Optimizer, left, right: ^ast.
 			}
 		}
 		combined_result = perform_arithmetic(.Quo, left_result, right_result, o, &temp_expr)
+	case .Mod:
+		if right_result.type_kind == .Number {
+			if f64_val, is_f64 := right_result.value.(f64); is_f64 && abs(f64_val) < EPSILON {
+				error.add_error(o.ec, o.current_file, "modulo by zero", &temp_expr)
+			} else if i64_val, is_i64 := right_result.value.(i64); is_i64 && i64_val == 0 {
+				error.add_error(o.ec, o.current_file, "modulo by zero", &temp_expr)
+			}
+		}
+		combined_result = perform_arithmetic(.Mod, left_result, right_result, o, &temp_expr)
 	case:
 		return ast.create_binary_expr(left, op, right, left.pos, right.end, o.alloc)
 	}
@@ -5062,6 +5080,35 @@ analyze_expression_range :: proc(o: ^Optimizer, expr: Deep_Expression) -> (Maybe
 				includes_min = lr.includes_min && rr.includes_max,
 				includes_max = lr.includes_max && rr.includes_min,
 			}, true
+		case .Mod:
+			if rr.min <= 0 && rr.max >= 0 {
+				if abs(rr.min) < EPSILON || abs(rr.max) < EPSILON {
+					return nil, false
+				}
+			}
+
+			max_divisor := max(abs(rr.min), abs(rr.max))
+
+			min_divisor := min(abs(rr.min), abs(rr.max))
+
+			if abs(min_divisor - math.floor(min_divisor)) < EPSILON &&
+			   abs(max_divisor - math.floor(max_divisor)) < EPSILON {
+				max_value := max_divisor - 1.0
+
+				return Variable_Range{
+					min = 0,
+					max = max_value,
+					includes_min = true,
+					includes_max = true,
+				}, true
+			} else {
+				return Variable_Range{
+					min = 0,
+					max = max_divisor,
+					includes_min = true,
+					includes_max = false,
+				}, true
+			}
 		}
 
 	case ^Deep_Variable_Ref:
@@ -5344,7 +5391,6 @@ get_function_return_values :: proc(
 	call_ctx: ^Deep_Expression_Context,
 	call_args: []^ast.Argument,
 ) -> Deep_Expression {
-
 	if func_sym == nil || func_sym.decl_node == nil {
 		return create_default_value_for_type(o, get_function_return_type(o, func_sym))
 	}
@@ -5364,10 +5410,45 @@ get_function_return_values :: proc(
 	saved_ctx := o.deep_analyzer.current_expression_context
 	saved_analyzing := o.deep_analyzer.analyzing_function
 
+	saved_context_stack := make([dynamic]^Deep_Expression_Context, len(o.deep_analyzer.expression_contexts), o.alloc)
+	copy(saved_context_stack[:], o.deep_analyzer.expression_contexts[:])
+
+	saved_history_stack := make([dynamic]map[Variable_ID]Variable_History, len(o.deep_analyzer.history_stack), o.alloc)
+	copy(saved_history_stack[:], o.deep_analyzer.history_stack[:])
+
+	saved_variable_history := make(map[Variable_ID]Variable_History, len(o.deep_analyzer.variable_history), o.alloc)
+	for var_id, hist in o.deep_analyzer.variable_history {
+		new_hist := Variable_History{
+			var_id = var_id,
+			values = make([dynamic]Deep_Expression, len(hist.values), o.alloc),
+			current_index = hist.current_index,
+		}
+		for val in hist.values {
+			append(&new_hist.values, deep_clone_expression(o, val))
+		}
+		saved_variable_history[var_id] = new_hist
+	}
+
 	defer {
 		o.current_scope = saved_scope
 		o.current_level = saved_level
 		o.deep_analyzer.analyzing_function = saved_analyzing
+
+		clear(&o.deep_analyzer.expression_contexts)
+		for ctx in saved_context_stack {
+			append(&o.deep_analyzer.expression_contexts, ctx)
+		}
+		o.deep_analyzer.current_expression_context = saved_ctx
+
+		clear(&o.deep_analyzer.history_stack)
+		for hist_map in saved_history_stack {
+			append(&o.deep_analyzer.history_stack, hist_map)
+		}
+
+		clear(&o.deep_analyzer.variable_history)
+		for var_id, hist in saved_variable_history {
+			o.deep_analyzer.variable_history[var_id] = hist
+		}
 	}
 
 	decl_ctx: ^Deep_Expression_Context
@@ -5406,7 +5487,7 @@ get_function_return_values :: proc(
 	func_ctx := deep_create_expression_context(o, params_scope)
 	if decl_ctx != nil {
 		func_ctx.parent = decl_ctx
-	} else {
+	} else if o.deep_analyzer.scope_to_context[o.symbols.global_scope] != nil {
 		func_ctx.parent = o.deep_analyzer.scope_to_context[o.symbols.global_scope]
 	}
 
@@ -5418,9 +5499,6 @@ get_function_return_values :: proc(
 	bind_parameters_to_args_with_call_ctx(o, func_sym, call_args, params_scope, func_ctx, call_ctx)
 
 	ast.walk_node(o.deep_analyzer.walker, cast(^ast.Node)body_node)
-
-	o.current_scope = body_scope
-	o.current_level = body_scope.level
 
 	return_infos := collect_function_returns(o, func_sym, body_node)
 
@@ -5775,6 +5853,93 @@ perform_range_arithmetic :: proc(
 					max = l_range.min / r_num,
 					includes_min = l_range.includes_max,
 					includes_max = l_range.includes_min,
+				}, true
+			}
+		}
+	case .Mod:
+		if right_is_range {
+			r_range := right_val.(Variable_Range)
+
+			if r_range.min <= 0 && r_range.max >= 0 {
+				if abs(r_range.min) < EPSILON || abs(r_range.max) < EPSILON {
+					return nil, false
+				}
+			}
+
+			max_divisor := max(abs(r_range.min), abs(r_range.max))
+			min_divisor := min(abs(r_range.min), abs(r_range.max))
+
+			all_integer := abs(min_divisor - math.floor(min_divisor)) < EPSILON &&
+						  abs(max_divisor - math.floor(max_divisor)) < EPSILON
+
+			if left_is_range {
+				l_range := left_val.(Variable_Range)
+
+				if all_integer {
+					max_value := max_divisor - 1.0
+
+					if l_range.max < min_divisor {
+						max_value = min(max_value, l_range.max)
+					}
+
+					return Variable_Range{
+						min = 0,
+						max = max_value,
+						includes_min = true,
+						includes_max = true,
+					}, true
+				} else {
+					return Variable_Range{
+						min = 0,
+						max = max_divisor,
+						includes_min = true,
+						includes_max = false,
+					}, true
+				}
+			} else {
+				l_num := get_numeric_value(left_val)
+				l_int := i64(l_num)
+
+				if all_integer && abs(l_num - math.floor(l_num)) < EPSILON {
+					result := l_int % i64(max_divisor)
+					return Variable_Range{
+						min = f64(result),
+						max = f64(result),
+						includes_min = true,
+						includes_max = true,
+					}, true
+				} else {
+					return Variable_Range{
+						min = 0,
+						max = max_divisor,
+						includes_min = true,
+						includes_max = false,
+					}, true
+				}
+			}
+		} else if left_is_range {
+			l_range := left_val.(Variable_Range)
+			r_num := get_numeric_value(right_val)
+
+			if abs(r_num) < EPSILON {
+				return nil, false
+			}
+
+			if abs(r_num - math.floor(r_num)) < EPSILON {
+				divisor := i64(r_num)
+
+				return Variable_Range{
+					min = 0,
+					max = f64(divisor - 1),
+					includes_min = true,
+					includes_max = true,
+				}, true
+			} else {
+				return Variable_Range{
+					min = 0,
+					max = abs(r_num),
+					includes_min = true,
+					includes_max = false,
 				}, true
 			}
 		}
@@ -6507,7 +6672,6 @@ deep_create_expression :: proc(o: ^Optimizer, expr: ^ast.Expr) -> Deep_Expressio
 			binary_expr.op = deep_token_kind_to_operation(binary.op.kind)
 			binary_expr.left = new_clone(left_expr, o.alloc)
 			binary_expr.right = new_clone(right_expr, o.alloc)
-
 			return cast(Deep_Expression)binary_expr
 		}
 
@@ -7383,6 +7547,7 @@ _deep_visit_value_decl_expr :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 		var_id := get_variable_id_for_name(o, node.name, cast(^ast.Node)node)
 
 		right_expr := deep_create_expression(o, node.value)
+
 		if right_expr == nil {
 			return
 		}
@@ -8682,14 +8847,14 @@ _deep_after_visit_node_expr :: proc(v: ^ast.Visitor, node: ^ast.Node) {
 		if len(o.deep_analyzer.expression_contexts) > 0 {
 			deep_pop_expression_context(o)
 		}
-		case ^ast.If_Stmt:
-	if contexts, exists := o.deep_analyzer.if_else_contexts[n]; exists {
-		merge_contexts_after_if(o, contexts, contexts.parent_context)
+	case ^ast.If_Stmt:
+		if contexts, exists := o.deep_analyzer.if_else_contexts[n]; exists {
+			merge_contexts_after_if(o, contexts, contexts.parent_context)
 
-		o.deep_analyzer.current_expression_context = contexts.parent_context
+			o.deep_analyzer.current_expression_context = contexts.parent_context
 
-		o.deep_analyzer.if_else_contexts[n] = contexts
-	}
+			o.deep_analyzer.if_else_contexts[n] = contexts
+		}
 
 	case ^ast.Block_Stmt:
 		if scope, exists := o.symbols.node_scopes[node.id]; exists {

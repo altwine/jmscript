@@ -1,10 +1,6 @@
 package test
 
 /*
-//func ge() -> number {
-//	player_send_message("test", "CONCATENATION")
-//}
-
 func de(arg: number) -> number {
 	if arg == 1 {
 		return 2
@@ -21,16 +17,26 @@ func t() {
 }
 */
 
+func ge() -> number {
+	player_send_message("test", "CONCATENATION")
+
+	c := 1
+	if c == 1 {
+		return 1
+	} else {
+		return 3
+	}
+	return 4
+}
+
 event player_join() {
 	a := 1
+	_ :: a
 
-	b := a % 2
+	b := ge()
+	_ :: b
 
-	if b == 1 {
-		player_send_message("test", "CONCATENATION")
-	}
-
-	if b == 1 {
-		player_send_message("test2", "CONCATENATION")
+	if b == 3 {
+		player_send_message("UNRECHEIBL", "CONCATENATION")
 	}
 }
