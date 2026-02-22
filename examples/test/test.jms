@@ -1,20 +1,30 @@
 package test
 
+/*
+//func ge() -> number {
+//	player_send_message("test", "CONCATENATION")
+//}
 
-a := 500
+func de(arg: number) -> number {
+	if arg == 1 {
+		return 2
+	} else {
+		return 3
+	}
+}
+
+func t() {
+	a := 1
+
+	b := de(a)
+	_ :: b
+}
+*/
+
 event player_join() {
-	b := 600
-	if a == b || a != b {
-		player_send_message("Hello World", "SPACES");
-		player_send_message("Math: 5 < 10", "SPACES");
-		player_send_message("<#FF0000>Hex</#FF0000>", "SPACES");
-		player_send_message("Invalid < red>", "SPACES");
-		player_send_message("<red>Text</red>", "SPACES");
-		player_send_message( "Math: a < b", "SPACES");
-		player_send_message("<hover:show_text:'Hi'>Hover", "SPACES");
-		player_send_message("Broken <tag", "SPACES");
-		player_send_message("Later <green>text", "SPACES");
-		player_send_message("Tes&k!!!", "SPACES");
-		player_send_message('{"test":"bubub"}', "SPACES");
+	a := 1
+	b := a + 2
+	if b == 3 {
+		player_send_message("test", "CONCATENATION")
 	}
 }
