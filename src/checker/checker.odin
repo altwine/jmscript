@@ -14,6 +14,7 @@ Symbol_Table :: struct {
 	current_scope: ^Scope,
 	scope_level:   int,
 	node_scopes:   map[int]^Scope,
+	all_node_scopes:   map[int]^Scope,
 }
 
 Checker :: struct {
@@ -37,6 +38,7 @@ checker_init :: proc(c: ^Checker, ec: ^error.Collector, allocator := context.all
 	c.symbol_table = new(Symbol_Table, allocator)
 	c.symbol_table.scope_level = -1
 	c.symbol_table.node_scopes = make(map[int]^Scope, 0, allocator)
+	c.symbol_table.all_node_scopes = make(map[int]^Scope, 0, allocator)
 
 	c.collector_vtable = ast.Visitor_VTable{}
 	c.type_checker_vtable = ast.Visitor_VTable{}
@@ -46,6 +48,7 @@ checker_init :: proc(c: ^Checker, ec: ^error.Collector, allocator := context.all
 	c.collector_vtable.visit_value_decl = _collect_visit_value_decl
 	c.collector_vtable.before_visit_child = _collect_before_visit_child
 	c.collector_vtable.after_visit_child = _collect_after_visit_child
+	c.collector_vtable.after_visit_node = _after_visit_node
 
 	c.type_checker_vtable.visit_func_stmt = _type_check_visit_func_stmt
 	c.type_checker_vtable.visit_event_stmt = _type_check_visit_event_stmt
@@ -153,6 +156,15 @@ _collect_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
 	c := cast(^Checker)v.user_data
 	if child != nil {
 		exit_scope_for_node(c, child)
+	}
+}
+
+@(private="file")
+_after_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) {
+	c := cast(^Checker)v.user_data
+
+	if node != nil && c.symbol_table.current_scope != nil {
+		c.symbol_table.all_node_scopes[node.id] = c.symbol_table.current_scope
 	}
 }
 
@@ -286,6 +298,7 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 
 	ret_type := create_type_info(string_to_type_kind(c, node.result, node), c.alloc)
 	symbol := create_symbol(node.name, make_type_func(c, ret_type), node, c.alloc)
+	symbol.metadata["flags"] = Flags{}
 
 	if !add_symbol(c, symbol) {
 		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("function '%s' is already defined", node.name), node)

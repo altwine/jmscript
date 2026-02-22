@@ -11,6 +11,7 @@ Flag :: enum {
 	BUILTIN,
 	NATIVE,
 	PURE,
+	VOLATILE,
 }
 
 Flags :: bit_set[Flag]
