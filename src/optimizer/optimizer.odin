@@ -10937,27 +10937,48 @@ find_constant_conversion_candidates :: proc(o: ^Optimizer) {
 	clear(&o.variables_to_convert)
 	clear(&o.variables_to_replace)
 
-	for scope in o.all_scopes {
-		for sym in scope.symbols {
-			if is_conversion_candidate(o, sym) {
-				if const_result := get_constant_value_from_symbol(o, sym); const_result.is_constant {
-					o.const_prop_candidates[sym] = const_result
-					o.variables_to_convert[sym] = true
+	potential := make([dynamic]^checker.Symbol, o.alloc)
+	defer delete(potential)
 
-					if count, exists := o.symbol_usage_count[sym]; exists && count > 0 {
-						o.variables_to_replace[sym] = true
-					}
+	for scope in o.all_scopes {
+		for &sym in scope.symbols {
+			if is_basic_conversion_candidate(o, sym) {
+				append(&potential, sym)
+			}
+		}
+	}
+
+	found_any := true
+	iteration := 0
+	max_iterations := len(potential)
+
+	for found_any && iteration < max_iterations {
+		found_any = false
+		iteration += 1
+
+		for sym in potential {
+			if sym in o.const_prop_candidates {
+				continue
+			}
+
+			if const_result := try_evaluate_with_candidates(o, sym); const_result.is_constant {
+				o.const_prop_candidates[sym] = const_result
+				o.variables_to_convert[sym] = true
+
+				if count, exists := o.symbol_usage_count[sym]; exists && count > 0 {
+					o.variables_to_replace[sym] = true
 				}
+
+				found_any = true
 			}
 		}
 	}
 }
 
-is_conversion_candidate :: proc(o: ^Optimizer, sym: ^checker.Symbol) -> bool {
+is_basic_conversion_candidate :: proc(o: ^Optimizer, sym: ^checker.Symbol) -> bool {
 	if sym == nil { return false }
 	if sym.decl_node == nil { return false }
 	if is_symbol_public(sym) { return false }
-
 	if sym.is_const { return false }
 
 	if flags_field, has := sym.metadata["flags"]; has {
@@ -10975,28 +10996,103 @@ is_conversion_candidate :: proc(o: ^Optimizer, sym: ^checker.Symbol) -> bool {
 		count, exists := o.symbol_usage_count[sym]
 		if !exists || count == 0 { return false }
 
-		if is_variable_modified(o, sym) {
-			return false
-		}
+		if is_variable_modified(o, sym) { return false }
 
-		saved_scope := o.current_scope
-		saved_level := o.current_level
-
-		if scope, exists2 := o.symbols.node_scopes[sym.decl_node.id]; exists2 {
-			o.current_scope = scope
-			o.current_level = scope.level
-		}
-
-		const_result := evaluate_constant_expression(o, decl.value)
-
-		o.current_scope = saved_scope
-		o.current_level = saved_level
-
-		return const_result.is_constant
-
-	case:
-		return false
+		return true
 	}
+
+	return false
+}
+
+try_evaluate_with_candidates :: proc(o: ^Optimizer, sym: ^checker.Symbol) -> Constant_Result {
+	if sym.decl_node == nil {
+		return {is_constant = false}
+	}
+
+	#partial switch decl in sym.decl_node.derived {
+	case ^ast.Value_Decl:
+		if decl.value != nil {
+			saved_scope := o.current_scope
+			saved_level := o.current_level
+			defer {
+				o.current_scope = saved_scope
+				o.current_level = saved_level
+			}
+
+			if scope, exists := o.symbols.all_node_scopes[sym.decl_node.id]; exists {
+				o.current_scope = scope
+				o.current_level = scope.level
+			}
+
+			substituted := substitute_known_constants(o, decl.value)
+			if substituted != nil {
+				defer free(substituted, o.alloc)
+				return evaluate_constant_expression(o, substituted)
+			}
+
+			return evaluate_constant_expression(o, decl.value)
+		}
+	}
+
+	return {is_constant = false}
+}
+
+substitute_known_constants :: proc(o: ^Optimizer, expr: ^ast.Expr) -> ^ast.Expr {
+	if expr == nil { return nil }
+
+	#partial switch e in expr.derived {
+	case ^ast.Ident:
+		sym := find_symbol_in_scopes(o, e.name, o.current_scope)
+		if sym != nil {
+			if const_result, exists := o.const_prop_candidates[sym]; exists {
+				return create_constant_literal(o, const_result, e.pos, e.end)
+			}
+		}
+		return nil
+
+	case ^ast.Binary_Expr:
+		left_sub := substitute_known_constants(o, e.left)
+		right_sub := substitute_known_constants(o, e.right)
+
+		if left_sub != nil || right_sub != nil {
+			new_left := left_sub if left_sub != nil else e.left
+			new_right := right_sub if right_sub != nil else e.right
+
+			return ast.create_binary_expr(
+				new_left,
+				e.op,
+				new_right,
+				e.pos,
+				e.end,
+				o.alloc,
+			)
+		}
+
+	case ^ast.Unary_Expr:
+		operand_sub := substitute_known_constants(o, e.expr)
+		if operand_sub != nil {
+			return ast.create_unary_expr(
+				e.op,
+				operand_sub,
+				e.pos,
+				e.end,
+				o.alloc,
+			)
+		}
+
+	case ^ast.Paren_Expr:
+		expr_sub := substitute_known_constants(o, e.expr)
+		if expr_sub != nil {
+			return ast.create_paren_expr(
+				expr_sub,
+				e.pos,
+				e.end,
+				o.alloc,
+			)
+		}
+	}
+
+	return nil
 }
 
 convert_declarations_to_constants :: proc(o: ^Optimizer) -> int {
@@ -11310,6 +11406,48 @@ variable_is_modified_in_node :: proc(o: ^Optimizer, sym: ^checker.Symbol, node: 
 			}
 		}
 		if n.body != nil && variable_is_modified_in_node(o, sym, n.body) {
+			return true
+		}
+
+	case ^ast.Event_Stmt:
+		event := n
+
+		if event.params != nil {
+			for param in event.params.list {
+				if param.name == sym.name {
+					return true
+				}
+			}
+		}
+
+		if event.body != nil && variable_is_modified_in_node(o, sym, event.body) {
+			return true
+		}
+
+	case ^ast.Member_Access_Expr:
+		member := n
+		if variable_is_modified_in_node(o, sym, member.expr) {
+			return true
+		}
+		if member.field != nil && variable_is_modified_in_node(o, sym, member.field) {
+			return true
+		}
+
+	case ^ast.Index_Expr:
+		index := n
+		if variable_is_modified_in_node(o, sym, index.expr) {
+			return true
+		}
+		if index.index != nil && variable_is_modified_in_node(o, sym, index.index) {
+			return true
+		}
+
+	case ^ast.Field_Value:
+		field_val := n
+		if field_val.field != nil && variable_is_modified_in_node(o, sym, field_val.field) {
+			return true
+		}
+		if field_val.value != nil && variable_is_modified_in_node(o, sym, field_val.value) {
 			return true
 		}
 	}
@@ -12504,18 +12642,18 @@ get_passes :: proc(allocator := context.allocator) -> [dynamic]Pass {
 	})
 
 	append(&passes, Pass{
-		name = "constant_optimization",
-		run = proc(o: ^Optimizer) {
-			optimize_constant_expressions(o)
-		},
-	})
-
-	append(&passes, Pass{
 		name = "constant_conversion",
 		run = proc(o: ^Optimizer) {
 			run_constant_conversion_pass(o)
 		},
 		needs_usage_analysis = true,
+	})
+
+	append(&passes, Pass{
+		name = "constant_optimization",
+		run = proc(o: ^Optimizer) {
+			optimize_constant_expressions(o)
+		},
 	})
 
 	append(&passes, Pass{
