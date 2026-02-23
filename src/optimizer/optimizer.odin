@@ -6635,23 +6635,6 @@ collect_returns_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt, results:
 				}
 			}
 
-			if i+1 < len(block.stmts) {
-				function_name := find_enclosing_function_name(o, cast(^ast.Node)stmt)
-				for j := i + 1; j < len(block.stmts); j += 1 {
-					error.add_warning(
-						o.ec,
-						o.current_file,
-						fmt.tprintf("unreachable code after return in function '%s'", function_name),
-						block.stmts[j].pos,
-						block.stmts[j].end,
-					)
-
-					schedule_node_removal(o, cast(^ast.Node)block.stmts[j],
-						"unreachable code after return",
-						o.deep_analyzer.current_expression_context)
-				}
-				block.stmts = block.stmts[:i+1]
-			}
 			return true
 
 		case ^ast.If_Stmt:
@@ -6688,21 +6671,6 @@ collect_returns_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt, results:
 
 			if then_returns && else_returns {
 				if i+1 < len(block.stmts) {
-					function_name := find_enclosing_function_name(o, cast(^ast.Node)stmt)
-					for j := i + 1; j < len(block.stmts); j += 1 {
-						error.add_warning(
-							o.ec,
-							o.current_file,
-							fmt.tprintf("unreachable code after if with returns in all branches in function '%s'", function_name),
-							block.stmts[j].pos,
-							block.stmts[j].end,
-						)
-
-						schedule_node_removal(o, cast(^ast.Node)block.stmts[j],
-							"unreachable code after if with returns in all branches",
-							o.deep_analyzer.current_expression_context)
-					}
-					block.stmts = block.stmts[:i+1]
 					return true
 				}
 			} else {
@@ -6752,21 +6720,6 @@ collect_returns_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt, results:
 
 				if body_returns {
 					if i+1 < len(block.stmts) {
-						function_name := find_enclosing_function_name(o, cast(^ast.Node)stmt)
-						for j := i + 1; j < len(block.stmts); j += 1 {
-							error.add_warning(
-								o.ec,
-								o.current_file,
-								fmt.tprintf("unreachable code after loop with guaranteed return in function '%s'", function_name),
-								block.stmts[j].pos,
-								block.stmts[j].end,
-							)
-
-							schedule_node_removal(o, cast(^ast.Node)block.stmts[j],
-								"unreachable code after loop with guaranteed return",
-								o.deep_analyzer.current_expression_context)
-						}
-						block.stmts = block.stmts[:i+1]
 						return true
 					}
 				}
@@ -6777,21 +6730,6 @@ collect_returns_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt, results:
 			nested_returns := collect_returns_in_block(o, s, results)
 			if nested_returns {
 				if i+1 < len(block.stmts) {
-					function_name := find_enclosing_function_name(o, cast(^ast.Node)stmt)
-					for j := i + 1; j < len(block.stmts); j += 1 {
-						error.add_warning(
-							o.ec,
-							o.current_file,
-							fmt.tprintf("unreachable code after block with return in function '%s'", function_name),
-							block.stmts[j].pos,
-							block.stmts[j].end,
-						)
-
-						schedule_node_removal(o, cast(^ast.Node)block.stmts[j],
-							"unreachable code after block with return",
-							o.deep_analyzer.current_expression_context)
-					}
-					block.stmts = block.stmts[:i+1]
 					return true
 				}
 			} else {
@@ -6806,50 +6744,6 @@ collect_returns_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt, results:
 	}
 
 	return all_paths_return
-}
-
-@(private="file")
-has_return_in_all_branches_simple :: proc(o: ^Optimizer, stmt: ^ast.Stmt) -> bool {
-	#partial switch s in stmt.derived {
-	case ^ast.If_Stmt:
-		if_stmt := s
-
-		then_returns := false
-		if if_stmt.body != nil {
-			if len(if_stmt.body.stmts) > 0 {
-				last_then := if_stmt.body.stmts[len(if_stmt.body.stmts)-1]
-				#partial switch ts in last_then.derived {
-				case ^ast.Return_Stmt:
-					then_returns = true
-				case ^ast.If_Stmt:
-					then_returns = has_return_in_all_branches_simple(o, last_then)
-				}
-			}
-		}
-
-		else_returns := false
-		if if_stmt.else_stmt != nil {
-			#partial switch es in if_stmt.else_stmt.derived {
-			case ^ast.Return_Stmt:
-				else_returns = true
-			case ^ast.Block_Stmt:
-				if len(es.stmts) > 0 {
-					last_else := es.stmts[len(es.stmts)-1]
-					#partial switch els in last_else.derived {
-					case ^ast.Return_Stmt:
-						else_returns = true
-					case ^ast.If_Stmt:
-						else_returns = has_return_in_all_branches_simple(o, last_else)
-					}
-				}
-			case ^ast.If_Stmt:
-				else_returns = has_return_in_all_branches_simple(o, if_stmt.else_stmt)
-			}
-		}
-
-		return then_returns && else_returns
-	}
-	return false
 }
 
 deep_create_expression :: proc(o: ^Optimizer, expr: ^ast.Expr) -> Deep_Expression {
@@ -12999,168 +12893,211 @@ move_declarations_down_pass :: proc(o: ^Optimizer) {
 	// print_declaration_move_stats(o, declarations)
 }
 
-UnreachableCodeInfo :: struct {
-	stmt: ^ast.Stmt,
-	reason: string,
-	function_name: string,
-	position: lexer.Pos,
-}
-
 remove_unreachable_code_pass :: proc(o: ^Optimizer) {
-	unreachable_statements := make([dynamic]UnreachableCodeInfo, o.alloc)
-	defer delete(unreachable_statements)
+	unreachable_groups := make([dynamic]UnreachableGroup, o.alloc)
+	defer delete(unreachable_groups)
 
 	for file in o.files {
-		find_unreachable_code_in_file(o, file, &unreachable_statements)
+		o.current_file = file
+
+		#partial switch n in file.derived {
+		case ^ast.File:
+			for decl in n.decls {
+				find_unreachable_groups_in_stmt(o, decl, &unreachable_groups)
+			}
+		}
 	}
 
 	removed_count := 0
-	for info in unreachable_statements {
-		error.add_warning(o.ec, o.current_file,
-			fmt.tprintf("unreachable code after return in function '%s'", info.function_name),
-			info.position, info.stmt.end)
+	for group in unreachable_groups {
+		if len(group.statements) == 0 { continue }
 
-		if remove_node_from_parent(o, cast(^ast.Node)info.stmt) {
+		first := group.statements[0]
+		last := group.statements[len(group.statements)-1]
+
+		error.add_warning(
+			o.ec,
+			o.current_file,
+			fmt.tprintf("unreachable code after %s in function '%s' (%d statement(s))",
+				group.reason, group.function_name, len(group.statements)),
+			first.pos,
+			last.end,
+		)
+
+		for stmt in group.statements {
+			schedule_node_removal(o, cast(^ast.Node)stmt,
+				fmt.tprintf("unreachable code after %s", group.reason),
+				o.deep_analyzer.current_expression_context)
 			removed_count += 1
 		}
 	}
 
 	if removed_count > 0 {
-		fmt.printfln("[INFO] Removed %d unreachable statement(s)", removed_count)
+		fmt.printfln("[INFO] Marked %d unreachable statement(s) for removal in %d group(s)",
+			removed_count, len(unreachable_groups))
 	}
 }
 
-find_unreachable_code_in_file :: proc(o: ^Optimizer, file: ^ast.File, unreachable: ^[dynamic]UnreachableCodeInfo) {
-	for decl in file.decls {
-		find_unreachable_in_stmt(o, decl, unreachable)
-	}
+UnreachableGroup :: struct {
+	statements: [dynamic]^ast.Stmt,
+	reason: string,
+	function_name: string,
+	start_pos: lexer.Pos,
 }
 
-find_unreachable_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt, unreachable: ^[dynamic]UnreachableCodeInfo) {
+find_unreachable_groups_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt, groups: ^[dynamic]UnreachableGroup) {
 	if stmt == nil { return }
 
 	#partial switch s in stmt.derived {
 	case ^ast.Func_Stmt:
-		func_stmt := s
-		if func_stmt.body != nil {
-			find_unreachable_in_block(o, func_stmt.body, func_stmt.name, unreachable)
-
-			returns := collect_function_returns(o, nil, func_stmt.body)
-			for ret in returns {
-				deep_free_expression(o, ret.expr)
-			}
-			delete(returns)
+		if s.body != nil {
+			find_unreachable_groups_in_block(o, s.body, s.name, groups)
 		}
 
 	case ^ast.Event_Stmt:
-		event_stmt := s
-		if event_stmt.body != nil {
-			find_unreachable_in_block(o, event_stmt.body, event_stmt.name, unreachable)
-			returns := collect_function_returns(o, nil, event_stmt.body)
-			for ret in returns {
-				deep_free_expression(o, ret.expr)
-			}
-			delete(returns)
+		if s.body != nil {
+			find_unreachable_groups_in_block(o, s.body, s.name, groups)
 		}
 
 	case ^ast.Block_Stmt:
-		find_unreachable_in_block(o, s, "anonymous block", unreachable)
+		find_unreachable_groups_in_block(o, s, "anonymous block", groups)
 	}
 }
 
-find_unreachable_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt, function_name: string, unreachable: ^[dynamic]UnreachableCodeInfo) {
+find_unreachable_groups_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt, function_name: string, groups: ^[dynamic]UnreachableGroup) {
 	if block == nil { return }
 
-	found_return := false
-	return_index := -1
+	i := 0
+	for i < len(block.stmts) {
+		stmt := block.stmts[i]
 
-	for stmt, i in block.stmts {
 		#partial switch s in stmt.derived {
 		case ^ast.Return_Stmt:
-			found_return = true
-			return_index = i
+			if i+1 < len(block.stmts) {
+				group := UnreachableGroup{
+					statements = make([dynamic]^ast.Stmt, o.alloc),
+					reason = "return",
+					function_name = function_name,
+					start_pos = block.stmts[i+1].pos,
+				}
+
+				for j := i + 1; j < len(block.stmts); j += 1 {
+					append(&group.statements, block.stmts[j])
+				}
+
+				append(groups, group)
+				return
+			}
 
 		case ^ast.If_Stmt:
-			if_stmt := s
-			if has_return_in_all_branches(o, if_stmt) {
-				found_return = true
-				return_index = i
+			if s.body != nil {
+				find_unreachable_groups_in_block(o, s.body, function_name, groups)
 			}
-
-		case ^ast.For_Stmt:
-			for_stmt := s
-			if has_unconditional_return_in_loop(o, for_stmt) {
-				found_return = true
-				return_index = i
-			}
-		}
-
-		if found_return {
-			break
-		}
-	}
-
-	if found_return && return_index >= 0 && return_index < len(block.stmts)-1 {
-		for i := return_index + 1; i < len(block.stmts); i += 1 {
-			unreachable_stmt := block.stmts[i]
-
-			append(unreachable, UnreachableCodeInfo{
-				stmt = unreachable_stmt,
-				reason = "after return",
-				function_name = function_name,
-				position = unreachable_stmt.pos,
-			})
-		}
-	}
-
-	for stmt in block.stmts {
-		#partial switch s in stmt.derived {
-		case ^ast.If_Stmt:
-			if_stmt := s
-			if if_stmt.body != nil {
-				find_unreachable_in_block(o, if_stmt.body, function_name, unreachable)
-			}
-			if if_stmt.else_stmt != nil {
-				if else_block, ok := if_stmt.else_stmt.derived.(^ast.Block_Stmt); ok {
-					find_unreachable_in_block(o, else_block, function_name, unreachable)
+			if s.else_stmt != nil {
+				if else_block, ok := s.else_stmt.derived.(^ast.Block_Stmt); ok {
+					find_unreachable_groups_in_block(o, else_block, function_name, groups)
 				}
 			}
 
+			then_returns := does_block_end_with_return(o, s.body)
+			else_returns := does_else_end_with_return(o, s.else_stmt)
+
+			if then_returns && else_returns && i+1 < len(block.stmts) {
+				group := UnreachableGroup{
+					statements = make([dynamic]^ast.Stmt, o.alloc),
+					reason = "if with returns in all branches",
+					function_name = function_name,
+					start_pos = block.stmts[i+1].pos,
+				}
+
+				for j := i + 1; j < len(block.stmts); j += 1 {
+					append(&group.statements, block.stmts[j])
+				}
+
+				append(groups, group)
+				return
+			}
+
 		case ^ast.For_Stmt:
-			for_stmt := s
-			if for_stmt.body != nil {
-				find_unreachable_in_block(o, for_stmt.body, function_name, unreachable)
+			always_executes := false
+			if s.cond != nil {
+				cond_result := evaluate_constant_expression(o, s.cond)
+				if cond_result.is_constant && cond_result.type_kind == .Boolean {
+					if bool_val, ok := cond_result.value.(bool); ok && bool_val {
+						always_executes = true
+					}
+				}
+			} else {
+				always_executes = true
+			}
+
+			if always_executes && does_block_contain_return(o, s.body) && i+1 < len(block.stmts) {
+				group := UnreachableGroup{
+					statements = make([dynamic]^ast.Stmt, o.alloc),
+					reason = "loop with guaranteed return",
+					function_name = function_name,
+					start_pos = block.stmts[i+1].pos,
+				}
+
+				for j := i + 1; j < len(block.stmts); j += 1 {
+					append(&group.statements, block.stmts[j])
+				}
+
+				append(groups, group)
+				return
+			}
+
+			if s.body != nil {
+				find_unreachable_groups_in_block(o, s.body, function_name, groups)
 			}
 
 		case ^ast.Block_Stmt:
-			find_unreachable_in_block(o, s, function_name, unreachable)
+			find_unreachable_groups_in_block(o, s, function_name, groups)
 		}
+
+		i += 1
 	}
 }
 
-has_return_in_all_branches :: proc(o: ^Optimizer, if_stmt: ^ast.If_Stmt) -> bool {
-	has_return_in_then := false
-	has_return_in_else := false
-
-	if if_stmt.body != nil {
-		has_return_in_then = has_return_in_block(o, if_stmt.body)
+does_block_end_with_return :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> bool {
+	if block == nil || len(block.stmts) == 0 {
+		return false
 	}
 
-	if if_stmt.else_stmt != nil {
-		if else_block, ok := if_stmt.else_stmt.derived.(^ast.Block_Stmt); ok {
-			has_return_in_else = has_return_in_block(o, else_block)
-		} else {
-			#partial switch s in if_stmt.else_stmt.derived {
-			case ^ast.Return_Stmt:
-				has_return_in_else = true
-			}
-		}
+	last := block.stmts[len(block.stmts)-1]
+
+	#partial switch s in last.derived {
+	case ^ast.Return_Stmt:
+		return true
+	case ^ast.If_Stmt:
+		then_returns := does_block_end_with_return(o, s.body)
+		else_returns := does_else_end_with_return(o, s.else_stmt)
+		return then_returns && else_returns
+	case ^ast.Block_Stmt:
+		return does_block_end_with_return(o, s)
 	}
 
-	return has_return_in_then && has_return_in_else
+	return false
 }
 
-has_return_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> bool {
+does_else_end_with_return :: proc(o: ^Optimizer, else_stmt: ^ast.Stmt) -> bool {
+	if else_stmt == nil { return false }
+
+	#partial switch s in else_stmt.derived {
+	case ^ast.Return_Stmt:
+		return true
+	case ^ast.Block_Stmt:
+		return does_block_end_with_return(o, s)
+	case ^ast.If_Stmt:
+		then_returns := does_block_end_with_return(o, s.body)
+		else_returns := does_else_end_with_return(o, s.else_stmt)
+		return then_returns && else_returns
+	}
+
+	return false
+}
+
+does_block_contain_return :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> bool {
 	if block == nil { return false }
 
 	for stmt in block.stmts {
@@ -13168,39 +13105,24 @@ has_return_in_block :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> bool {
 		case ^ast.Return_Stmt:
 			return true
 		case ^ast.If_Stmt:
-			if has_return_in_all_branches(o, s) {
+			if does_block_contain_return(o, s.body) {
+				return true
+			}
+			if s.else_stmt != nil {
+				if else_block, ok := s.else_stmt.derived.(^ast.Block_Stmt); ok {
+					if does_block_contain_return(o, else_block) {
+						return true
+					}
+				}
+			}
+		case ^ast.Block_Stmt:
+			if does_block_contain_return(o, s) {
 				return true
 			}
 		}
 	}
 
 	return false
-}
-
-has_unconditional_return_in_loop :: proc(o: ^Optimizer, for_stmt: ^ast.For_Stmt) -> bool {
-	if for_stmt.body == nil { return false }
-
-	if has_return_in_block(o, for_stmt.body) {
-		if is_loop_always_executed(o, for_stmt) {
-			return true
-		}
-	}
-
-	return false
-}
-
-is_loop_always_executed :: proc(o: ^Optimizer, for_stmt: ^ast.For_Stmt) -> bool {
-	if for_stmt.cond != nil {
-		cond_result := evaluate_constant_expression(o, for_stmt.cond)
-		if cond_result.is_constant && cond_result.type_kind == .Boolean {
-			if bool_val, ok := cond_result.value.(bool); ok && bool_val {
-				return true
-			}
-		}
-		return false
-	}
-
-	return true
 }
 
 Pass :: struct {
@@ -13358,7 +13280,7 @@ optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^c
 
 	run_all_passes(o)
 
-	for file in files {
-		ast.print_tree(file)
-	}
+	// for file in files {
+	// 	ast.print_tree(file)
+	// }
 }

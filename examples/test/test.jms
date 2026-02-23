@@ -20,11 +20,12 @@ func t() {
 func ge() -> number {
 	player_send_message("test", "CONCATENATION")
 
-	c := 1
-	if c == 1 {
+	if 1 == 2 {
 		return 1
+	} else {
+		return 3
 	}
-	return 4
+	return 2
 }
 
 event player_join() {
@@ -35,6 +36,6 @@ event player_join() {
 	_ :: b
 
 	if b == 3 {
-		player_send_message("UNRECHEIBL", "CONCATENATION")
+		player_send_message("alw true", "CONCATENATION")
 	}
 }
