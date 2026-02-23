@@ -14,51 +14,51 @@ import "../error"
 import "../lexer"
 
 Optimizer :: struct {
-	alloc:		mem.Allocator,
-	files:		[dynamic]^ast.File,
+	alloc:		  mem.Allocator,
+	files:		  [dynamic]^ast.File,
 	symbols:	  ^checker.Symbol_Table,
 	current_file: ^ast.File,
-	ec: ^error.Collector,
+	ec:           ^error.Collector,
 
 	scope_symbols_usage: map[^checker.Scope]map[string]bool,
-	all_scopes:		  [dynamic]^checker.Scope,
-	current_scope:	   ^checker.Scope,
-	current_level:	   int,
-	scope_to_node: map[^checker.Scope]^ast.Node,
+	all_scopes:		     [dynamic]^checker.Scope,
+	current_scope:	     ^checker.Scope,
+	current_level:	     int,
+	scope_to_node:       map[^checker.Scope]^ast.Node,
 
-	node_parent: map[^ast.Node]^ast.Node,
+	node_parent:         map[^ast.Node]^ast.Node,
 
-	symbol_deps:		map[^checker.Symbol][dynamic]^checker.Symbol,
-	reverse_deps:	   map[^checker.Symbol][dynamic]^checker.Symbol,
+	symbol_deps:	         map[^checker.Symbol][dynamic]^checker.Symbol,
+	reverse_deps:	         map[^checker.Symbol][dynamic]^checker.Symbol,
 	symbol_by_name_in_scope: map[^checker.Scope]map[string]^checker.Symbol,
 
 	preserved_symbols:  map[^checker.Symbol]bool,
 	unused_warnings:	map[^checker.Symbol]bool,
 
-	pre_walker:		^ast.Walker,
-	pre_walker_vtable: ast.Visitor_VTable,
+	pre_walker:		    ^ast.Walker,
+	pre_walker_vtable:  ast.Visitor_VTable,
 
-	constant_cache: map[^ast.Node]Constant_Result,
+	constant_cache:     map[^ast.Node]Constant_Result,
 
-	anonymous_vars: map[string]bool,
+	anonymous_vars:     map[string]bool,
 
-	inlined_symbols:   map[^checker.Symbol]bool,
+	inlined_symbols:    map[^checker.Symbol]bool,
 	symbol_usage_count: map[^checker.Symbol]int,
 
-	func_calls:		  map[^checker.Symbol][dynamic]^ast.Call_Expr,
+	func_calls:		    map[^checker.Symbol][dynamic]^ast.Call_Expr,
 	call_to_func:		map[^ast.Call_Expr]^checker.Symbol,
 
 	deep_analyzer: ^Deep_Analyzer,
 
 	deferred_operations: [dynamic]Deferred_Operation,
-	operation_counter: int,
-	nodes_to_remove: map[^ast.Node]bool,
+	operation_counter:   int,
+	nodes_to_remove:     map[^ast.Node]bool,
 
-	flow_analyzer: ^Flow_Analyzer,
+	flow_analyzer:       ^Flow_Analyzer,
 
-	const_prop_candidates: map[^checker.Symbol]Constant_Result,
-	variables_to_convert:  map[^checker.Symbol]bool,
-	variables_to_replace:  map[^checker.Symbol]bool,
+	const_prop_candidates:  map[^checker.Symbol]Constant_Result,
+	variables_to_convert:   map[^checker.Symbol]bool,
+	variables_to_replace:   map[^checker.Symbol]bool,
 	visited_in_propagation: map[^ast.Node]bool,
 }
 
@@ -92,23 +92,23 @@ Insert_Position :: union {
 }
 
 Deferred_Operation :: struct {
-	type: Operation_Type,
-	priority: int,
+	type:        Operation_Type,
+	priority:    int,
 
-	selector: Node_Selector,
+	selector:    Node_Selector,
 	replacement: ^ast.Node,
 
-	block_to_clear: ^ast.Block_Stmt,
-	target_block: ^ast.Block_Stmt,
+	block_to_clear:       ^ast.Block_Stmt,
+	target_block:         ^ast.Block_Stmt,
 	statements_to_append: []^ast.Stmt,
 
 	symbol: ^checker.Symbol,
-	scope: ^checker.Scope,
+	scope:  ^checker.Scope,
 
-	source_node: ^ast.Node,
-	target_parent: ^ast.Node,
+	source_node:     ^ast.Node,
+	target_parent:   ^ast.Node,
 	target_position: Insert_Position,
-	relative_node: ^ast.Node,
+	relative_node:   ^ast.Node,
 
 	node_a: ^ast.Node,
 	node_b: ^ast.Node,
@@ -116,7 +116,7 @@ Deferred_Operation :: struct {
 	container_node: ^ast.Node,
 	extracted_stmt: ^ast.Stmt,
 
-	reason: string,
+	reason:         string,
 	source_context: ^Deep_Expression_Context,
 }
 
@@ -130,7 +130,7 @@ Constant_Value :: union {
 }
 
 Constant_Result :: struct {
-	value:   Constant_Value,
+	value:       Constant_Value,
 	is_constant: bool,
 	type_kind:   checker.Type_Kind,
 }
@@ -2165,28 +2165,6 @@ evaluate_call_expression :: proc(o: ^Optimizer, call: ^ast.Call_Expr) -> Constan
 			}
 			return result
 		}
-
-		sym := find_symbol_in_scopes(o, ident.name, o.current_scope)
-		if sym != nil && sym.type.kind == .Function {
-			if flags_field, has := sym.metadata["flags"]; has {
-				if flags, ok := flags_field.(checker.Flags); ok && .PURE in flags {
-					all_args_constant := true
-					for arg in call.args {
-						arg_result := evaluate_constant_expression(o, arg.value)
-						if !arg_result.is_constant {
-							all_args_constant = false
-							break
-						}
-					}
-
-					if all_args_constant {
-						// TODO
-						result.is_constant = true
-						result.type_kind = .Any
-					}
-				}
-			}
-		}
 	}
 
 	return result
@@ -3655,8 +3633,8 @@ Variable_Value :: union {
 }
 
 Variable_Range :: struct {
-	min: f64,
-	max: f64,
+	min:          f64,
+	max:          f64,
 	includes_min: bool,
 	includes_max: bool,
 }
@@ -3684,8 +3662,8 @@ Predicate_Type :: enum {
 }
 
 Variable_ID :: struct {
-	scope_id:	int,
-	name:		string,
+	scope_id:     int,
+	name:         string,
 	decl_node_id: int,
 }
 
@@ -3696,26 +3674,26 @@ ConditionType :: enum {
 	Predicate,
 }
 
-ConditionNode :: struct {
-	type: ConditionType,
+Condition_Node :: struct {
+	type:      ConditionType,
 	predicate: Maybe(Predicate),
-	left: ^ConditionNode,
-	right: ^ConditionNode,
-	operand: ^ConditionNode,
+	left:      ^Condition_Node,
+	right:     ^Condition_Node,
+	operand:   ^Condition_Node,
 }
 
 Predicate :: struct {
 	variable: Variable_ID,
-	value: Variable_Value,
-	type: Predicate_Type,
+	value:    Variable_Value,
+	type:     Predicate_Type,
 	transformed_from: Variable_ID,
 	pos: lexer.Pos,
 	end: lexer.Pos,
 }
 
 Deep_Discrete_Set :: struct {
-	kind: Deep_Expression_Kind,
-	values: [dynamic]Variable_Value,
+	kind:          Deep_Expression_Kind,
+	values:        [dynamic]Variable_Value,
 	is_exhaustive: bool,
 }
 
@@ -3738,96 +3716,96 @@ Deep_Expression_Kind :: enum {
 }
 
 Deep_Binary_Expression :: struct {
-	kind: Deep_Expression_Kind,
-	op: Value_Operation,
-	left: ^Deep_Expression,
+	kind:  Deep_Expression_Kind,
+	op:    Value_Operation,
+	left:  ^Deep_Expression,
 	right: ^Deep_Expression,
 }
 
 Deep_Unary_Expression :: struct {
-	kind: Deep_Expression_Kind,
-	op: Value_Operation,
+	kind:    Deep_Expression_Kind,
+	op:      Value_Operation,
 	operand: ^Deep_Expression,
 }
 
 Deep_Variable_Ref :: struct {
-	kind: Deep_Expression_Kind,
+	kind:   Deep_Expression_Kind,
 	var_id: Variable_ID,
 }
 
 Deep_Constant_Value :: struct {
-	kind: Deep_Expression_Kind,
+	kind:  Deep_Expression_Kind,
 	value: Variable_Value,
 }
 
 Deep_Union_Expression :: struct {
-	kind: Deep_Expression_Kind,
-	expressions: [dynamic]Deep_Expression,
+	kind:          Deep_Expression_Kind,
+	expressions:   [dynamic]Deep_Expression,
 	is_exhaustive: bool,
-	min_value: Maybe(f64),
-	max_value: Maybe(f64),
-	value_range: Maybe(Variable_Range),
+	min_value:     Maybe(f64),
+	max_value:     Maybe(f64),
+	value_range:   Maybe(Variable_Range),
 }
 
 Deep_Expression_Context :: struct {
 	parent: ^Deep_Expression_Context,
-	scope: ^checker.Scope,
+	scope:  ^checker.Scope,
 
-	variables: map[Variable_ID]Deep_Expression,
-	constraints: map[Variable_ID][dynamic]Predicate,
+	variables:              map[Variable_ID]Deep_Expression,
+	constraints:            map[Variable_ID][dynamic]Predicate,
 	transformed_predicates: map[Variable_ID][dynamic]Predicate,
 
 	name_to_var_id: map[string]Variable_ID,
 
-	is_or_context: bool,
+	is_or_context:   bool,
 	possible_states: [dynamic]^Deep_Expression_Context,
 }
 
 Variable_History :: struct {
-	var_id: Variable_ID,
-	values: [dynamic]Deep_Expression,
+	var_id:        Variable_ID,
+	values:        [dynamic]Deep_Expression,
 	current_index: int,
 }
 
 Deep_Analyzer :: struct {
-	walker: ^ast.Walker,
-	walker_vtable: ast.Visitor_VTable,
+	walker:           ^ast.Walker,
+	walker_vtable:    ast.Visitor_VTable,
 	expression_cache: map[Variable_ID]Variable_Value,
 
-	variable_expressions: map[Variable_ID]Deep_Expression,
-	expression_deps: map[Variable_ID][dynamic]Variable_ID,
+	variable_expressions:    map[Variable_ID]Deep_Expression,
+	expression_deps:         map[Variable_ID][dynamic]Variable_ID,
 	reverse_expression_deps: map[Variable_ID][dynamic]Variable_ID,
 
-	expression_contexts: [dynamic]^Deep_Expression_Context,
+	expression_contexts:        [dynamic]^Deep_Expression_Context,
 	current_expression_context: ^Deep_Expression_Context,
 
-	scope_to_context: map[^checker.Scope]^Deep_Expression_Context,
+	scope_to_context:  map[^checker.Scope]^Deep_Expression_Context,
 
-	var_id_to_scope: map[Variable_ID]^checker.Scope,
+	var_id_to_scope:   map[Variable_ID]^checker.Scope,
 	node_id_to_var_id: map[int]Variable_ID,
 
-	if_else_contexts: map[^ast.If_Stmt]If_Else_Contexts,
+	if_else_contexts:  map[^ast.If_Stmt]If_Else_Contexts,
 
-	function_expressions: map[^checker.Symbol]Deep_Expression,
-	function_params: map[^checker.Symbol][dynamic]Variable_ID,
-	function_calls: map[^ast.Call_Expr]^checker.Symbol,
-	call_arguments: map[^ast.Call_Expr][dynamic]Deep_Expression,
-	analyzing_function: ^checker.Symbol,
-	function_return_cache: map[[2]uintptr]Deep_Expression,
-	analyzed_functions: map[^checker.Symbol]bool,
+	function_expressions:   map[^checker.Symbol]Deep_Expression,
+	function_params:        map[^checker.Symbol][dynamic]Variable_ID,
+	function_calls:         map[^ast.Call_Expr]^checker.Symbol,
+	call_arguments:         map[^ast.Call_Expr][dynamic]Deep_Expression,
+	analyzing_function:     ^checker.Symbol,
+	function_return_cache:  map[[2]uintptr]Deep_Expression,
+	analyzed_functions:     map[^checker.Symbol]bool,
 
-	variable_history: map[Variable_ID]Variable_History,
+	variable_history:       map[Variable_ID]Variable_History,
 	current_function_scope: ^checker.Scope,
-	history_stack: [dynamic]map[Variable_ID]Variable_History,
+	history_stack:          [dynamic]map[Variable_ID]Variable_History,
 
 	visited_nodes: map[int]bool,
 }
 
 If_Else_Contexts :: struct {
-	if_context: ^Deep_Expression_Context,
-	else_context: ^Deep_Expression_Context,
+	if_context:     ^Deep_Expression_Context,
+	else_context:   ^Deep_Expression_Context,
 	parent_context: ^Deep_Expression_Context,
-	condition_tree: ^ConditionNode,
+	condition_tree: ^Condition_Node,
 }
 
 variable_id_eq :: proc(a, b: Variable_ID) -> bool {
@@ -3952,10 +3930,10 @@ invert_predicate_type :: proc(type: Predicate_Type) -> Predicate_Type {
 	}
 }
 
-extract_condition_tree :: proc(o: ^Optimizer, cond: ^ast.Expr) -> ^ConditionNode {
+extract_condition_tree :: proc(o: ^Optimizer, cond: ^ast.Expr) -> ^Condition_Node {
 	if cond == nil { return nil }
 
-	node := new(ConditionNode, o.alloc)
+	node := new(Condition_Node, o.alloc)
 
 	#partial switch c in cond.derived {
 	case ^ast.Binary_Expr:
@@ -4061,7 +4039,7 @@ create_general_predicate :: proc(o: ^Optimizer, binary: ^ast.Binary_Expr) -> Pre
 	}
 }
 
-CheckResult :: enum {
+Check_Result :: enum {
 	Impossible,
 	Possible,
 	Certain,
@@ -4071,7 +4049,7 @@ can_value_satisfy_predicate :: proc(
 	o: ^Optimizer,
 	value: Deep_Expression,
 	pred: Predicate,
-) -> CheckResult {
+) -> Check_Result {
 	if value == nil { return .Possible }
 
 	#partial switch v in value {
@@ -4099,7 +4077,7 @@ can_value_satisfy_predicate :: proc(
 	return .Possible
 }
 
-check_numeric_value :: proc(val: f64, pred: Predicate) -> CheckResult {
+check_numeric_value :: proc(val: f64, pred: Predicate) -> Check_Result {
 	pred_val := get_numeric_value(pred.value)
 
 	#partial switch pred.type {
@@ -4159,7 +4137,7 @@ check_numeric_value :: proc(val: f64, pred: Predicate) -> CheckResult {
 	return .Possible
 }
 
-check_boolean_value :: proc(val: bool, pred: Predicate) -> CheckResult {
+check_boolean_value :: proc(val: bool, pred: Predicate) -> Check_Result {
 	pred_val: bool
 	#partial switch v in pred.value {
 	case bool:
@@ -4185,7 +4163,7 @@ check_boolean_value :: proc(val: bool, pred: Predicate) -> CheckResult {
 	return .Possible
 }
 
-check_string_value :: proc(val: string, pred: Predicate) -> CheckResult {
+check_string_value :: proc(val: string, pred: Predicate) -> Check_Result {
 	pred_val: string
 	#partial switch v in pred.value {
 	case string:
@@ -4211,7 +4189,7 @@ check_string_value :: proc(val: string, pred: Predicate) -> CheckResult {
 	return .Possible
 }
 
-check_range_value :: proc(range: Variable_Range, pred: Predicate) -> CheckResult {
+check_range_value :: proc(range: Variable_Range, pred: Predicate) -> Check_Result {
 	pred_val := get_numeric_value(pred.value)
 
 	#partial switch pred.type {
@@ -4298,8 +4276,8 @@ check_range_value :: proc(range: Variable_Range, pred: Predicate) -> CheckResult
 	return .Possible
 }
 
-check_discrete_set :: proc(set: ^Deep_Discrete_Set, pred: Predicate) -> CheckResult {
-	results := make([dynamic]CheckResult, context.temp_allocator)
+check_discrete_set :: proc(set: ^Deep_Discrete_Set, pred: Predicate) -> Check_Result {
+	results := make([dynamic]Check_Result, context.temp_allocator)
 	defer delete(results)
 
 	for val in set.values {
@@ -4353,8 +4331,8 @@ check_union_expression :: proc(
 	o: ^Optimizer,
 	union_expr: ^Deep_Union_Expression,
 	pred: Predicate,
-) -> CheckResult {
-	results := make([dynamic]CheckResult, context.temp_allocator)
+) -> Check_Result {
+	results := make([dynamic]Check_Result, context.temp_allocator)
 	defer delete(results)
 
 	for expr in union_expr.expressions {
@@ -4470,10 +4448,10 @@ create_default_predicate :: proc(o: ^Optimizer, expr: ^ast.Expr) -> Predicate {
 	}
 }
 
-invert_condition_tree :: proc(o: ^Optimizer, node: ^ConditionNode) -> ^ConditionNode {
+invert_condition_tree :: proc(o: ^Optimizer, node: ^Condition_Node) -> ^Condition_Node {
 	if node == nil { return nil }
 
-	result := new(ConditionNode, o.alloc)
+	result := new(Condition_Node, o.alloc)
 
 	switch node.type {
 	case .And:
@@ -4501,10 +4479,10 @@ invert_condition_tree :: proc(o: ^Optimizer, node: ^ConditionNode) -> ^Condition
 	return result
 }
 
-clone_condition_tree :: proc(o: ^Optimizer, node: ^ConditionNode) -> ^ConditionNode {
+clone_condition_tree :: proc(o: ^Optimizer, node: ^Condition_Node) -> ^Condition_Node {
 	if node == nil { return nil }
 
-	clone := new(ConditionNode, o.alloc)
+	clone := new(Condition_Node, o.alloc)
 	clone.type = node.type
 	clone.predicate = node.predicate
 
@@ -4521,7 +4499,7 @@ clone_condition_tree :: proc(o: ^Optimizer, node: ^ConditionNode) -> ^ConditionN
 	return clone
 }
 
-free_condition_tree :: proc(o: ^Optimizer, node: ^ConditionNode) {
+free_condition_tree :: proc(o: ^Optimizer, node: ^Condition_Node) {
 	if node == nil { return }
 
 	free_condition_tree(o, node.left)
@@ -4533,7 +4511,7 @@ free_condition_tree :: proc(o: ^Optimizer, node: ^ConditionNode) {
 
 apply_condition_to_context :: proc(
 	o: ^Optimizer,
-	node: ^ConditionNode,
+	node: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) {
 	if node == nil { return }
@@ -4560,7 +4538,7 @@ apply_condition_to_context :: proc(
 
 apply_or_to_context :: proc(
 	o: ^Optimizer,
-	node: ^ConditionNode,
+	node: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) {
 	possible_states := make([dynamic]^Deep_Expression_Context, o.alloc)
@@ -5613,7 +5591,7 @@ is_return_reachable :: proc(
 
 can_condition_be_true :: proc(
 	o: ^Optimizer,
-	node: ^ConditionNode,
+	node: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) -> bool {
 	if node == nil { return true }
@@ -5643,7 +5621,7 @@ can_condition_be_true :: proc(
 
 can_condition_be_false :: proc(
 	o: ^Optimizer,
-	node: ^ConditionNode,
+	node: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) -> bool {
 	if node == nil { return true }
@@ -6604,7 +6582,7 @@ bind_parameters_to_args_with_call_ctx :: proc(
 }
 
 ReturnInfo :: struct {
-	expr: Deep_Expression,
+	expr:        Deep_Expression,
 	return_stmt: ^ast.Return_Stmt,
 }
 
@@ -7923,7 +7901,7 @@ _deep_visit_if_stmt_expr :: proc(v: ^ast.Visitor, node: ^ast.If_Stmt) {
 analyze_if_reachability :: proc(
 	o: ^Optimizer,
 	if_stmt: ^ast.If_Stmt,
-	condition: ^ConditionNode,
+	condition: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) {
 	function_name := find_enclosing_function_name(o, cast(^ast.Node)if_stmt)
@@ -7966,7 +7944,7 @@ analyze_if_reachability :: proc(
 
 is_condition_always_true :: proc(
 	o: ^Optimizer,
-	node: ^ConditionNode,
+	node: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) -> bool {
 	if node == nil { return true }
@@ -7985,7 +7963,7 @@ is_condition_always_true :: proc(
 
 is_condition_always_false :: proc(
 	o: ^Optimizer,
-	node: ^ConditionNode,
+	node: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) -> bool {
 	if node == nil { return false }
@@ -8004,7 +7982,7 @@ is_condition_always_false :: proc(
 
 is_condition_always_true_in_single_context :: proc(
 	o: ^Optimizer,
-	node: ^ConditionNode,
+	node: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) -> bool {
 	switch node.type {
@@ -8033,7 +8011,7 @@ is_condition_always_true_in_single_context :: proc(
 
 is_condition_always_false_in_single_context :: proc(
 	o: ^Optimizer,
-	node: ^ConditionNode,
+	node: ^Condition_Node,
 	ctx: ^Deep_Expression_Context,
 ) -> bool {
 	switch node.type {
@@ -8064,8 +8042,8 @@ check_constraints_for_predicate :: proc(
 	o: ^Optimizer,
 	ctx: ^Deep_Expression_Context,
 	pred: Predicate,
-) -> CheckResult {
-	result := CheckResult.Possible
+) -> Check_Result {
+	result := Check_Result.Possible
 
 	if constraints, exists := ctx.constraints[pred.variable]; exists {
 		for constraint in constraints {
@@ -8081,7 +8059,7 @@ check_constraints_for_predicate :: proc(
 	return result
 }
 
-combine_check_results_for_true :: proc(value_result, constraint_result: CheckResult) -> bool {
+combine_check_results_for_true :: proc(value_result, constraint_result: Check_Result) -> bool {
 	switch value_result {
 	case .Certain:
 		return true
@@ -8100,7 +8078,7 @@ combine_check_results_for_true :: proc(value_result, constraint_result: CheckRes
 	return false
 }
 
-combine_check_results_for_false :: proc(value_result, constraint_result: CheckResult) -> bool {
+combine_check_results_for_false :: proc(value_result, constraint_result: Check_Result) -> bool {
 	switch value_result {
 	case .Impossible:
 		return true
@@ -8233,7 +8211,7 @@ merge_contexts_after_if :: proc(
 	free_context(o, temp_ctx)
 }
 
-has_or_condition :: proc(tree: ^ConditionNode) -> bool {
+has_or_condition :: proc(tree: ^Condition_Node) -> bool {
 	if tree == nil { return false }
 	if tree.type == .Or { return true }
 	if tree.left != nil && has_or_condition(tree.left) { return true }
@@ -10347,43 +10325,43 @@ node_is_expr :: proc(node: ^ast.Node) -> bool {
 }
 
 Flow_Node :: struct {
-	id: int,
-	node: ^ast.Node,
-	dependencies: map[^ast.Node]bool,
-	dependents: map[^ast.Node]bool,
-	is_volatile: bool,
+	id:               int,
+	node:             ^ast.Node,
+	dependencies:     map[^ast.Node]bool,
+	dependents:       map[^ast.Node]bool,
+	is_volatile:      bool,
 	has_side_effects: bool,
-	execution_order: int,
-	flow_id: int,
-	visited: bool,
-	in_current_path: bool,
-	defined_vars: [dynamic]string,
-	used_vars: [dynamic]string,
+	execution_order:  int,
+	flow_id:          int,
+	visited:          bool,
+	in_current_path:  bool,
+	defined_vars:     [dynamic]string,
+	used_vars:        [dynamic]string,
 }
 
 Flow :: struct {
-	id: int,
-	nodes: [dynamic]^Flow_Node,
-	is_volatile: bool,
-	depends_on: [dynamic]int,
-	execution_order: int,
+	id:                      int,
+	nodes:                   [dynamic]^Flow_Node,
+	is_volatile:             bool,
+	depends_on:              [dynamic]int,
+	execution_order:         int,
 	can_execute_in_parallel: bool,
-	defined_vars: map[string]bool,
-	used_vars: map[string]bool,
+	defined_vars:            map[string]bool,
+	used_vars:               map[string]bool,
 }
 
 Flow_Analyzer :: struct {
-	flow_nodes: map[^ast.Node]^Flow_Node,
-	flows: [dynamic]^Flow,
-	current_flow_id: int,
-	execution_counter: int,
-	node_to_flow: map[^ast.Node]int,
-	flow_dependency_graph: map[int][dynamic]int,
+	flow_nodes:             map[^ast.Node]^Flow_Node,
+	flows:                  [dynamic]^Flow,
+	current_flow_id:        int,
+	execution_counter:      int,
+	node_to_flow:           map[^ast.Node]int,
+	flow_dependency_graph:  map[int][dynamic]int,
 
-	temp_visited: map[^ast.Node]bool,
-	perm_visited: map[^ast.Node]bool,
-	node_stack: [dynamic]^ast.Node,
-	variable_defs: map[string][dynamic]^ast.Node,
+	temp_visited:           map[^ast.Node]bool,
+	perm_visited:           map[^ast.Node]bool,
+	node_stack:             [dynamic]^ast.Node,
+	variable_defs:          map[string][dynamic]^ast.Node,
 	current_variable_scope: ^checker.Scope,
 }
 
@@ -11970,13 +11948,13 @@ run_constant_conversion_pass :: proc(o: ^Optimizer) -> int {
 }
 
 Declaration_Info :: struct {
-	symbol:		^checker.Symbol,
-	decl_node:	 ^ast.Value_Decl,
+	symbol:	        ^checker.Symbol,
+	decl_node:	    ^ast.Value_Decl,
 	original_scope: ^checker.Scope,
-	usage_nodes:   [dynamic]^ast.Node,
-	target_scope:  ^checker.Scope,
-	can_move:	  bool,
-	move_reason:   string,
+	usage_nodes:    [dynamic]^ast.Node,
+	target_scope:   ^checker.Scope,
+	can_move:	    bool,
+	move_reason:    string,
 }
 
 collect_all_declarations :: proc(o: ^Optimizer) -> [dynamic]^Declaration_Info {
@@ -12939,10 +12917,10 @@ remove_unreachable_code_pass :: proc(o: ^Optimizer) {
 }
 
 UnreachableGroup :: struct {
-	statements: [dynamic]^ast.Stmt,
-	reason: string,
+	statements:    [dynamic]^ast.Stmt,
+	reason:        string,
 	function_name: string,
-	start_pos: lexer.Pos,
+	start_pos:     lexer.Pos,
 }
 
 find_unreachable_groups_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt, groups: ^[dynamic]UnreachableGroup) {
@@ -13126,11 +13104,11 @@ does_block_contain_return :: proc(o: ^Optimizer, block: ^ast.Block_Stmt) -> bool
 }
 
 Pass :: struct {
-	name: string,
-	run: proc(o: ^Optimizer),
+	name:                 string,
+	run:                  proc(o: ^Optimizer),
 	needs_usage_analysis: bool,
-	needs_deep_analysis: bool,
-	needs_flow_analysis: bool,
+	needs_deep_analysis:  bool,
+	needs_flow_analysis:  bool,
 }
 
 get_passes :: proc(allocator := context.allocator) -> [dynamic]Pass {
@@ -13240,8 +13218,8 @@ get_passes :: proc(allocator := context.allocator) -> [dynamic]Pass {
 
 PassManager :: struct {
 	optimizer: ^Optimizer,
-	passes: [dynamic]Pass,
-	stats: map[string]int,
+	passes:    [dynamic]Pass,
+	stats:     map[string]int,
 	allocator: mem.Allocator,
 }
 
