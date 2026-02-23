@@ -15,7 +15,6 @@ func t() {
 	b := de(a)
 	_ :: b
 }
-*/
 
 func ge() -> number {
 	player_send_message("test", "CONCATENATION")
@@ -26,16 +25,11 @@ func ge() -> number {
 		return 3
 	}
 	return 2
-}
+}*/
 
 event player_join() {
 	a := 1
+	a = "test"
+
 	_ :: a
-
-	b := ge()
-	_ :: b
-
-	if b == 3 {
-		player_send_message("alw true", "CONCATENATION")
-	}
 }

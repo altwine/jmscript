@@ -460,24 +460,44 @@ _type_check_visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 @(private="file")
 _type_check_visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	c := cast(^Checker)v.user_data
+
 	if node.name == "_" {
 		return
 	}
-	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
-	if found {
-		if sym.is_const {
-			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("cannot assign to constant variable '%s'", node.name), node)
-		}
 
-		if flags_field, has := sym.metadata["flags"]; has {
-			if flags, ok := flags_field.(Flags); ok && .PURE in flags {
-				if !check_expression_is_pure(c, node.expr) {
-					error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("cannot assign non-pure value to pure variable '%s'", node.name), node)
-				}
+	sym, found := lookup_symbol(c.symbol_table.current_scope, node.name)
+	if !found {
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' is not declared", node.name), node)
+		return
+	}
+
+	if sym.is_const {
+		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("cannot assign to constant variable '%s'", node.name), node)
+		return
+	}
+
+	expr_type := get_type_info_from_expression(c, node.expr)
+
+	if expr_type.kind != .Invalid {
+		if sym.type.kind != expr_type.kind && !can_casted(expr_type.kind, sym.type.kind) {
+			error.add_error(c.ec, c.files[c.current_file_idx],
+				fmt.tprintf("type mismatch in assignment to '%s': cannot assign '%s' to '%s'",
+					node.name,
+					type_kind_to_string(expr_type.kind),
+					type_kind_to_string(sym.type.kind)),
+				node)
+			return
+		}
+	}
+
+	if flags_field, has := sym.metadata["flags"]; has {
+		if flags, ok := flags_field.(Flags); ok && .PURE in flags {
+			if !check_expression_is_pure(c, node.expr) {
+				error.add_error(c.ec, c.files[c.current_file_idx],
+					fmt.tprintf("cannot assign non-pure value to pure variable '%s'", node.name),
+					node)
 			}
 		}
-	} else {
-		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' is not declared", node.name), node)
 	}
 }
 
