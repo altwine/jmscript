@@ -1,10 +1,9 @@
 package compiler
 
+import "core:log"
 import "core:mem"
 import "core:time"
-import "core:fmt"
 
-// import "../ast"
 import "../error"
 import "../parser"
 import "../checker"
@@ -71,13 +70,13 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 	error.collector_clear(&c.ec)
 
 	total_time := time.duration_milliseconds(time.since(total_start))
-	fmt.println("\n=== Compilation Times ===")
-	fmt.println("Parse time:    ", parse_time, "ms")
-	fmt.println("Check time:    ", check_time, "ms")
-	fmt.println("Optimize time: ", opt_time, "ms")
-	fmt.println("Codegen time:  ", codegen_time, "ms")
-	fmt.println("Total time:    ", total_time, "ms")
-	fmt.println("========================")
+	log.info("=== Compilation Times ===")
+	log.infof("Parse time:    %.4f ms", parse_time)
+	log.infof("Check time:    %.4f ms", check_time)
+	log.infof("Optimize time: %.4f ms", opt_time)
+	log.infof("Codegen time:  %.4f ms", codegen_time)
+	log.infof("Total time:    %.4f ms", total_time)
+	log.info("========================")
 
 	return json_ir, true
 }

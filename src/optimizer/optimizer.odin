@@ -1,5 +1,6 @@
 package optimizer
 
+import "core:log"
 import "core:mem"
 import "core:fmt"
 import "core:strconv"
@@ -9811,7 +9812,7 @@ apply_deferred_operations :: proc(o: ^Optimizer) {
 	}
 
 	if applied_count > 0 {
-		fmt.printfln("[DEBUG] Applied %d deferred optimization(s)", applied_count)
+		log.debugf("Applied %d deferred optimization(s)", applied_count)
 	}
 
 	clear(&o.deferred_operations)
@@ -12911,8 +12912,7 @@ remove_unreachable_code_pass :: proc(o: ^Optimizer) {
 	}
 
 	if removed_count > 0 {
-		fmt.printfln("[INFO] Marked %d unreachable statement(s) for removal in %d group(s)",
-			removed_count, len(unreachable_groups))
+		log.infof("Marked %d unreachable statement(s) for removal in %d group(s)", removed_count, len(unreachable_groups))
 	}
 }
 
@@ -13155,7 +13155,7 @@ get_passes :: proc(allocator := context.allocator) -> [dynamic]Pass {
 				reordered += reorder_operands_in_file(o, file)
 			}
 			if reordered > 0 {
-				fmt.printfln("[INFO] Reordered %d expressions", reordered)
+				log.infof("Reordered %d expressions", reordered)
 			}
 		},
 	})
@@ -13227,12 +13227,12 @@ run_all_passes :: proc(o: ^Optimizer) {
 	passes := get_passes(o.alloc)
 	defer delete(passes)
 
-	fmt.println("\n=== Starting Optimization Passes ===")
+	log.info("=== Starting Optimization Passes ===")
 
 	for pass, i in passes {
 		pass_start := time.now()
 
-		fmt.printfln("\n[Pass %d/%d] Running: %s", i+1, len(passes), pass.name)
+		log.infof("[Pass %d/%d] Running: %s", i+1, len(passes), pass.name)
 
 		if pass.needs_usage_analysis {
 			count_all_symbol_usage(o)
@@ -13242,10 +13242,10 @@ run_all_passes :: proc(o: ^Optimizer) {
 		apply_deferred_operations(o)
 
 		pass_time := time.duration_milliseconds(time.since(pass_start))
-		fmt.printfln("[Pass %d/%d] Completed: %s (%.2f ms)", i+1, len(passes), pass.name, pass_time)
+		log.infof("[Pass %d/%d] Completed: %s (%.2f ms)", i+1, len(passes), pass.name, pass_time)
 	}
 
-	fmt.printfln("\n=== All Optimization Passes Completed ===")
+	log.infof("=== All Optimization Passes Completed ===")
 }
 
 optimizer_optimize :: proc(o: ^Optimizer, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table) {

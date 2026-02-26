@@ -1,5 +1,6 @@
 package main
 
+import "core:log"
 import "core:sys/info"
 import "core:thread"
 import "core:strconv"
@@ -29,13 +30,6 @@ setup_encoding :: proc "contextless"() {
 }
 
 main :: proc() {
-	sw: time.Stopwatch
-	time.stopwatch_start(&sw)
-	defer {
-		ms_duration := time.stopwatch_duration(sw)
-		fmt.printfln("[DEBUG] %0.2fms", time.duration_milliseconds(ms_duration))
-	}
-
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
 		mem.tracking_allocator_init(&track, context.allocator)
@@ -56,6 +50,19 @@ main :: proc() {
 			}
 			mem.tracking_allocator_destroy(&track)
 		}
+	}
+
+	verbose := slice.contains(os.args, "-v") || slice.contains(os.args, "--verbose")
+	error_level: log.Level = .Debug if ODIN_DEBUG else .Info if verbose else .Error
+	logger_opts: log.Options = {.Level, .Terminal_Color, .Time}
+	context.logger = log.create_console_logger(error_level, logger_opts, "", context.allocator)
+	defer log.destroy_console_logger(context.logger, context.allocator)
+
+	sw: time.Stopwatch
+	time.stopwatch_start(&sw)
+	defer {
+		ms_duration := time.stopwatch_duration(sw)
+		log.debugf("%0.2fms", time.duration_milliseconds(ms_duration))
 	}
 
 	if len(os.args) < 2 {
@@ -84,11 +91,11 @@ main :: proc() {
 command_compile :: proc() {
 	when thread.IS_SUPPORTED {
 		thread_count := max(1, os.processor_core_count())
-		fmt.printfln("[DEBUG] [Threading] Supported. Available threads: %d", thread_count)
+		log.debugf("Threading is supported. Available threads: %d", thread_count)
 	} else {
-		fmt.println("[DEBUG] [Threading] Not supported.")
+		log.debugf("Threading not supported.")
 	}
-	fmt.println("[DEBUG] [Threading] Not implemented right now.")
+	log.debugf("Threading isn't implemented right now.")
 
 	if len(os.args) < 3 {
 		fmt.println("Not enough arguments: path to dir is expected!")
