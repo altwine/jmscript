@@ -122,6 +122,49 @@ after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
 visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	c := cast(^Codegen)v.user_data
 	func_handler := create_func_handler(node.name, make_operations(c.alloc), c.alloc)
+
+	translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}`
+
+	if name_anno := checker.get_anno(node, "name"); name_anno != nil {
+		if name_anno.value != nil {
+			if basic_lit, is_basic_lit := name_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
+				if basic_lit.tok.kind == .Text {
+					anno_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+					display_name_data := fmt.tprintf(translations_template, anno_content, anno_content, anno_content, anno_content)
+					append(&func_handler.values, create_named_value("display_name", create_localized_text_value(display_name_data, c.alloc), c.alloc))
+				}
+			}
+		}
+	}
+
+	if desc_anno := checker.get_anno(node, "desc"); desc_anno != nil {
+		if desc_anno.value != nil {
+			if basic_lit, is_basic_lit := desc_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
+				if basic_lit.tok.kind == .Text {
+					anno_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+					display_desc_data := fmt.tprintf(translations_template, anno_content, anno_content, anno_content, anno_content)
+					append(&func_handler.values, create_named_value("display_description", create_localized_text_value(display_desc_data, c.alloc), c.alloc))
+				}
+			}
+		}
+	}
+
+	if icon_anno := checker.get_anno(node, "icon"); icon_anno != nil {
+		if icon_anno.value != nil {
+			if basic_lit, is_basic_lit := icon_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
+				if basic_lit.tok.kind == .Text {
+					item_id := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+					func_icon := generate_item(item_id, 1, c.alloc)
+					append(&func_handler.values, create_named_value("icon", create_item_value(func_icon, c.alloc), c.alloc))
+				}
+			}
+		}
+	}
+
+	if anno := checker.get_anno(node, "hidden"); anno != nil {
+		append(&func_handler.values, create_named_value("is_hidden", create_enum_value("TRUE", c.alloc), c.alloc))
+	}
+
 	append(&c.handlers, func_handler)
 	push_operations(c, &func_handler.operations)
 }
