@@ -323,7 +323,12 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false
 		case .BUILTIN in func_flags:
 			unimplemented("generation of built-in function")
 		case:
-			unimplemented("generation of default function")
+			if len(typed_node.args) > 0 {
+				unimplemented("generation of default function with arguments")
+			}
+			op := create_basic_operation("call_function", make_named_values(c.alloc), "", c.alloc)
+			append(&op.values, create_named_value("function_name", create_text_value(func_name, PARSING_PLAIN, c.alloc), c.alloc))
+			append(c.current_operations, op)
 		}
 	case ^ast.Argument:
 		return codegen_gen_expression(c, typed_node.value, waits_enum)
