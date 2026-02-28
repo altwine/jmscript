@@ -142,7 +142,9 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	c := cast(^Codegen)v.user_data
 
 	result_value, result_type := codegen_gen_expression(c, node.expr)
-	origin_sym, _ := checker.lookup_symbol(c.current_scope, node.name)
+	origin_sym, exists := checker.lookup_symbol(c.current_scope, node.name)
+	ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
+
 	origin_type := origin_sym.type.kind
 
 	if origin_type != .Number || result_type != .Number {
@@ -248,7 +250,8 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false
 		ident, is_ident := typed_node.expr.derived.(^ast.Ident)
 		ensure(is_ident)
 		func_name := ident.name
-		sym, _ := checker.lookup_symbol(c.symbols.global_scope, func_name)
+		sym, exists := checker.lookup_symbol(c.symbols.global_scope, func_name)
+		ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
 		func_flags := sym.metadata["flags"].(checker.Flags)
 
 		switch {
@@ -283,7 +286,8 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false
 		return codegen_gen_expression(c, typed_node.value, waits_enum)
 
 	case ^ast.Ident:
-		sym, _ := checker.lookup_symbol(c.current_scope, typed_node.name)
+		sym, exists := checker.lookup_symbol(c.current_scope, typed_node.name)
+		ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
 		return create_variable_value(typed_node.name, SCOPE_GAME, c.alloc), sym.type.kind
 
 	case ^ast.Basic_Lit:
