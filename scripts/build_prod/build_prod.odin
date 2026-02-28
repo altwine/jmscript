@@ -100,12 +100,11 @@ main :: proc() {
 
 	if is_legacy {
 		append(&build_prod_cmd, fmt.tprintf(`-resource:%s`, resources_file_path))
+		append(&build_prod_cmd, `-extra-linker-flags:/LTCG`)
 		append(&build_prod_cmd, "-microarch:x86-64-v2")
 	} else {
-		append(&build_prod_cmd, fmt.tprintf(`-extra-linker-flags:%s`, compiled_resources_file_path))
+		append(&build_prod_cmd, fmt.tprintf(`-extra-linker-flags:%s /LTCG`, compiled_resources_file_path))
 		append(&build_prod_cmd, "-microarch:x86-64-v3")
-		append(&build_prod_cmd, "-linker:lld")
-		append(&build_prod_cmd, "-lto:thin")
 	}
 
 	_, stdout, stderr, err := os2.process_exec(

@@ -41,12 +41,12 @@ main :: proc() {
 	append(&build_debug_cmd, "-disallow-do")
 	append(&build_debug_cmd, "-warnings-as-errors")
 	append(&build_debug_cmd, "-sanitize:address")
+	append(&build_debug_cmd, `-extra-linker-flags:/LTCG /IGNORE:4099`)
 	append(&build_debug_cmd, fmt.tprintf("-out:%s", output_file_path))
 
 	if is_legacy {
 		append(&build_debug_cmd, "-microarch:x86-64-v2")
 	} else {
-		append(&build_debug_cmd, "-linker:lld")
 		append(&build_debug_cmd, "-microarch:x86-64-v3")
 	}
 
