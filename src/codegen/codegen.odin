@@ -153,6 +153,11 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	current_var := create_variable_value(origin_sym.name, SCOPE_GAME, c.alloc)
 
 	#partial switch node.op.kind { // TODO: get rid of duplicate code
+	case .Eq:
+		op = create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", current_var, c.alloc))
+		append(&op.values, create_named_value("value", result_value, c.alloc))
+
 	case .Add_Eq:
 		op = create_basic_operation("set_variable_add", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", current_var, c.alloc))
