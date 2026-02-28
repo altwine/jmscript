@@ -123,7 +123,7 @@ visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	c := cast(^Codegen)v.user_data
 	func_handler := create_func_handler(node.name, make_operations(c.alloc), c.alloc)
 
-	translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}`
+	translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}}}}`
 
 	if name_anno := checker.get_anno(node, "name"); name_anno != nil {
 		if name_anno.value != nil {

@@ -1,35 +1,12 @@
 package test
 
-/*
-func de(arg: number) -> number {
-	if arg == 1 {
-		return 2
-	} else {
-		return 3
-	}
+@(name="Print Hellope!")
+@(desc="My awesome function to print Hellope!")
+@(icon="clay_ball")
+func print_hellope() {
+	player_send_message("Hellope!", "CONCATENATION")
 }
-
-func t() {
-	a := 1
-
-	b := de(a)
-	_ :: b
-}
-
-func ge() -> number {
-	player_send_message("test", "CONCATENATION")
-
-	if 1 == 2 {
-		return 1
-	} else {
-		return 3
-	}
-	return 2
-}*/
 
 event player_join() {
-	a := 1
-	a = "test"
-
-	_ :: a
+	print_hellope()
 }

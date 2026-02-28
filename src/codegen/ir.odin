@@ -26,6 +26,7 @@ create_func_handler :: proc(name: string, operations: [dynamic]^Operation, alloc
 	func_handler.name = name
 	func_handler.type = "function"
 	func_handler.operations = operations
+	func_handler.values = make_named_values(allocator)
 	return func_handler
 }
 
