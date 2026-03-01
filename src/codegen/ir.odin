@@ -119,6 +119,20 @@ PARSING_COLORED  :: "legacy"
 PARSING_STYLIZED :: "minimessage"
 PARSING_PLAIN    :: "plain"
 
+MapValue :: struct {
+	using base: BaseValue,
+	keys:    [dynamic]string,
+	values:  [dynamic]Value,
+}
+
+create_map_value :: proc(keys: [dynamic]string, values: [dynamic]Value, allocator := context.allocator) -> ^MapValue {
+	map_value := new(MapValue, allocator)
+	map_value.type = "map"
+	map_value.keys = keys
+	map_value.values = values
+	return map_value
+}
+
 VariableValue :: struct {
 	using base: BaseValue,
 	variable: string,
@@ -148,6 +162,32 @@ create_array_value :: proc(values: [dynamic]Value, allocator := context.allocato
 	array_value.type = "array"
 	array_value.values = values
 	return array_value
+}
+
+ParameterValue :: struct {
+	using base: BaseValue,
+	type_key: string,
+	description: string,
+	name: string,
+	value_type: string,
+	is_required: string,
+	default_value: string,
+	slot: f64,
+	description_slot: f64,
+}
+
+create_parameter_value :: proc(type_key, description, name, value_type: string, slot, description_slot: f64, is_required := "true", default_value := "{}", allocator := context.allocator) -> ^ParameterValue {
+	parameter_value := new(ParameterValue, allocator)
+	parameter_value.type = "parameter"
+	parameter_value.type_key = type_key
+	parameter_value.description = description
+	parameter_value.name = name
+	parameter_value.value_type = value_type
+	parameter_value.is_required = is_required
+	parameter_value.default_value = default_value
+	parameter_value.slot = slot
+	parameter_value.description_slot = description_slot
+	return parameter_value
 }
 
 EnumValue :: struct {
@@ -304,7 +344,6 @@ create_localized_text_value :: proc(data: string, allocator := context.allocator
 	localized_text_value.type = "localized_text"
 	localized_text_value.data = data
 	return localized_text_value
-
 }
 
 NullValue :: struct {}
@@ -318,8 +357,10 @@ Value :: union {
 	^NullValue,
 	^NumberValue,
 	^TextValue,
+	^MapValue,
 	^VariableValue,
 	^ArrayValue,
+	^ParameterValue,
 	^EnumValue,
 	^LocationValue,
 	^VectorValue,

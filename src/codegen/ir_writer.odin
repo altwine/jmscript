@@ -96,6 +96,16 @@ ir_write_value :: proc(jb: ^Json_Builder, value: Value, comma: bool, is_named :=
 			ir_write_value(jb, v, !is_last_value, false)
 		}
 		json_end_array(jb, false)
+	case ^ParameterValue:
+		json_write_string(jb, "type", "parameter", true)
+		json_write_string(jb, "type_key", typed_value.type_key, true)
+		json_write_string(jb, "description", typed_value.description, true)
+		json_write_string(jb, "name", typed_value.name, true)
+		json_write_string(jb, "value_type", typed_value.value_type, true)
+		json_write_string(jb, "is_required", typed_value.is_required, true)
+		json_write_string(jb, "default_value", typed_value.default_value, true)
+		json_write_number(jb, "slot", typed_value.slot, true)
+		json_write_number(jb, "description_slot", typed_value.description_slot, false)
 	case ^NumberValue:
 		number_string := fmt.tprintf("%0.8f", typed_value.number)
 		for strings.contains(number_string, ".") && strings.ends_with(number_string, "0") {
@@ -110,6 +120,16 @@ ir_write_value :: proc(jb: ^Json_Builder, value: Value, comma: bool, is_named :=
 		json_write_string(jb, "type", "text", true)
 		json_write_string(jb, "text", typed_value.text, true)
 		json_write_string(jb, "parsing", typed_value.parsing, false)
+	case ^MapValue:
+		json_write_string(jb, "type", "map", true)
+		json_begin_object(jb, "values")
+		keys_count := len(typed_value.keys)
+		for k, key_idx in typed_value.keys {
+			is_last_value := key_idx == keys_count-1
+			json_write_string_unquoted(jb, k, "", false)
+			ir_write_value(jb, typed_value.values[key_idx], !is_last_value, false)
+		}
+		json_end_object(jb, comma)
 	case ^VariableValue:
 		json_write_string(jb, "type", "variable", true)
 		json_write_string(jb, "variable", typed_value.variable, true)
