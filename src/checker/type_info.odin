@@ -33,6 +33,7 @@ Type_Info :: struct {
 	return_t: 	 ^Type_Info,
 	param_names: [dynamic]string,
 	param_types: [dynamic]^Type_Info,
+	is_param:   bool,
 	metadata:    Metadata,
 }
 

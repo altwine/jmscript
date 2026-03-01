@@ -312,6 +312,7 @@ _collect_visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	if node.params != nil {
 		for param in node.params.list {
 			type_info := create_type_info(string_to_type_kind(c, param.type, param), c.alloc)
+			type_info.is_param = true
 
 			param_sym := create_symbol(param.name, type_info, node, c.alloc)
 			add_symbol(c, param_sym)
@@ -345,6 +346,7 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 	if node.params != nil {
 		for param in node.params.list {
 			type_info := create_type_info(string_to_type_kind(c, param.type, param), c.alloc)
+			type_info.is_param = true
 
 			param_sym := create_symbol(param.name, type_info, node, c.alloc)
 			add_symbol(c, param_sym)
