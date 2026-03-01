@@ -123,46 +123,64 @@ visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	c := cast(^Codegen)v.user_data
 	func_handler := create_func_handler(node.name, make_operations(c.alloc), c.alloc)
 
-	translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}}}}`
+	translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}}`
 
-	if name_anno := checker.get_anno(node, "name"); name_anno != nil {
-		if name_anno.value != nil {
-			if basic_lit, is_basic_lit := name_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
-				if basic_lit.tok.kind == .Text {
-					anno_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
-					display_name_data := fmt.tprintf(translations_template, anno_content, anno_content, anno_content, anno_content)
-					append(&func_handler.values, create_named_value("display_name", create_localized_text_value(display_name_data, c.alloc), c.alloc))
-				}
-			}
+	if anno := checker.get_anno(node, "name"); anno != nil && anno.value != nil {
+		if basic_lit, is_basic_lit := anno.value.derived.(^ast.Basic_Lit); is_basic_lit && basic_lit.tok.kind == .Text {
+			anno_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+			display_name_data := fmt.tprintf(translations_template, anno_content, anno_content, anno_content, anno_content)
+			append(&func_handler.values, create_named_value("display_name", create_localized_text_value(display_name_data, c.alloc), c.alloc))
 		}
 	}
 
-	if desc_anno := checker.get_anno(node, "desc"); desc_anno != nil {
-		if desc_anno.value != nil {
-			if basic_lit, is_basic_lit := desc_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
-				if basic_lit.tok.kind == .Text {
-					anno_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
-					display_desc_data := fmt.tprintf(translations_template, anno_content, anno_content, anno_content, anno_content)
-					append(&func_handler.values, create_named_value("display_description", create_localized_text_value(display_desc_data, c.alloc), c.alloc))
-				}
-			}
+	if anno := checker.get_anno(node, "desc"); anno != nil && anno.value != nil {
+		if basic_lit, is_basic_lit := anno.value.derived.(^ast.Basic_Lit); is_basic_lit && basic_lit.tok.kind == .Text {
+			anno_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+			display_desc_data := fmt.tprintf(translations_template, anno_content, anno_content, anno_content, anno_content)
+			append(&func_handler.values, create_named_value("display_description", create_localized_text_value(display_desc_data, c.alloc), c.alloc))
 		}
 	}
 
-	if icon_anno := checker.get_anno(node, "icon"); icon_anno != nil {
-		if icon_anno.value != nil {
-			if basic_lit, is_basic_lit := icon_anno.value.derived.(^ast.Basic_Lit); is_basic_lit {
-				if basic_lit.tok.kind == .Text {
-					item_id := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
-					func_icon := generate_item(item_id, 1, c.alloc)
-					append(&func_handler.values, create_named_value("icon", create_item_value(func_icon, c.alloc), c.alloc))
-				}
-			}
+	if anno := checker.get_anno(node, "icon"); anno != nil && anno.value != nil {
+		if basic_lit, is_basic_lit := anno.value.derived.(^ast.Basic_Lit); is_basic_lit && basic_lit.tok.kind == .Text {
+			item_id := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+			func_icon := generate_item(item_id, 1, c.alloc)
+			append(&func_handler.values, create_named_value("icon", create_item_value(func_icon, c.alloc), c.alloc))
 		}
 	}
 
-	if anno := checker.get_anno(node, "hidden"); anno != nil {
+	if checker.anno_is_true(node, "hidden") {
 		append(&func_handler.values, create_named_value("is_hidden", create_enum_value("TRUE", c.alloc), c.alloc))
+	}
+
+	// TODO: fix possible slots overflow when len(params) > 7
+	ensure(len(node.params.list) <= 7, "slots overflow")
+
+	if len(node.params.list) > 0 {
+		parameters_inner := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+
+		for param, param_index in node.params.list {
+			test_desc :: "Test param description!"
+			test_desc_data := fmt.tprintf(translations_template, test_desc, test_desc, test_desc, test_desc)
+
+			// TODO: fix leaking abstract type (bool or smth) to justmc ir
+			ensure(
+				param.type == "number" || param.type == "text" ||
+				param.type == "variable" || param.type == "array" ||
+				param.type == "parameter" || param.type == "enum" ||
+				param.type == "location" ||	param.type == "vector" ||
+				param.type == "sound" || param.type == "particle" ||
+				param.type == "item" || param.type == "game_value" ||
+				param.type == "potion" || param.type == "block" ||
+				param.type == "map" || param.type == "localized_text", "abstract type leakage")
+
+			slot := 10 + f64(param_index)
+			desc_slot := 19 + f64(param_index)
+			param_data := create_parameter_value("singular", test_desc_data, param.name, param.type, slot, desc_slot, "true", "{}", c.alloc)
+			append(&parameters_inner.values, param_data)
+		}
+		parameters := create_named_value("parameters", parameters_inner, c.alloc)
+		append(&func_handler.values, parameters)
 	}
 
 	append(&c.handlers, func_handler)
@@ -195,7 +213,7 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	}
 
 	op: ^Operation
-	current_var := create_variable_value(origin_sym.name, SCOPE_GAME, c.alloc)
+	current_var := create_variable_value(origin_sym.name, guess_variable_type_by_scope(c, origin_sym.name), c.alloc)
 
 	#partial switch node.op.kind { // TODO: get rid of duplicate code
 	case .Eq:
@@ -264,23 +282,23 @@ visit_if_stmt :: proc(v: ^ast.Visitor, node: ^ast.If_Stmt) {
 
 visit_return_stmt :: proc(v: ^ast.Visitor, node: ^ast.Return_Stmt) {
 	c := cast(^Codegen)v.user_data
-
+	unimplemented("return statement support")
 }
 
 visit_defer_stmt :: proc(v: ^ast.Visitor, node: ^ast.Defer_Stmt) {
 	c := cast(^Codegen)v.user_data
-
+	unimplemented("defer statement support")
 }
 
 visit_for_stmt :: proc(v: ^ast.Visitor, node: ^ast.For_Stmt) {
 	c := cast(^Codegen)v.user_data
-
+	unimplemented("for statement support")
 }
 
 visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	c := cast(^Codegen)v.user_data
 	value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-	append(&value_decl_op.values, create_named_value("variable", create_variable_value(node.name, SCOPE_GAME, c.alloc), c.alloc))
+	append(&value_decl_op.values, create_named_value("variable", create_variable_value(node.name, guess_variable_type_by_scope(c, node.name), c.alloc), c.alloc))
 	result_value, _ := codegen_gen_expression(c, node.value)
 	append(&value_decl_op.values, create_named_value("value", result_value, c.alloc))
 	append(c.current_operations, value_decl_op)
@@ -323,11 +341,45 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false
 		case .BUILTIN in func_flags:
 			unimplemented("generation of built-in function")
 		case:
-			if len(typed_node.args) > 0 {
-				unimplemented("generation of default function with arguments")
-			}
+			// unimplemented("generation of default function with arguments")
 			op := create_basic_operation("call_function", make_named_values(c.alloc), "", c.alloc)
 			append(&op.values, create_named_value("function_name", create_text_value(func_name, PARSING_PLAIN, c.alloc), c.alloc))
+
+			args_count := len(typed_node.args)
+			if args_count > 0 {
+				keys := make([dynamic]string, 0, c.alloc)
+				values := make([dynamic]Value, 0, c.alloc)
+
+				for arg, i in typed_node.args {
+					real_index := i
+					if arg.name != "" {
+						for param_name, arg_i in sym.type.param_names {
+							if param_name == arg.name {
+								real_index = arg_i
+								break
+							}
+						}
+					}
+					arg_name := sym.type.param_names[real_index]
+					param_type := checker.type_kind_to_string(sym.type.param_types[real_index].kind)
+
+					// TODO: fix leaking abstract type (bool or smth) to justmc ir
+					ensure(
+						param_type == "number" || param_type == "text" ||
+						param_type == "variable" || param_type == "array" ||
+						param_type == "parameter" || param_type == "enum" ||
+						param_type == "location" ||	param_type == "vector" ||
+						param_type == "sound" || param_type == "particle" ||
+						param_type == "item" || param_type == "game_value" ||
+						param_type == "potion" || param_type == "block" ||
+						param_type == "map" || param_type == "localized_text", "abstract type leakage")
+
+					arg_value, _ := codegen_gen_expression(c, arg, waits_enum=param_type=="enum")
+					append(&keys, fmt.tprintf(`{{\"type\":\"text\",\"text\":\"%s\",\"parsing\":\"plain\"}}`, arg_name))
+					append(&values, arg_value)
+				}
+				append(&op.values, create_named_value("args", create_map_value(keys, values, c.alloc), c.alloc))
+			}
 			append(c.current_operations, op)
 		}
 	case ^ast.Argument:
@@ -336,7 +388,7 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false
 	case ^ast.Ident:
 		sym, exists := checker.lookup_symbol(c.current_scope, typed_node.name)
 		ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
-		return create_variable_value(typed_node.name, SCOPE_GAME, c.alloc), sym.type.kind
+		return create_variable_value(typed_node.name, guess_variable_type_by_scope(c, typed_node.name), c.alloc), sym.type.kind
 
 	case ^ast.Basic_Lit:
 		content := typed_node.tok.content
@@ -520,6 +572,14 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false
 		unimplemented(fmt.tprintf("%v", typed_node))
 	}
 	return nil, nil
+}
+
+guess_variable_type_by_scope :: proc(c: ^Codegen, variable_name: string) -> string {
+	sym, _ := checker.lookup_symbol(c.current_scope, variable_name)
+	if sym.type.is_param {
+		return SCOPE_LINE
+	}
+	return SCOPE_GAME
 }
 
 codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table, minify: bool, unique_id: string) -> string {
