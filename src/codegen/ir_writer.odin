@@ -99,7 +99,9 @@ ir_write_value :: proc(jb: ^Json_Builder, value: Value, comma: bool, is_named :=
 	case ^ParameterValue:
 		json_write_string(jb, "type", "parameter", true)
 		json_write_string(jb, "type_key", typed_value.type_key, true)
-		json_write_string(jb, "description", typed_value.description, true)
+		if typed_value.description != "" {
+			json_write_string(jb, "description", typed_value.description, true)
+		}
 		json_write_string(jb, "name", typed_value.name, true)
 		json_write_string(jb, "value_type", typed_value.value_type, true)
 		json_write_string(jb, "is_required", typed_value.is_required, true)

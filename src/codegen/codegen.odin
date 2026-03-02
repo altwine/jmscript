@@ -160,8 +160,8 @@ visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 		parameters_inner := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
 
 		for param, param_index in node.params.list {
-			test_desc :: "Test param description!"
-			test_desc_data := fmt.tprintf(translations_template, test_desc, test_desc, test_desc, test_desc)
+			// test_desc :: "Test param description!"
+			// test_desc_data := fmt.tprintf(translations_template, test_desc, test_desc, test_desc, test_desc)
 
 			// TODO: fix leaking abstract type (bool or smth) to justmc ir
 			ensure(
@@ -176,7 +176,7 @@ visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 
 			slot := 10 + f64(param_index)
 			desc_slot := 19 + f64(param_index)
-			param_data := create_parameter_value("singular", test_desc_data, param.name, param.type, slot, desc_slot, "true", "{}", c.alloc)
+			param_data := create_parameter_value("singular", "", param.name, param.type, slot, desc_slot, "true", "{}", c.alloc)
 			append(&parameters_inner.values, param_data)
 		}
 		parameters := create_named_value("parameters", parameters_inner, c.alloc)
