@@ -51,6 +51,9 @@ ir_write_operation :: proc(jb: ^Json_Builder, operation: ^Operation, comma: bool
 		json_write_string(jb, "type", operation.selection.type, false)
 		json_end_object(jb, true)
 	}
+	if operation.is_inverted {
+		json_write_string(jb, "is_inverted", "true", true)
+	}
 	if len(operation.operations) > 0 {
 		json_begin_array(jb, "operations")
 		ops_count := len(operation.operations)
