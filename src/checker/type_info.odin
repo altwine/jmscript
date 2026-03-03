@@ -29,12 +29,13 @@ Type_Kind :: enum {
 }
 
 Type_Info :: struct {
-	kind:	  	 Type_Kind,
-	return_t: 	 ^Type_Info,
-	param_names: [dynamic]string,
-	param_types: [dynamic]^Type_Info,
-	is_param:   bool,
-	metadata:    Metadata,
+	kind:	  	   Type_Kind,
+	return_t: 	   ^Type_Info,
+	param_names:   [dynamic]string,
+	param_types:   [dynamic]^Type_Info,
+	is_param:      bool,
+	from_for_head: bool,
+	metadata:      Metadata,
 }
 
 create_type_info :: proc(kind: Type_Kind, allocator := context.allocator) -> ^Type_Info {

@@ -46,6 +46,7 @@ checker_init :: proc(c: ^Checker, ec: ^error.Collector, allocator := context.all
 	c.collector_vtable.visit_func_stmt = _collect_visit_func_stmt
 	c.collector_vtable.visit_event_stmt = _collect_visit_event_stmt
 	c.collector_vtable.visit_value_decl = _collect_visit_value_decl
+	c.collector_vtable.visit_for_stmt = _collect_visit_for_stmt
 	c.collector_vtable.before_visit_child = _collect_before_visit_child
 	c.collector_vtable.after_visit_child = _collect_after_visit_child
 	c.collector_vtable.after_visit_node = _after_visit_node
@@ -175,7 +176,8 @@ enter_scope_for_node :: proc(c: ^Checker, node: ^ast.Node) -> bool {
 		return false
 
 	case ^ast.Block_Stmt,
-		 ^ast.Defer_Stmt:
+		 ^ast.Defer_Stmt,
+		 ^ast.For_Stmt:
 
 		if scope, exists := c.symbol_table.node_scopes[node.id]; exists {
 			c.symbol_table.current_scope = scope
@@ -195,7 +197,8 @@ exit_scope_for_node :: proc(c: ^Checker, node: ^ast.Node) {
 	case ^ast.Block_Stmt,
 		 ^ast.Func_Stmt,
 		 ^ast.Event_Stmt,
-		 ^ast.Defer_Stmt:
+		 ^ast.Defer_Stmt,
+		 ^ast.For_Stmt:
 
 		if scope, exists := c.symbol_table.node_scopes[node.id]; exists && scope.parent != nil {
 			c.symbol_table.current_scope = scope.parent
@@ -227,7 +230,8 @@ _type_check_before_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node
 		case ^ast.Block_Stmt,
 			 ^ast.Func_Stmt,
 			 ^ast.Event_Stmt,
-			 ^ast.Defer_Stmt:
+			 ^ast.Defer_Stmt,
+			 ^ast.For_Stmt:
 
 			set_scope_from_node_id(c, child)
 		case:
@@ -245,7 +249,8 @@ _type_check_after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node)
 		case ^ast.Block_Stmt,
 			 ^ast.Func_Stmt,
 			 ^ast.Event_Stmt,
-			 ^ast.Defer_Stmt:
+			 ^ast.Defer_Stmt,
+			 ^ast.For_Stmt:
 
 			if scope, exists := c.symbol_table.node_scopes[child.id]; exists && scope.parent != nil {
 				c.symbol_table.current_scope = scope.parent
@@ -354,6 +359,25 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 			append(&symbol.type.param_names, param_sym.name)
 			append(&symbol.type.param_types, type_info)
 		}
+	}
+}
+
+@(private="file")
+_collect_visit_for_stmt :: proc(v: ^ast.Visitor, node: ^ast.For_Stmt) {
+	c := cast(^Checker)v.user_data
+	for range_var in node.range_vars {
+		if range_var.name == "_" {
+			return
+		}
+		if _, already_defined := lookup_local_symbol(c.symbol_table.current_scope, range_var.name);
+			already_defined {
+			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' is already defined", range_var.name), range_var)
+			return
+		}
+		type_info := get_type_info_from_expression(c, range_var)
+		type_info.from_for_head = true
+		symbol := create_symbol(range_var.name, type_info, range_var, c.alloc)
+		add_symbol(c, symbol)
 	}
 }
 
@@ -976,8 +1000,8 @@ check_function_body_is_pure :: proc(c: ^Checker, body: ^ast.Block_Stmt, func_sco
 }
 
 check_for_stmt_is_pure :: proc(c: ^Checker, for_stmt: ^ast.For_Stmt) -> bool {
-	if for_stmt.init != nil {
-		for ident in for_stmt.init {
+	if for_stmt.range_vars != nil {
+		for ident in for_stmt.range_vars {
 			if sym, exists := lookup_symbol(c.symbol_table.current_scope, ident.name); !exists {
 				return false
 			}
@@ -985,9 +1009,6 @@ check_for_stmt_is_pure :: proc(c: ^Checker, for_stmt: ^ast.For_Stmt) -> bool {
 	}
 
 	if for_stmt.cond != nil && !check_expression_is_pure(c, for_stmt.cond) {
-		return false
-	}
-	if for_stmt.second_cond != nil && !check_expression_is_pure(c, for_stmt.second_cond) {
 		return false
 	}
 
@@ -1006,17 +1027,32 @@ check_for_stmt_is_pure :: proc(c: ^Checker, for_stmt: ^ast.For_Stmt) -> bool {
 		}
 	}
 
+	if for_stmt.init != nil {
+		#partial switch post_stmt in for_stmt.init.derived {
+		case ^ast.Expr_Stmt:
+			if !check_expression_is_pure(c, post_stmt.expr) {
+				return false
+			}
+	 case ^ast.Assign_Stmt:
+			if !check_expression_is_pure(c, post_stmt.expr) {
+				return false
+			}
+		case:
+			return false
+		}
+	}
+
 	if for_stmt.body != nil {
 		enter_scope(c)
 		defer exit_scope(c)
 
-		if for_stmt.init != nil {
-			for ident in for_stmt.init {
-				type_info := create_type_info(.Any, c.alloc)
-				symbol := create_symbol(ident.name, type_info, cast(^ast.Node)ident, c.alloc)
-				add_symbol(c, symbol)
-			}
-		}
+		// if for_stmt.range_vars != nil {
+		// 	for ident in for_stmt.range_vars {
+		// 		type_info := create_type_info(.Any, c.alloc)
+		// 		symbol := create_symbol(ident.name, type_info, cast(^ast.Node)ident, c.alloc)
+		// 		add_symbol(c, symbol)
+		// 	}
+		// }
 
 		if !check_function_body_is_pure(c, for_stmt.body) {
 			return false

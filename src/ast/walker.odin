@@ -16,6 +16,7 @@ Visitor_VTable :: struct {
 	visit_member_access_expr: proc(v: ^Visitor, node: ^Member_Access_Expr),
 	visit_index_expr:	   	  proc(v: ^Visitor, node: ^Index_Expr),
 	visit_call_expr:		  proc(v: ^Visitor, node: ^Call_Expr),
+	visit_range_expr:		  proc(v: ^Visitor, node: ^Range_Expr),
 	visit_field_value:	      proc(v: ^Visitor, node: ^Field_Value),
 	visit_field_access:	      proc(v: ^Visitor, node: ^Field_Access),
 
@@ -115,6 +116,13 @@ walk_node :: proc(w: ^Walker, node: ^Node) {
 		for arg in n.args {
 			walk_child_node(w, node, arg)
 		}
+
+	case ^Range_Expr:
+		if w.vtable.visit_range_expr != nil {
+			w.vtable.visit_range_expr(&w.visitor, n)
+		}
+		walk_child_expr(w, node, n.start_expr)
+		walk_child_expr(w, node, n.end_expr)
 
 	case ^Field_Value:
 		if w.vtable.visit_field_value != nil {
@@ -253,13 +261,13 @@ walk_node :: proc(w: ^Walker, node: ^Node) {
 		for &anno in n.annotations {
 			walk_child_node(w, node, &anno)
 		}
-		if n.init != nil {
-			for ident in n.init {
+		if n.range_vars != nil {
+			for ident in n.range_vars {
 				walk_child_node(w, node, ident)
 			}
 		}
+		walk_child_node(w, node, n.init)
 		walk_child_expr(w, node, n.cond)
-		walk_child_expr(w, node, n.second_cond)
 		walk_child_node(w, node, n.post)
 		walk_child_node(w, node, n.body)
 

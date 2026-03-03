@@ -287,43 +287,180 @@ skip_to_close_paren :: proc(p: ^Parser) {
 
 parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {
 	for_tok := current(p)
-	body:  ^ast.Block_Stmt
-	init := make([dynamic]^ast.Ident, p.file.alloc)
-	cond: ^ast.Expr
-	range_tok: lexer.Token
-	second_cond: ^ast.Expr
 	advance(p)
+
+	init_stmt: ^ast.Stmt = nil
+	cond_expr: ^ast.Expr = nil
+	post_stmt: ^ast.Stmt = nil
+	range_vars: []^ast.Ident = nil
+	range_expr: ^ast.Range_Expr = nil
+	loop_type: ast.Loop_Type = .Unconditional
+	body: ^ast.Block_Stmt = nil
+
 	if match(p, .Open_Brace) {
 		body = parse_block_stmt(p)
-	} else {
-		for match(p, .Ident) {
-			ident_tok := current(p)
+		end_pos := body.end if body != nil else current(p).pos
+		for_stmt := ast.new(ast.For_Stmt, for_tok.pos, end_pos, p.file.alloc)
+		for_stmt.type = .Unconditional
+		for_stmt.body = body
+		return for_stmt
+	}
+
+	if match(p, .Ident) {
+		save_offset := p.offset
+		first_ident := parse_ident_token(p)
+		idents := make([dynamic]^ast.Ident, p.file.alloc)
+		append(&idents, first_ident)
+
+		if match(p, .Comma) {
 			advance(p)
-			init1 := ast.new(ast.Ident, ident_tok.pos, ident_tok.pos, p.file.alloc)
-			init1.name = ident_tok.content
-			append(&init, init1)
-			if match(p, .Comma) {
-				advance(p)
+			if match(p, .Ident) {
+				append(&idents, parse_ident_token(p))
 			}
 		}
+
 		if match(p, .In) {
 			advance(p)
-		}
-		cond = parse_expression(p)
-		if match(p, .Open_Brace) {
+			loop_type = .Range
+			range_vars = idents[:]
+			expr := parse_expression(p)
+			#partial switch v in expr.derived {
+			case ^ast.Range_Expr:
+				range_expr = v
+				cond_expr = v
+			case:
+				error.add_error(p.ec, p.file, "expected range expression", current(p).pos)
+			}
+
+			if !match(p, .Open_Brace) {
+				error.add_error(p.ec, p.file, "expected '{' after range expression", current(p).pos)
+				for !match(p, .Open_Brace) && !match(p, .EOF) { advance(p) }
+			}
 			body = parse_block_stmt(p)
+			end_pos := body.end if body != nil else current(p).pos
+			for_stmt := ast.new(ast.For_Stmt, for_tok.pos, end_pos, p.file.alloc)
+			for_stmt.type = .Range
+			for_stmt.range_vars = range_vars
+			for_stmt.range_expr = range_expr
+			for_stmt.cond = cond_expr
+			for_stmt.body = body
+			return for_stmt
+		} else {
+			p.offset = save_offset
 		}
 	}
 
-	for_stmt := ast.new(ast.For_Stmt, for_tok.pos, current(p).pos, p.file.alloc)
-	for_stmt.for_pos = for_tok.pos
-	for_stmt.init = init[:]
-	for_stmt.cond = cond
+	first_part := parse_for_header_part(p)
+
+	if match(p, .Semicolon) {
+		loop_type = .Basic
+		advance(p)
+		init_stmt = first_part
+
+		if !match(p, .Semicolon) && !match(p, .Open_Brace) {
+			cond_expr = parse_expression(p)
+		}
+
+		if !match(p, .Semicolon) {
+			error.add_error(p.ec, p.file, "expected ';' after condition", current(p).pos)
+		} else {
+			advance(p)
+		}
+
+		if !match(p, .Open_Brace) {
+			post_stmt = parse_for_header_part(p)
+		}
+
+	} else if match(p, .Open_Brace) {
+		loop_type = .Conditional
+		if first_part != nil {
+			if expr_stmt, ok := first_part.derived.(^ast.Expr_Stmt); ok {
+				cond_expr = expr_stmt.expr
+			} else {
+				init_stmt = first_part
+			}
+		}
+	} else {
+		error.add_error(p.ec, p.file, "expected ';' or '{' in for loop header", current(p).pos)
+		for !match(p, .Open_Brace) && !match(p, .Semicolon) && !match(p, .EOF) {
+			advance(p)
+		}
+		if match(p, .Semicolon) {
+			loop_type = .Basic
+			advance(p)
+			init_stmt = first_part
+			if !match(p, .Semicolon) && !match(p, .Open_Brace) {
+				cond_expr = parse_expression(p)
+			}
+			if match(p, .Semicolon) { advance(p) }
+			if !match(p, .Open_Brace) {
+				post_stmt = parse_for_header_part(p)
+			}
+		}
+	}
+
+	if !match(p, .Open_Brace) {
+		error.add_error(p.ec, p.file, "expected '{' after for loop header", current(p).pos)
+		for !match(p, .Open_Brace) && !match(p, .EOF) { advance(p) }
+	}
+	body = parse_block_stmt(p)
+	end_pos := body.end if body != nil else current(p).pos
+
+	for_stmt := ast.new(ast.For_Stmt, for_tok.pos, end_pos, p.file.alloc)
+	for_stmt.type = loop_type
+	for_stmt.init = init_stmt
+	for_stmt.cond = cond_expr
+	for_stmt.post = post_stmt
+	for_stmt.range_vars = range_vars
+	for_stmt.range_expr = range_expr
 	for_stmt.body = body
-	for_stmt.range_tok = range_tok
-	for_stmt.second_cond = second_cond
 	return for_stmt
 }
+
+parse_ident_token :: proc(p: ^Parser) -> ^ast.Ident {
+	tok := current(p)
+	advance(p)
+	ident := ast.new(ast.Ident, tok.pos, tok.pos, p.file.alloc)
+	ident.name = tok.content
+	return ident
+}
+
+parse_for_header_part :: proc(p: ^Parser) -> ^ast.Stmt {
+	if match(p, .Semicolon) || match(p, .Open_Brace) || match(p, .In) {
+		return nil
+	}
+
+	start_offset := p.offset
+	stmt: ^ast.Stmt = nil
+
+	switch {
+	case match(p, .Ident) && (peek(p).kind == .Eq || lexer.is_assignment(peek(p).kind)):
+		stmt = parse_assignment_stmt(p)
+	case match(p, .Ident) && peek(p).kind == .Colon && (peek(p, 2).kind == .Eq || (peek(p, 2).kind == .Ident && peek(p, 3).kind == .Eq)):
+		stmt = parse_variable_declaration(p, false)
+	case match(p, .Ident) && peek(p).kind == .Colon && (peek(p, 2).kind == .Colon || (peek(p, 2).kind == .Ident && peek(p, 3).kind == .Colon)):
+		stmt = parse_variable_declaration(p, true)
+	case:
+		expr := parse_expression(p)
+		if expr != nil {
+			expr_stmt := ast.new(ast.Expr_Stmt, expr.pos, expr.end, p.file.alloc)
+			expr_stmt.expr = expr
+			stmt = expr_stmt
+		}
+	}
+
+	if stmt == nil { p.offset = start_offset }
+	return stmt
+}
+
+
+
+
+
+
+
+
+
 
 parse_expr_stmt :: proc(p: ^Parser) -> ^ast.Expr_Stmt {
 	start_tok := current(p)
@@ -557,6 +694,30 @@ parse_expression :: proc(p: ^Parser) -> ^ast.Expr {
 	return parse_logical_or(p)
 }
 
+parse_range_expression :: proc(p: ^Parser, left: ^ast.Expr) -> ^ast.Expr {
+	range_tok := current(p)
+	advance(p)
+
+	range_kind: ast.Range_Kind
+	#partial switch range_tok.kind {
+	case .Range_Half: range_kind = .Exclusive
+	case .Range_Full: range_kind = .Inclusive
+	}
+
+	right := parse_unary(p)
+	if right == nil {
+		error.add_error(p.ec, p.file, "expected expression after range operator", current(p).pos)
+		return left
+	}
+
+	range_expr := ast.new(ast.Range_Expr, left.pos, right.end, p.file.alloc)
+	range_expr.start_expr = left
+	range_expr.end_expr = right
+	range_expr.kind = range_kind
+
+	return range_expr
+}
+
 parse_logical_or :: proc(p: ^Parser) -> ^ast.Expr {
 	left := parse_logical_and(p)
 	if left == nil {
@@ -606,7 +767,7 @@ parse_logical_and :: proc(p: ^Parser) -> ^ast.Expr {
 }
 
 parse_comparison :: proc(p: ^Parser) -> ^ast.Expr {
-	left := parse_addition(p)
+	left := parse_range(p)
 	if left == nil {
 		return nil
 	}
@@ -631,6 +792,17 @@ parse_comparison :: proc(p: ^Parser) -> ^ast.Expr {
 			return left
 		}
 	}
+}
+
+parse_range :: proc(p: ^Parser) -> ^ast.Expr {
+	left := parse_addition(p)
+	if left == nil {
+		return nil
+	}
+	if match(p, .Range_Half) || match(p, .Range_Full) {
+		return parse_range_expression(p, left)
+	}
+	return left
 }
 
 parse_addition :: proc(p: ^Parser) -> ^ast.Expr {

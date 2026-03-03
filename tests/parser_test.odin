@@ -302,7 +302,7 @@ test_parse_for_statement :: proc(t: ^testing.T) {
 		{`for {
 	// infinite loop
 }`, "infinite loop"},
-		{`for i in items {
+		{`for i in 0..=10 {
 	process(i)
 }`, "range-based for loop"},
 	}
@@ -543,7 +543,7 @@ func max(a: number, b: number) -> number {
 @benchmark
 func calculate() {
 	result = 0
-	for i in iterator {
+	for i in 0..=10 {
 		result += square(i)
 	}
 	print(result)

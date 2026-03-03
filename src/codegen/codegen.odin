@@ -10,6 +10,9 @@ import "../checker"
 import "../error"
 import "../../assets"
 
+// This is compiler-side limit.
+RANGE_EXPR_LIST_LIT_HARD_LIMIT :: 128
+
 BLOCKS :: 88
 LINES :: 23
 FLOORS :: 15
@@ -17,7 +20,6 @@ FLOORS :: 15
 Codegen :: struct {
 	alloc: mem.Allocator,
 	jb: Json_Builder,
-	walker: ast.Walker,
 	symbols: ^checker.Symbol_Table,
 	ec: ^error.Collector,
 
@@ -56,71 +58,63 @@ codegen_init :: proc(c: ^Codegen, ec: ^error.Collector, allocator := context.all
 
 	c.current_operations_stack = make([dynamic]^[dynamic]^Operation, allocator)
 	c.unique_id = 0
-
-	vtable := new(ast.Visitor_VTable, allocator)
-	vtable.visit_func_stmt = visit_func_stmt
-	vtable.visit_event_stmt = visit_event_stmt
-	vtable.visit_expr_stmt = visit_expr_stmt
-	vtable.visit_assign_stmt = visit_assign_stmt
-	// vtable.visit_block_stmt = visit_block_stmt
-	vtable.visit_if_stmt = visit_if_stmt
-	vtable.visit_return_stmt = visit_return_stmt
-	vtable.visit_defer_stmt = visit_defer_stmt
-	vtable.visit_for_stmt = visit_for_stmt
-	vtable.visit_value_decl = visit_value_decl
-	vtable.before_visit_child = before_visit_child
-	vtable.after_visit_child = after_visit_child
-	vtable.before_visit_node = before_visit_node
-	vtable.after_visit_node = after_visit_node
-	c.walker.user_data = c
-	ast.walker_init(&c.walker, vtable, allocator)
 	c.alloc = allocator
 }
 
-before_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) -> bool {
-	c := cast(^Codegen)v.user_data
-	return true
-}
-
-after_visit_node :: proc(v: ^ast.Visitor, node: ^ast.Node) {
-	c := cast(^Codegen)v.user_data
-	#partial switch n in node.derived {
-	case ^ast.If_Stmt, ^ast.For_Stmt, ^ast.Func_Stmt, ^ast.Event_Stmt:
-		pop_operations(c)
-	}
-}
-
-before_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) -> bool {
-	if child == nil {
-		return true
-	}
-	#partial switch t in child.derived {
-	case ^ast.Block_Stmt, ^ast.Defer_Stmt:
-		c := cast(^Codegen)v.user_data
-		if scope, exists := c.symbols.node_scopes[child.id]; exists {
-			c.current_scope = scope
-		}
-	}
-	return true
-}
-
-after_visit_child :: proc(v: ^ast.Visitor, parent, child: ^ast.Node) {
-	if child == nil {
+codegen_gen_statement :: proc(c: ^Codegen, stmt: ^ast.Stmt) {
+	if stmt == nil {
 		return
 	}
-	#partial switch t in child.derived {
-	case ^ast.Block_Stmt, ^ast.Defer_Stmt:
-		c := cast(^Codegen)(v.user_data)
-		if scope, exists := c.symbols.node_scopes[child.id]; exists {
+
+	if block, is_block := stmt.derived.(^ast.Block_Stmt); is_block {
+		if scope, exists := c.symbols.node_scopes[stmt.id]; exists {
+			c.current_scope = scope
+		}
+		for child_stmt in block.stmts {
+			codegen_gen_statement(c, child_stmt)
+		}
+		if scope, exists := c.symbols.node_scopes[stmt.id]; exists {
 			if scope.parent != nil {
 				c.current_scope = scope.parent
 			}
 		}
+		return
+	}
+
+	#partial switch s in stmt.derived {
+	case ^ast.Func_Stmt:   codegen_gen_func_stmt(c, s)
+	case ^ast.Event_Stmt:  codegen_gen_event_stmt(c, s)
+	case ^ast.Expr_Stmt:   codegen_gen_expr_stmt(c, s)
+	case ^ast.Assign_Stmt: codegen_gen_assign_stmt(c, s)
+	case ^ast.If_Stmt:     codegen_gen_if_stmt(c, s)
+	case ^ast.For_Stmt:    codegen_gen_for_stmt(c, s)
+	case ^ast.Value_Decl:  codegen_gen_value_decl(c, s)
+	case ^ast.Return_Stmt: codegen_gen_return_stmt(c, s)
+	case ^ast.Defer_Stmt:  codegen_gen_defer_stmt(c, s)
+	case:                  unimplemented(fmt.tprintf("statement type %T", s))
 	}
 }
 
-visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
-	c := cast(^Codegen)v.user_data
+codegen_gen_expression :: proc(c: ^Codegen, expr: ^ast.Expr, waits_enum := false) -> (Value, checker.Type_Kind) {
+	if expr == nil {
+		return nil, .Invalid
+	}
+
+	#partial switch e in expr.derived {
+	case ^ast.Range_Expr:  return codegen_gen_range_expr(c, e, waits_enum)
+	case ^ast.Call_Expr:   return codegen_gen_call_expr(c, e, waits_enum)
+	case ^ast.Argument:    return codegen_gen_expression(c, e.value, waits_enum)
+	case ^ast.Ident:       return codegen_gen_ident(c, e)
+	case ^ast.Basic_Lit:   return codegen_gen_basic_lit(c, e, waits_enum)
+	case ^ast.Binary_Expr: return codegen_gen_binary_expr(c, e, waits_enum)
+	case ^ast.Unary_Expr:  return codegen_gen_unary_expr(c, e, waits_enum)
+	case ^ast.Paren_Expr:  return codegen_gen_expression(c, e.expr, waits_enum)
+	case:                  unimplemented(fmt.tprintf("expression type %v", e))
+	}
+	return nil, .Invalid
+}
+
+codegen_gen_func_stmt :: proc(c: ^Codegen, node: ^ast.Func_Stmt) {
 	func_handler := create_func_handler(node.name, make_operations(c.alloc), c.alloc)
 
 	translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}}`
@@ -153,16 +147,12 @@ visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 		append(&func_handler.values, create_named_value("is_hidden", create_enum_value("TRUE", c.alloc), c.alloc))
 	}
 
-	// TODO: fix possible slots overflow when len(params) > 7
 	ensure(len(node.params.list) <= 7, "slots overflow")
 
 	if len(node.params.list) > 0 {
-		parameters_inner := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		parameters_inner := create_array_value(make_values(c.alloc), c.alloc)
 
 		for param, param_index in node.params.list {
-			// test_desc :: "Test param description!"
-			// test_desc_data := fmt.tprintf(translations_template, test_desc, test_desc, test_desc, test_desc)
-
 			// TODO: fix leaking abstract type (bool or smth) to justmc ir
 			ensure(
 				param.type == "number" || param.type == "text" ||
@@ -185,23 +175,29 @@ visit_func_stmt :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 
 	append(&c.handlers, func_handler)
 	push_operations(c, &func_handler.operations)
+
+	if node.body != nil {
+		codegen_gen_statement(c, node.body)
+	}
+
+	pop_operations(c)
 }
 
-visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
-	c := cast(^Codegen)v.user_data
+codegen_gen_event_stmt :: proc(c: ^Codegen, node: ^ast.Event_Stmt) {
 	event_handler := create_event_handler(node.name, make_operations(c.alloc), c.alloc)
 	append(&c.handlers, event_handler)
 	push_operations(c, &event_handler.operations)
+	if node.body != nil {
+		codegen_gen_statement(c, node.body)
+	}
+	pop_operations(c)
 }
 
-visit_expr_stmt :: proc(v: ^ast.Visitor, node: ^ast.Expr_Stmt) {
-	c := cast(^Codegen)v.user_data
+codegen_gen_expr_stmt :: proc(c: ^Codegen, node: ^ast.Expr_Stmt) {
 	codegen_gen_expression(c, node.expr)
 }
 
-visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
-	c := cast(^Codegen)v.user_data
-
+codegen_gen_assign_stmt :: proc(c: ^Codegen, node: ^ast.Assign_Stmt) {
 	result_value, result_type := codegen_gen_expression(c, node.expr)
 	origin_sym, exists := checker.lookup_symbol(c.current_scope, node.name)
 	ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
@@ -224,7 +220,7 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	case .Add_Eq:
 		op = create_basic_operation("set_variable_add", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", current_var, c.alloc))
-		array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
 		append(&array_value.values, current_var)
 		append(&array_value.values, result_value)
 		append(&op.values, create_named_value("value", array_value, c.alloc))
@@ -232,7 +228,7 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	case .Sub_Eq:
 		op = create_basic_operation("set_variable_subtract", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", current_var, c.alloc))
-		array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
 		append(&array_value.values, current_var)
 		append(&array_value.values, result_value)
 		append(&op.values, create_named_value("value", array_value, c.alloc))
@@ -240,7 +236,7 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	case .Mul_Eq:
 		op = create_basic_operation("set_variable_multiply", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", current_var, c.alloc))
-		array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
 		append(&array_value.values, current_var)
 		append(&array_value.values, result_value)
 		append(&op.values, create_named_value("value", array_value, c.alloc))
@@ -248,7 +244,7 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	case .Quo_Eq:
 		op = create_basic_operation("set_variable_divide", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", current_var, c.alloc))
-		array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
 		append(&array_value.values, current_var)
 		append(&array_value.values, result_value)
 		append(&op.values, create_named_value("value", array_value, c.alloc))
@@ -268,35 +264,127 @@ visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 	append(c.current_operations, op)
 }
 
-visit_if_stmt :: proc(v: ^ast.Visitor, node: ^ast.If_Stmt) {
-	c := cast(^Codegen)v.user_data
+codegen_gen_if_stmt :: proc(c: ^Codegen, node: ^ast.If_Stmt) {
+	if node.init != nil {
+		codegen_gen_statement(c, node.init)
+	}
+
 	if_stmt_result, res_type := codegen_gen_expression(c, node.cond)
 
-	op := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
+	op := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
 	append(&op.values, create_named_value("value", if_stmt_result, c.alloc))
 	append(&op.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
 	append(c.current_operations, op)
 
 	push_operations(c, &op.operations)
+
+	if node.body != nil {
+		codegen_gen_statement(c, node.body)
+	}
+
+	if node.else_stmt != nil {
+		unimplemented("else body in if statement")
+	}
+
+	pop_operations(c)
+
+	if node.else_stmt != nil {
+		else_op := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&else_op.values, create_named_value("value", if_stmt_result, c.alloc))
+		append(&else_op.values, create_named_value("compare", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, else_op)
+
+		push_operations(c, &else_op.operations)
+
+		codegen_gen_statement(c, node.else_stmt)
+
+		pop_operations(c)
+	}
 }
 
-visit_return_stmt :: proc(v: ^ast.Visitor, node: ^ast.Return_Stmt) {
-	c := cast(^Codegen)v.user_data
-	unimplemented("return statement support")
+codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
+	switch node.type {
+	case .Basic:
+		if node.init != nil {
+			codegen_gen_statement(c, node.init)
+		}
+		loop_container := create_container_operation("repeat_forever", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(c.current_operations, loop_container)
+		push_operations(c, &loop_container.operations)
+		if node.cond != nil {
+			cond_value, cond_type := codegen_gen_expression(c, node.cond)
+
+			break_cond := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+			append(&break_cond.values, create_named_value("value", cond_value, c.alloc))
+			append(&break_cond.values, create_named_value("compare", create_number_value(0, c.alloc), c.alloc))
+			append(&loop_container.operations, break_cond)
+
+			break_op := create_basic_operation("control_stop_repeat", make_named_values(c.alloc), "", c.alloc)
+			append(&break_cond.operations, break_op)
+		}
+
+		if node.body != nil {
+			codegen_gen_statement(c, node.body)
+		}
+
+		if node.post != nil {
+			codegen_gen_statement(c, node.post)
+		}
+
+		pop_operations(c)
+
+	case .Unconditional:
+		op := create_container_operation("repeat_forever", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(c.current_operations, op)
+		push_operations(c, &op.operations)
+		if node.body != nil {
+			codegen_gen_statement(c, node.body)
+		}
+		pop_operations(c)
+
+	case .Conditional:
+		if node.init != nil {
+			codegen_gen_statement(c, node.init)
+		}
+		loop_container := create_container_operation("repeat_forever", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(c.current_operations, loop_container)
+		push_operations(c, &loop_container.operations)
+		if node.cond != nil {
+			cond_value, cond_type := codegen_gen_expression(c, node.cond)
+
+			break_cond := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), true, "", c.alloc)
+			append(&break_cond.values, create_named_value("value", cond_value, c.alloc))
+			append(&break_cond.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
+
+			break_op := create_basic_operation("control_stop_repeat", make_named_values(c.alloc), "", c.alloc)
+			append(&break_cond.operations, break_op)
+			append(&loop_container.operations, break_cond)
+		}
+		if node.body != nil {
+			codegen_gen_statement(c, node.body)
+		}
+		pop_operations(c)
+
+	case .Range:
+		loop_container := create_container_operation("repeat_for_each_in_list", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(c.current_operations, loop_container)
+		push_operations(c, &loop_container.operations)
+		if node.body != nil {
+			codegen_gen_statement(c, node.body)
+		}
+		if len(node.range_vars) > 0 {
+			append(&loop_container.values, create_named_value("value_variable", create_variable_value(node.range_vars[0].name, guess_variable_type_by_scope(c, node.range_vars[0].name), c.alloc), c.alloc))
+		}
+		if len(node.range_vars) > 1 {
+			append(&loop_container.values, create_named_value("index_variable", create_variable_value(node.range_vars[1].name, guess_variable_type_by_scope(c, node.range_vars[1].name), c.alloc), c.alloc))
+		}
+		result_value, _ := codegen_gen_expression(c, node.range_expr, false)
+		append(&loop_container.values, create_named_value("list", result_value, c.alloc))
+		pop_operations(c)
+	}
 }
 
-visit_defer_stmt :: proc(v: ^ast.Visitor, node: ^ast.Defer_Stmt) {
-	c := cast(^Codegen)v.user_data
-	unimplemented("defer statement support")
-}
-
-visit_for_stmt :: proc(v: ^ast.Visitor, node: ^ast.For_Stmt) {
-	c := cast(^Codegen)v.user_data
-	unimplemented("for statement support")
-}
-
-visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
-	c := cast(^Codegen)v.user_data
+codegen_gen_value_decl :: proc(c: ^Codegen, node: ^ast.Value_Decl) {
 	value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
 	append(&value_decl_op.values, create_named_value("variable", create_variable_value(node.name, guess_variable_type_by_scope(c, node.name), c.alloc), c.alloc))
 	result_value, _ := codegen_gen_expression(c, node.value)
@@ -304,25 +392,58 @@ visit_value_decl :: proc(v: ^ast.Visitor, node: ^ast.Value_Decl) {
 	append(c.current_operations, value_decl_op)
 }
 
-codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false) -> (Value, checker.Type_Kind) {
-	#partial switch typed_node in node.derived {
-	case ^ast.Call_Expr:
-		result_var := create_variable_value(next_unique_id(c), SCOPE_GAME, c.alloc)
-		ident, is_ident := typed_node.expr.derived.(^ast.Ident)
-		ensure(is_ident)
-		func_name := ident.name
-		sym, exists := checker.lookup_symbol(c.symbols.global_scope, func_name)
-		ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
-		func_flags := sym.metadata["flags"].(checker.Flags)
+codegen_gen_return_stmt :: proc(c: ^Codegen, node: ^ast.Return_Stmt) {
+	unimplemented("return statement support")
+}
 
-		switch {
-		case .NATIVE in func_flags:
-			action, _ := assets.action_native_from_mapped(func_name)
-			if action.type != .BASIC {
-				unimplemented()
+codegen_gen_defer_stmt :: proc(c: ^Codegen, node: ^ast.Defer_Stmt) {
+	unimplemented("defer statement support")
+}
+
+codegen_gen_call_expr :: proc(c: ^Codegen, node: ^ast.Call_Expr, waits_enum: bool) -> (Value, checker.Type_Kind) {
+	result_var := create_variable_value(next_unique_id(c), SCOPE_GAME, c.alloc)
+	ident, is_ident := node.expr.derived.(^ast.Ident)
+	ensure(is_ident)
+	func_name := ident.name
+	sym, exists := checker.lookup_symbol(c.symbols.global_scope, func_name)
+	ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
+	func_flags := sym.metadata["flags"].(checker.Flags)
+
+	switch {
+	case .NATIVE in func_flags:
+		action, _ := assets.action_native_from_mapped(func_name)
+		if action.type != .BASIC {
+			unimplemented()
+		}
+		op := create_basic_operation(func_name, make_named_values(c.alloc), "", c.alloc)
+		for arg, i in node.args {
+			real_index := i
+			if arg.name != "" {
+				for param_name, arg_i in sym.type.param_names {
+					if param_name == arg.name {
+						real_index = arg_i
+						break
+					}
+				}
 			}
-			op := create_basic_operation(func_name, make_named_values(c.alloc), "", c.alloc)
-			for arg, i in typed_node.args {
+			arg_name := action.slots[real_index].name
+			param_type := action.slots[real_index].type
+			arg_value, _ := codegen_gen_expression(c, arg, waits_enum=param_type=="enum")
+			append(&op.values, create_named_value(arg_name, arg_value, c.alloc))
+		}
+		append(c.current_operations, op)
+	case .BUILTIN in func_flags:
+		unimplemented("generation of built-in function")
+	case:
+		op := create_basic_operation("call_function", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("function_name", create_text_value(func_name, PARSING_PLAIN, c.alloc), c.alloc))
+
+		args_count := len(node.args)
+		if args_count > 0 {
+			keys := make([dynamic]string, 0, c.alloc)
+			values := make_values(c.alloc)
+
+			for arg, i in node.args {
 				real_index := i
 				if arg.name != "" {
 					for param_name, arg_i in sym.type.param_names {
@@ -332,251 +453,254 @@ codegen_gen_expression :: proc(c: ^Codegen, node: ^ast.Node, waits_enum := false
 						}
 					}
 				}
-				arg_name := action.slots[real_index].name
-				param_type := action.slots[real_index].type
+				arg_name := sym.type.param_names[real_index]
+				param_type := checker.type_kind_to_string(sym.type.param_types[real_index].kind)
+
+				// TODO: fix leaking abstract type (bool or smth) to justmc ir
+				ensure(
+					param_type == "number" || param_type == "text" ||
+					param_type == "variable" || param_type == "array" ||
+					param_type == "parameter" || param_type == "enum" ||
+					param_type == "location" ||	param_type == "vector" ||
+					param_type == "sound" || param_type == "particle" ||
+					param_type == "item" || param_type == "game_value" ||
+					param_type == "potion" || param_type == "block" ||
+					param_type == "map" || param_type == "localized_text", "abstract type leakage")
+
 				arg_value, _ := codegen_gen_expression(c, arg, waits_enum=param_type=="enum")
-				append(&op.values, create_named_value(arg_name, arg_value, c.alloc))
+				append(&keys, fmt.tprintf(`{{\"type\":\"text\",\"text\":\"%s\",\"parsing\":\"plain\"}}`, arg_name))
+				append(&values, arg_value)
 			}
-			append(c.current_operations, op)
-		case .BUILTIN in func_flags:
-			unimplemented("generation of built-in function")
-		case:
-			// unimplemented("generation of default function with arguments")
-			op := create_basic_operation("call_function", make_named_values(c.alloc), "", c.alloc)
-			append(&op.values, create_named_value("function_name", create_text_value(func_name, PARSING_PLAIN, c.alloc), c.alloc))
-
-			args_count := len(typed_node.args)
-			if args_count > 0 {
-				keys := make([dynamic]string, 0, c.alloc)
-				values := make([dynamic]Value, 0, c.alloc)
-
-				for arg, i in typed_node.args {
-					real_index := i
-					if arg.name != "" {
-						for param_name, arg_i in sym.type.param_names {
-							if param_name == arg.name {
-								real_index = arg_i
-								break
-							}
-						}
-					}
-					arg_name := sym.type.param_names[real_index]
-					param_type := checker.type_kind_to_string(sym.type.param_types[real_index].kind)
-
-					// TODO: fix leaking abstract type (bool or smth) to justmc ir
-					ensure(
-						param_type == "number" || param_type == "text" ||
-						param_type == "variable" || param_type == "array" ||
-						param_type == "parameter" || param_type == "enum" ||
-						param_type == "location" ||	param_type == "vector" ||
-						param_type == "sound" || param_type == "particle" ||
-						param_type == "item" || param_type == "game_value" ||
-						param_type == "potion" || param_type == "block" ||
-						param_type == "map" || param_type == "localized_text", "abstract type leakage")
-
-					arg_value, _ := codegen_gen_expression(c, arg, waits_enum=param_type=="enum")
-					append(&keys, fmt.tprintf(`{{\"type\":\"text\",\"text\":\"%s\",\"parsing\":\"plain\"}}`, arg_name))
-					append(&values, arg_value)
-				}
-				append(&op.values, create_named_value("args", create_map_value(keys, values, c.alloc), c.alloc))
-			}
-			append(c.current_operations, op)
+			append(&op.values, create_named_value("args", create_map_value(keys, values, c.alloc), c.alloc))
 		}
-	case ^ast.Argument:
-		return codegen_gen_expression(c, typed_node.value, waits_enum)
-
-	case ^ast.Ident:
-		sym, exists := checker.lookup_symbol(c.current_scope, typed_node.name)
-		ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
-		return create_variable_value(typed_node.name, guess_variable_type_by_scope(c, typed_node.name), c.alloc), sym.type.kind
-
-	case ^ast.Basic_Lit:
-		content := typed_node.tok.content
-		#partial switch typed_node.tok.kind {
-		case .Text:
-			text_content := content[1:len(content)-1]
-			if waits_enum {
-				return create_enum_value(text_content, c.alloc), .Enum
-			}
-			return create_text_value(text_content, get_parsing_type(text_content), c.alloc), .Text
-		case .Number:
-			num, _ := strconv.parse_f64(content)
-			return create_number_value(num, c.alloc), .Number
-		case .True:
-			return create_number_value(1, c.alloc), .Boolean
-		case .False:
-			return create_number_value(0, c.alloc), .Boolean
-		}
-	case ^ast.Binary_Expr:
-		result_var := create_variable_value(next_unique_id(c), SCOPE_GAME, c.alloc)
-		operator := typed_node.op.kind
-		left_val, left_type := codegen_gen_expression(c, typed_node.left, waits_enum)
-		right_val, right_type := codegen_gen_expression(c, typed_node.right, waits_enum)
-
-		switch { // TODO: get rid of duplicate code
-		case left_type == .Text && right_type == .Text && operator == .Add:
-			text_add_op := create_basic_operation("set_variable_text", make_named_values(c.alloc), "", c.alloc)
-			append(&text_add_op.values, create_named_value("variable", result_var, c.alloc))
-			array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
-			append(&array_value.values, left_val)
-			append(&array_value.values, right_val)
-			append(&text_add_op.values, create_named_value("text", array_value, c.alloc))
-			append(&text_add_op.values, create_named_value("merging", create_enum_value("CONCATENATION", c.alloc), c.alloc))
-			append(c.current_operations, text_add_op)
-			return result_var, .Text
-
-		case left_type == .Number && right_type == .Number && operator == .Add:
-			op := create_basic_operation("set_variable_add", make_named_values(c.alloc), "", c.alloc)
-			append(&op.values, create_named_value("variable", result_var, c.alloc))
-			array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
-			append(&array_value.values, left_val)
-			append(&array_value.values, right_val)
-			append(&op.values, create_named_value("value", array_value, c.alloc))
-			append(c.current_operations, op)
-			return result_var, .Number
-
-		case left_type == .Number && right_type == .Number && operator == .Sub:
-			op := create_basic_operation("set_variable_subtract", make_named_values(c.alloc), "", c.alloc)
-			append(&op.values, create_named_value("variable", result_var, c.alloc))
-			array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
-			append(&array_value.values, left_val)
-			append(&array_value.values, right_val)
-			append(&op.values, create_named_value("value", array_value, c.alloc))
-			append(c.current_operations, op)
-			return result_var, .Number
-
-		case left_type == .Number && right_type == .Number && operator == .Mul:
-			op := create_basic_operation("set_variable_multiply", make_named_values(c.alloc), "", c.alloc)
-			append(&op.values, create_named_value("variable", result_var, c.alloc))
-			array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
-			append(&array_value.values, left_val)
-			append(&array_value.values, right_val)
-			append(&op.values, create_named_value("value", array_value, c.alloc))
-			append(c.current_operations, op)
-			return result_var, .Number
-
-		case left_type == .Number && right_type == .Number && operator == .Quo:
-			op := create_basic_operation("set_variable_divide", make_named_values(c.alloc), "", c.alloc)
-			append(&op.values, create_named_value("variable", result_var, c.alloc))
-			array_value := create_array_value(make([dynamic]Value, 0, c.alloc), c.alloc)
-			append(&array_value.values, left_val)
-			append(&array_value.values, right_val)
-			append(&op.values, create_named_value("value", array_value, c.alloc))
-			append(&op.values, create_named_value("division_mode", create_enum_value("default", c.alloc), c.alloc))
-			append(c.current_operations, op)
-			return result_var, .Number
-
-		case left_type == .Number && right_type == .Number && operator == .Mod:
-			op := create_basic_operation("set_variable_remainder", make_named_values(c.alloc), "", c.alloc)
-			append(&op.values, create_named_value("variable", result_var, c.alloc))
-			append(&op.values, create_named_value("dividend", left_val, c.alloc))
-			append(&op.values, create_named_value("divisor", right_val, c.alloc))
-			append(&op.values, create_named_value("remainder_mode", create_enum_value("REMAINDER", c.alloc), c.alloc))
-			append(c.current_operations, op)
-			return result_var, .Number
-
-		case left_type == .Number && right_type == .Number && operator == .Cmp_Eq,
-			left_type == .Text && right_type == .Text && operator == .Cmp_Eq,
-			left_type == .Boolean && right_type == .Boolean && operator == .Cmp_Eq:
-
-			value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
-			append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
-			append(c.current_operations, value_decl_op)
-
-			value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
-			append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
-
-			op := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
-			append(&op.values, create_named_value("value", left_val, c.alloc))
-			append(&op.values, create_named_value("compare", right_val, c.alloc))
-			append(&op.operations, value_decl_op_inner)
-			append(c.current_operations, op)
-			return result_var, .Boolean
-
-		case left_type == .Number && right_type == .Number && operator == .Not_Eq,
-			left_type == .Text && right_type == .Text && operator == .Not_Eq,
-			left_type == .Boolean && right_type == .Boolean && operator == .Not_Eq:
-
-			value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
-			append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
-			append(c.current_operations, value_decl_op)
-
-			value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
-			append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
-
-			op := create_container_operation("if_variable_not_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
-			append(&op.values, create_named_value("value", left_val, c.alloc))
-			append(&op.values, create_named_value("compare", right_val, c.alloc))
-			append(&op.operations, value_decl_op_inner)
-			append(c.current_operations, op)
-			return result_var, .Boolean
-
-		case left_type == .Boolean && right_type == .Boolean && operator == .Cmp_And:
-			set_false := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&set_false.values, create_named_value("variable", result_var, c.alloc))
-			append(&set_false.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
-			append(c.current_operations, set_false)
-
-			set_true := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&set_true.values, create_named_value("variable", result_var, c.alloc))
-			append(&set_true.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
-
-			if_right := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
-			append(&if_right.values, create_named_value("value", right_val, c.alloc))
-			append(&if_right.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
-			append(&if_right.operations, set_true)
-
-			if_left := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
-			append(&if_left.values, create_named_value("value", left_val, c.alloc))
-			append(&if_left.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
-			append(&if_left.operations, if_right)
-			append(c.current_operations, if_left)
-
-			return result_var, .Boolean
-
-		case left_type == .Boolean && right_type == .Boolean && operator == .Cmp_Or:
-			set_false := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&set_false.values, create_named_value("variable", result_var, c.alloc))
-			append(&set_false.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
-			append(c.current_operations, set_false)
-
-			set_true_left := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&set_true_left.values, create_named_value("variable", result_var, c.alloc))
-			append(&set_true_left.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
-
-			if_left := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
-			append(&if_left.values, create_named_value("value", left_val, c.alloc))
-			append(&if_left.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
-			append(&if_left.operations, set_true_left)
-			append(c.current_operations, if_left)
-
-			set_true_right := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
-			append(&set_true_right.values, create_named_value("variable", result_var, c.alloc))
-			append(&set_true_right.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
-
-			if_right := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), false, "", c.alloc)
-			append(&if_right.values, create_named_value("value", right_val, c.alloc))
-			append(&if_right.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
-			append(&if_right.operations, set_true_right)
-			append(c.current_operations, if_right)
-			return result_var, .Boolean
-
-		case:
-			unimplemented(fmt.tprintf("generation of binary expr (%v, %v, %v)", left_type, operator, right_type))
-		}
-	case:
-		unimplemented(fmt.tprintf("%v", typed_node))
+		append(c.current_operations, op)
 	}
-	return nil, nil
+	return result_var, .Number
+}
+
+
+// TODO: maybe remove waits_enum, do we really even need it everywhere
+
+
+codegen_gen_range_expr :: proc(c: ^Codegen, node: ^ast.Range_Expr, waits_enum: bool) -> (Value, checker.Type_Kind) {
+	array_values := make_values(c.alloc)
+	start, is_lit := node.start_expr.derived.(^ast.Basic_Lit)
+	end, _is_lit := node.end_expr.derived.(^ast.Basic_Lit)
+	if !(is_lit && _is_lit) {
+		unimplemented("codegen of range expressions other than literal...literal")
+	}
+	start_num, _ := strconv.parse_f64(start.tok.content)
+	end_num, _ := strconv.parse_f64(end.tok.content)
+	if node.kind == .Inclusive {
+		end_num += 1
+	}
+	if end_num - start_num > RANGE_EXPR_LIST_LIT_HARD_LIMIT {
+		unimplemented(fmt.tprintf("codegen of ranges: can't generate more than %d elements", RANGE_EXPR_LIST_LIT_HARD_LIMIT))
+	}
+	for i := start_num; i < end_num; i += 1 {
+		append(&array_values, create_number_value(i, c.alloc))
+	}
+	return create_array_value(array_values, c.alloc), .Array
+}
+
+codegen_gen_ident :: proc(c: ^Codegen, node: ^ast.Ident) -> (Value, checker.Type_Kind) {
+	sym, exists := checker.lookup_symbol(c.current_scope, node.name)
+	ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
+	return create_variable_value(node.name, guess_variable_type_by_scope(c, node.name), c.alloc), sym.type.kind
+}
+
+codegen_gen_basic_lit :: proc(c: ^Codegen, node: ^ast.Basic_Lit, waits_enum: bool) -> (Value, checker.Type_Kind) {
+	content := node.tok.content
+	#partial switch node.tok.kind {
+	case .Text:
+		text_content := content[1:len(content)-1]
+		if waits_enum {
+			return create_enum_value(text_content, c.alloc), .Enum
+		}
+		return create_text_value(text_content, get_parsing_type(text_content), c.alloc), .Text
+	case .Number:
+		num, _ := strconv.parse_f64(content)
+		return create_number_value(num, c.alloc), .Number
+	case .True:
+		return create_number_value(1, c.alloc), .Boolean
+	case .False:
+		return create_number_value(0, c.alloc), .Boolean
+	}
+	return nil, .Invalid
+}
+
+codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum: bool) -> (Value, checker.Type_Kind) {
+	result_var := create_variable_value(next_unique_id(c), SCOPE_GAME, c.alloc)
+	operator := node.op.kind
+	left_val, left_type := codegen_gen_expression(c, node.left, waits_enum)
+	right_val, right_type := codegen_gen_expression(c, node.right, waits_enum)
+
+	switch {
+	case left_type == .Text && right_type == .Text && operator == .Add:
+		text_add_op := create_basic_operation("set_variable_text", make_named_values(c.alloc), "", c.alloc)
+		append(&text_add_op.values, create_named_value("variable", result_var, c.alloc))
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
+		append(&array_value.values, left_val)
+		append(&array_value.values, right_val)
+		append(&text_add_op.values, create_named_value("text", array_value, c.alloc))
+		append(&text_add_op.values, create_named_value("merging", create_enum_value("CONCATENATION", c.alloc), c.alloc))
+		append(c.current_operations, text_add_op)
+		return result_var, .Text
+
+	case left_type == .Number && right_type == .Number && operator == .Add:
+		op := create_basic_operation("set_variable_add", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", result_var, c.alloc))
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
+		append(&array_value.values, left_val)
+		append(&array_value.values, right_val)
+		append(&op.values, create_named_value("value", array_value, c.alloc))
+		append(c.current_operations, op)
+		return result_var, .Number
+
+	case left_type == .Number && right_type == .Number && operator == .Sub:
+		op := create_basic_operation("set_variable_subtract", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", result_var, c.alloc))
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
+		append(&array_value.values, left_val)
+		append(&array_value.values, right_val)
+		append(&op.values, create_named_value("value", array_value, c.alloc))
+		append(c.current_operations, op)
+		return result_var, .Number
+
+	case left_type == .Number && right_type == .Number && operator == .Mul:
+		op := create_basic_operation("set_variable_multiply", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", result_var, c.alloc))
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
+		append(&array_value.values, left_val)
+		append(&array_value.values, right_val)
+		append(&op.values, create_named_value("value", array_value, c.alloc))
+		append(c.current_operations, op)
+		return result_var, .Number
+
+	case left_type == .Number && right_type == .Number && operator == .Quo:
+		op := create_basic_operation("set_variable_divide", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", result_var, c.alloc))
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
+		append(&array_value.values, left_val)
+		append(&array_value.values, right_val)
+		append(&op.values, create_named_value("value", array_value, c.alloc))
+		append(&op.values, create_named_value("division_mode", create_enum_value("default", c.alloc), c.alloc))
+		append(c.current_operations, op)
+		return result_var, .Number
+
+	case left_type == .Number && right_type == .Number && operator == .Mod:
+		op := create_basic_operation("set_variable_remainder", make_named_values(c.alloc), "", c.alloc)
+		append(&op.values, create_named_value("variable", result_var, c.alloc))
+		append(&op.values, create_named_value("dividend", left_val, c.alloc))
+		append(&op.values, create_named_value("divisor", right_val, c.alloc))
+		append(&op.values, create_named_value("remainder_mode", create_enum_value("REMAINDER", c.alloc), c.alloc))
+		append(c.current_operations, op)
+		return result_var, .Number
+
+	case left_type == .Number && right_type == .Number && operator == .Cmp_Eq,
+		left_type == .Text && right_type == .Text && operator == .Cmp_Eq,
+		left_type == .Boolean && right_type == .Boolean && operator == .Cmp_Eq:
+
+		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, value_decl_op)
+
+		value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		op := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&op.values, create_named_value("value", left_val, c.alloc))
+		append(&op.values, create_named_value("compare", right_val, c.alloc))
+		append(&op.operations, value_decl_op_inner)
+		append(c.current_operations, op)
+		return result_var, .Boolean
+
+	case left_type == .Number && right_type == .Number && operator == .Not_Eq,
+		left_type == .Text && right_type == .Text && operator == .Not_Eq,
+		left_type == .Boolean && right_type == .Boolean && operator == .Not_Eq:
+
+		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, value_decl_op)
+
+		value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		op := create_container_operation("if_variable_not_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&op.values, create_named_value("value", left_val, c.alloc))
+		append(&op.values, create_named_value("compare", right_val, c.alloc))
+		append(&op.operations, value_decl_op_inner)
+		append(c.current_operations, op)
+		return result_var, .Boolean
+
+	case left_type == .Boolean && right_type == .Boolean && operator == .Cmp_And:
+		set_false := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&set_false.values, create_named_value("variable", result_var, c.alloc))
+		append(&set_false.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, set_false)
+
+		set_true := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&set_true.values, create_named_value("variable", result_var, c.alloc))
+		append(&set_true.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		if_right := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&if_right.values, create_named_value("value", right_val, c.alloc))
+		append(&if_right.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
+		append(&if_right.operations, set_true)
+
+		if_left := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&if_left.values, create_named_value("value", left_val, c.alloc))
+		append(&if_left.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
+		append(&if_left.operations, if_right)
+		append(c.current_operations, if_left)
+
+		return result_var, .Boolean
+
+	case left_type == .Boolean && right_type == .Boolean && operator == .Cmp_Or:
+		set_false := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&set_false.values, create_named_value("variable", result_var, c.alloc))
+		append(&set_false.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, set_false)
+
+		set_true_left := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&set_true_left.values, create_named_value("variable", result_var, c.alloc))
+		append(&set_true_left.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		if_left := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&if_left.values, create_named_value("value", left_val, c.alloc))
+		append(&if_left.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
+		append(&if_left.operations, set_true_left)
+		append(c.current_operations, if_left)
+
+		set_true_right := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&set_true_right.values, create_named_value("variable", result_var, c.alloc))
+		append(&set_true_right.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		if_right := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&if_right.values, create_named_value("value", right_val, c.alloc))
+		append(&if_right.values, create_named_value("compare", create_number_value(1, c.alloc), c.alloc))
+		append(&if_right.operations, set_true_right)
+		append(c.current_operations, if_right)
+		return result_var, .Boolean
+
+	case:
+		unimplemented(fmt.tprintf("generation of binary expr (%v, %v, %v)", left_type, operator, right_type))
+	}
+	return nil, .Invalid
+}
+
+codegen_gen_unary_expr :: proc(c: ^Codegen, node: ^ast.Unary_Expr, waits_enum: bool) -> (Value, checker.Type_Kind) {
+	unimplemented("unary expression support")
 }
 
 guess_variable_type_by_scope :: proc(c: ^Codegen, variable_name: string) -> string {
-	sym, _ := checker.lookup_symbol(c.current_scope, variable_name)
-	if sym.type.is_param {
+	sym, exist := checker.lookup_symbol(c.current_scope, variable_name)
+	ensure(exist)
+	if sym.type.is_param || sym.type.from_for_head {
 		return SCOPE_LINE
 	}
 	return SCOPE_GAME
@@ -584,9 +708,10 @@ guess_variable_type_by_scope :: proc(c: ^Codegen, variable_name: string) -> stri
 
 codegen_gen :: proc(c: ^Codegen, files: [dynamic]^ast.File, symbols: ^checker.Symbol_Table, minify: bool, unique_id: string) -> string {
 	c.symbols = symbols
-
 	for file in files {
-		ast.walk_file(&c.walker, file)
+		for decl in file.decls {
+			codegen_gen_statement(c, decl)
+		}
 	}
 
 	if len(c.entry_handler.operations) > 0 {

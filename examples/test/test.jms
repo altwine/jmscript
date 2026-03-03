@@ -3,10 +3,19 @@ package test
 @(name="Print Hellope!")
 @(desc="My awesome function to print Hellope!")
 @(icon="clay_ball")
-func print_hellope() {
-	player_send_message("Hellope!", "CONCATENATION")
+func print_hellope(message: text) {
+	player_send_message(message, "CONCATENATION")
 }
 
 event player_join() {
-	print_hellope()
+	// for { // works
+	// for a := 0; a != 10; a += 1 { // works
+	// for a != 10 { // works
+	// for a in 0..=10 { // works
+
+	for a, b in 0..<10 {
+		print_hellope("test!")
+		control_wait(1, "TICKS")
+	}
+
 }

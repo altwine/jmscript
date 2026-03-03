@@ -488,39 +488,39 @@ count_symbol_usage_in_node :: proc(o: ^Optimizer, node: ^ast.Node) {
 			o.current_level = saved_else_level
 		}
 
-	case ^ast.For_Stmt:
-		if n.init != nil {
-			for ident in n.init {
-				count_symbol_usage_in_node(o, ident)
-			}
-		}
+	// case ^ast.For_Stmt:
+	// 	if n.init != nil {
+	// 		for ident in n.init {
+	// 			count_symbol_usage_in_node(o, ident)
+	// 		}
+	// 	}
 
-		if n.cond != nil {
-			count_symbol_usage_in_node(o, n.cond)
-		}
+	// 	if n.cond != nil {
+	// 		count_symbol_usage_in_node(o, n.cond)
+	// 	}
 
-		if n.second_cond != nil {
-			count_symbol_usage_in_node(o, n.second_cond)
-		}
+	// 	if n.second_cond != nil {
+	// 		count_symbol_usage_in_node(o, n.second_cond)
+	// 	}
 
-		if n.post != nil {
-			count_symbol_usage_in_node(o, n.post)
-		}
+	// 	if n.post != nil {
+	// 		count_symbol_usage_in_node(o, n.post)
+	// 	}
 
-		if n.body != nil {
-			saved_for_scope := o.current_scope
-			saved_for_level := o.current_level
+	// 	if n.body != nil {
+	// 		saved_for_scope := o.current_scope
+	// 		saved_for_level := o.current_level
 
-			if scope, exists := o.symbols.node_scopes[n.body.id]; exists {
-				o.current_scope = scope
-				o.current_level = scope.level
-			}
+	// 		if scope, exists := o.symbols.node_scopes[n.body.id]; exists {
+	// 			o.current_scope = scope
+	// 			o.current_level = scope.level
+	// 		}
 
-			count_symbol_usage_in_node(o, n.body)
+	// 		count_symbol_usage_in_node(o, n.body)
 
-			o.current_scope = saved_for_scope
-			o.current_level = saved_for_level
-		}
+	// 		o.current_scope = saved_for_scope
+	// 		o.current_level = saved_for_level
+	// 	}
 
 	case ^ast.Func_Stmt:
 		if n.params != nil {
@@ -890,19 +890,19 @@ build_parent_tree_for_node :: proc(o: ^Optimizer, node: ^ast.Node, parent: ^ast.
 		build_parent_tree_for_node(o, n.body, node)
 		build_parent_tree_for_node(o, n.else_stmt, node)
 
-	case ^ast.For_Stmt:
-		for &anno in n.annotations {
-			build_parent_tree_for_node(o, &anno, node)
-		}
-		if n.init != nil {
-			for ident in n.init {
-				build_parent_tree_for_node(o, ident, node)
-			}
-		}
-		build_parent_tree_for_node(o, n.cond, node)
-		build_parent_tree_for_node(o, n.second_cond, node)
-		build_parent_tree_for_node(o, n.post, node)
-		build_parent_tree_for_node(o, n.body, node)
+	// case ^ast.For_Stmt:
+	// 	for &anno in n.annotations {
+	// 		build_parent_tree_for_node(o, &anno, node)
+	// 	}
+	// 	if n.init != nil {
+	// 		for ident in n.init {
+	// 			build_parent_tree_for_node(o, ident, node)
+	// 		}
+	// 	}
+	// 	build_parent_tree_for_node(o, n.cond, node)
+	// 	build_parent_tree_for_node(o, n.second_cond, node)
+	// 	build_parent_tree_for_node(o, n.post, node)
+	// 	build_parent_tree_for_node(o, n.body, node)
 
 	case ^ast.Value_Decl:
 		for &anno in n.annotations {
@@ -1056,26 +1056,26 @@ remove_node_from_parent :: proc(o: ^Optimizer, node: ^ast.Node) -> bool {
 			return true
 		}
 
-	case ^ast.For_Stmt:
-		for_stmt := p
-		if for_stmt.init != nil {
-			for i := 0; i < len(for_stmt.init); i += 1 {
-				if cast(uintptr)for_stmt.init[i] == cast(uintptr)node {
-					new_init := make([dynamic]^ast.Ident, len(for_stmt.init)-1, o.alloc)
-					copy(new_init[:], for_stmt.init[:i])
-					copy(new_init[i:], for_stmt.init[i+1:])
-					for_stmt.init = new_init[:]
+	// case ^ast.For_Stmt:
+	// 	for_stmt := p
+	// 	if for_stmt.init != nil {
+	// 		for i := 0; i < len(for_stmt.init); i += 1 {
+	// 			if cast(uintptr)for_stmt.init[i] == cast(uintptr)node {
+	// 				new_init := make([dynamic]^ast.Ident, len(for_stmt.init)-1, o.alloc)
+	// 				copy(new_init[:], for_stmt.init[:i])
+	// 				copy(new_init[i:], for_stmt.init[i+1:])
+	// 				for_stmt.init = new_init[:]
 
-					delete_key(&o.node_parent, node)
-					return true
-				}
-			}
-		}
-		if cast(uintptr)for_stmt.body == cast(uintptr)node {
-			for_stmt.body = nil
-			delete_key(&o.node_parent, node)
-			return true
-		}
+	// 				delete_key(&o.node_parent, node)
+	// 				return true
+	// 			}
+	// 		}
+	// 	}
+	// 	if cast(uintptr)for_stmt.body == cast(uintptr)node {
+	// 		for_stmt.body = nil
+	// 		delete_key(&o.node_parent, node)
+	// 		return true
+	// 	}
 
 	case ^ast.Call_Expr:
 		call := p
@@ -1294,12 +1294,12 @@ collect_dependencies_from_block :: proc(o: ^Optimizer, from_sym: ^checker.Symbol
 				collect_dependencies_from_block(o, from_sym, s.else_stmt)
 			}
 
-		case ^ast.For_Stmt:
-			collect_dependencies_from_expr(o, from_sym, s.cond)
-			collect_dependencies_from_expr(o, from_sym, s.second_cond)
-			if s.body != nil {
-				collect_dependencies_from_block(o, from_sym, s.body)
-			}
+		// case ^ast.For_Stmt:
+		// 	collect_dependencies_from_expr(o, from_sym, s.cond)
+		// 	collect_dependencies_from_expr(o, from_sym, s.second_cond)
+		// 	if s.body != nil {
+		// 		collect_dependencies_from_block(o, from_sym, s.body)
+		// 	}
 
 		case ^ast.Block_Stmt:
 			collect_dependencies_from_block(o, from_sym, s)
@@ -2737,13 +2737,13 @@ fold_constants_after_factories :: proc(o: ^Optimizer, file: ^ast.File) -> int {
 				traverse_and_fold(o, if_stmt.else_stmt, folded_count)
 			}
 
-		case ^ast.For_Stmt:
-			for_stmt := n
-			traverse_and_fold(o, for_stmt.cond, folded_count)
-			traverse_and_fold(o, for_stmt.second_cond, folded_count)
-			if for_stmt.body != nil {
-				traverse_and_fold(o, for_stmt.body, folded_count)
-			}
+		// case ^ast.For_Stmt:
+		// 	for_stmt := n
+		// 	traverse_and_fold(o, for_stmt.cond, folded_count)
+		// 	traverse_and_fold(o, for_stmt.second_cond, folded_count)
+		// 	if for_stmt.body != nil {
+		// 		traverse_and_fold(o, for_stmt.body, folded_count)
+		// 	}
 
 		case ^ast.Func_Stmt:
 			func_stmt := n
@@ -9541,19 +9541,19 @@ process_stmt_with_constants :: proc(o: ^Optimizer, stmt: ^ast.Stmt, ctx: ^Deep_E
 			schedule_constant_substitutions(o, if_stmt.cond, ctx)
 		}
 
-	case ^ast.For_Stmt:
-		for_stmt := s
-		if for_stmt.cond != nil {
-			schedule_constant_substitutions(o, for_stmt.cond, ctx)
-		}
-		if for_stmt.second_cond != nil {
-			schedule_constant_substitutions(o, for_stmt.second_cond, ctx)
-		}
-		if for_stmt.init != nil {
-			for ident in for_stmt.init {
-				schedule_constant_substitutions(o, cast(^ast.Expr)ident, ctx)
-			}
-		}
+	// case ^ast.For_Stmt:
+	// 	for_stmt := s
+	// 	if for_stmt.cond != nil {
+	// 		schedule_constant_substitutions(o, for_stmt.cond, ctx)
+	// 	}
+	// 	if for_stmt.second_cond != nil {
+	// 		schedule_constant_substitutions(o, for_stmt.second_cond, ctx)
+	// 	}
+	// 	if for_stmt.init != nil {
+	// 		for ident in for_stmt.init {
+	// 			schedule_constant_substitutions(o, cast(^ast.Expr)ident, ctx)
+	// 		}
+	// 	}
 
 	case ^ast.Return_Stmt:
 		ret := s
@@ -9627,31 +9627,31 @@ _deep_visit_func_stmt_expr :: proc(v: ^ast.Visitor, node: ^ast.Func_Stmt) {
 	}
 }
 
-@(private="file")
-_deep_visit_for_stmt_expr :: proc(v: ^ast.Visitor, node: ^ast.For_Stmt) {
-	o := cast(^Optimizer)v.user_data
+// @(private="file")
+// _deep_visit_for_stmt_expr :: proc(v: ^ast.Visitor, node: ^ast.For_Stmt) {
+// 	o := cast(^Optimizer)v.user_data
 
-	if node.init != nil {
-		for init in node.init {
-			if ident, is_ident := init.derived.(^ast.Ident); is_ident {
-				var_id := create_variable_id(o, ident.name, cast(^ast.Node)ident)
-				var_ref := new(Deep_Variable_Ref, o.alloc)
-				var_ref.kind = .Variable
-				var_ref.var_id = var_id
+// 	if node.init != nil {
+// 		for init in node.init {
+// 			if ident, is_ident := init.derived.(^ast.Ident); is_ident {
+// 				var_id := create_variable_id(o, ident.name, cast(^ast.Node)ident)
+// 				var_ref := new(Deep_Variable_Ref, o.alloc)
+// 				var_ref.kind = .Variable
+// 				var_ref.var_id = var_id
 
-				o.deep_analyzer.current_expression_context.variables[var_id] = var_ref
-				o.deep_analyzer.current_expression_context.name_to_var_id[ident.name] = var_id
-			}
-		}
-	}
+// 				o.deep_analyzer.current_expression_context.variables[var_id] = var_ref
+// 				o.deep_analyzer.current_expression_context.name_to_var_id[ident.name] = var_id
+// 			}
+// 		}
+// 	}
 
-	if node.cond != nil {
-		condition_tree := extract_condition_tree(o, node.cond)
-		defer free_condition_tree(o, condition_tree)
+// 	if node.cond != nil {
+// 		condition_tree := extract_condition_tree(o, node.cond)
+// 		defer free_condition_tree(o, condition_tree)
 
-		apply_condition_to_context(o, condition_tree, o.deep_analyzer.current_expression_context)
-	}
-}
+// 		apply_condition_to_context(o, condition_tree, o.deep_analyzer.current_expression_context)
+// 	}
+// }
 
 @(private="file")
 _deep_visit_return_stmt_expr :: proc(v: ^ast.Visitor, node: ^ast.Return_Stmt) {
@@ -9694,7 +9694,7 @@ deep_analyzer_init :: proc(o: ^Optimizer) {
 		visit_assign_stmt = _deep_visit_assign_stmt_expr,
 		visit_if_stmt = _deep_visit_if_stmt_expr,
 		visit_return_stmt = _deep_visit_return_stmt_expr,
-		visit_for_stmt = _deep_visit_for_stmt_expr,
+		// visit_for_stmt = _deep_visit_for_stmt_expr,
 		visit_block_stmt = _deep_visit_block_stmt,
 		visit_value_decl = _deep_visit_value_decl_expr,
 
@@ -10498,17 +10498,17 @@ check_side_effects_in_stmt :: proc(o: ^Optimizer, stmt: ^ast.Stmt, has_effects: 
 			}
 		}
 
-	case ^ast.For_Stmt:
-		for_stmt := s
-		if for_stmt.cond != nil {
-			check_side_effects_in_expr(o, for_stmt.cond, has_effects)
-		}
-		if for_stmt.second_cond != nil {
-			check_side_effects_in_expr(o, for_stmt.second_cond, has_effects)
-		}
-		if for_stmt.body != nil {
-			check_side_effects_in_block(o, for_stmt.body, has_effects)
-		}
+	// case ^ast.For_Stmt:
+	// 	for_stmt := s
+	// 	if for_stmt.cond != nil {
+	// 		check_side_effects_in_expr(o, for_stmt.cond, has_effects)
+	// 	}
+	// 	if for_stmt.second_cond != nil {
+	// 		check_side_effects_in_expr(o, for_stmt.second_cond, has_effects)
+	// 	}
+	// 	if for_stmt.body != nil {
+	// 		check_side_effects_in_block(o, for_stmt.body, has_effects)
+	// 	}
 
 	case ^ast.Block_Stmt:
 		check_side_effects_in_block(o, s, has_effects)
@@ -10637,16 +10637,16 @@ is_node_volatile :: proc(o: ^Optimizer, node: ^ast.Node) -> bool {
 		}
 		return false
 
-	case ^ast.For_Stmt:
-		for_stmt := n
-		is_volatile := false
-		if for_stmt.cond != nil {
-			is_volatile = is_volatile || is_node_volatile(o, for_stmt.cond)
-		}
-		if for_stmt.second_cond != nil {
-			is_volatile = is_volatile || is_node_volatile(o, for_stmt.second_cond)
-		}
-		return is_volatile
+	// case ^ast.For_Stmt:
+	// 	for_stmt := n
+	// 	is_volatile := false
+	// 	if for_stmt.cond != nil {
+	// 		is_volatile = is_volatile || is_node_volatile(o, for_stmt.cond)
+	// 	}
+	// 	if for_stmt.second_cond != nil {
+	// 		is_volatile = is_volatile || is_node_volatile(o, for_stmt.second_cond)
+	// 	}
+	// 	return is_volatile
 
 	case ^ast.Return_Stmt:
 		ret := n
@@ -10735,14 +10735,14 @@ collect_variable_info :: proc(o: ^Optimizer, flow_node: ^Flow_Node) {
 			collect_used_vars_from_expr(o, if_stmt.cond, &flow_node.used_vars)
 		}
 
-	case ^ast.For_Stmt:
-		for_stmt := n
-		if for_stmt.cond != nil {
-			collect_used_vars_from_expr(o, for_stmt.cond, &flow_node.used_vars)
-		}
-		if for_stmt.second_cond != nil {
-			collect_used_vars_from_expr(o, for_stmt.second_cond, &flow_node.used_vars)
-		}
+	// case ^ast.For_Stmt:
+	// 	for_stmt := n
+	// 	if for_stmt.cond != nil {
+	// 		collect_used_vars_from_expr(o, for_stmt.cond, &flow_node.used_vars)
+	// 	}
+	// 	if for_stmt.second_cond != nil {
+	// 		collect_used_vars_from_expr(o, for_stmt.second_cond, &flow_node.used_vars)
+	// 	}
 
 	case ^ast.Return_Stmt:
 		ret := n
@@ -10899,11 +10899,11 @@ create_flow_node_for_statement :: proc(o: ^Optimizer, stmt: ^ast.Stmt) {
 			create_flow_nodes_for_block(o, if_stmt.else_stmt)
 		}
 
-	case ^ast.For_Stmt:
-		for_stmt := s
-		if for_stmt.body != nil {
-			create_flow_nodes_for_block(o, for_stmt.body)
-		}
+	// case ^ast.For_Stmt:
+	// 	for_stmt := s
+	// 	if for_stmt.body != nil {
+	// 		create_flow_nodes_for_block(o, for_stmt.body)
+	// 	}
 
 	case ^ast.Block_Stmt:
 		create_flow_nodes_for_block(o, s)
@@ -11028,9 +11028,9 @@ find_statement_dependencies :: proc(o: ^Optimizer, current_flow_node: ^Flow_Node
 		add_control_dependencies_for_if(o, current_flow_node, if_stmt, current_index, statements)
 	}
 
-	if for_stmt, is_for := current_flow_node.node.derived.(^ast.For_Stmt); is_for {
-		add_control_dependencies_for_for(o, current_flow_node, for_stmt, current_index, statements)
-	}
+	// if for_stmt, is_for := current_flow_node.node.derived.(^ast.For_Stmt); is_for {
+	// 	add_control_dependencies_for_for(o, current_flow_node, for_stmt, current_index, statements)
+	// }
 }
 
 add_control_dependencies_for_if :: proc(o: ^Optimizer, if_flow_node: ^Flow_Node, if_stmt: ^ast.If_Stmt, current_index: int, statements: []^ast.Stmt) {
@@ -11048,28 +11048,28 @@ add_control_dependencies_for_if :: proc(o: ^Optimizer, if_flow_node: ^Flow_Node,
 	}
 }
 
-add_control_dependencies_for_for :: proc(o: ^Optimizer, for_flow_node: ^Flow_Node, for_stmt: ^ast.For_Stmt, current_index: int, statements: []^ast.Stmt) {
-	for i in 0..<current_index {
-		prev_stmt := statements[i]
-		prev_node := cast(^ast.Node)prev_stmt
-		prev_flow_node := o.flow_analyzer.flow_nodes[prev_node]
+// add_control_dependencies_for_for :: proc(o: ^Optimizer, for_flow_node: ^Flow_Node, for_stmt: ^ast.For_Stmt, current_index: int, statements: []^ast.Stmt) {
+// 	for i in 0..<current_index {
+// 		prev_stmt := statements[i]
+// 		prev_node := cast(^ast.Node)prev_stmt
+// 		prev_flow_node := o.flow_analyzer.flow_nodes[prev_node]
 
-		if prev_flow_node == nil { continue }
+// 		if prev_flow_node == nil { continue }
 
-		affects := false
-		if for_stmt.cond != nil {
-			affects = affects_condition(o, prev_flow_node, for_stmt.cond)
-		}
-		if !affects && for_stmt.second_cond != nil {
-			affects = affects_condition(o, prev_flow_node, for_stmt.second_cond)
-		}
+// 		affects := false
+// 		if for_stmt.cond != nil {
+// 			affects = affects_condition(o, prev_flow_node, for_stmt.cond)
+// 		}
+// 		if !affects && for_stmt.second_cond != nil {
+// 			affects = affects_condition(o, prev_flow_node, for_stmt.second_cond)
+// 		}
 
-		if affects {
-			for_flow_node.dependencies[prev_node] = true
-			prev_flow_node.dependents[for_flow_node.node] = true
-		}
-	}
-}
+// 		if affects {
+// 			for_flow_node.dependencies[prev_node] = true
+// 			prev_flow_node.dependents[for_flow_node.node] = true
+// 		}
+// 	}
+// }
 
 affects_condition :: proc(o: ^Optimizer, stmt_flow_node: ^Flow_Node, condition: ^ast.Expr) -> bool {
 	if condition == nil { return false }
@@ -11705,24 +11705,24 @@ replace_in_node :: proc(o: ^Optimizer, node: ^ast.Node) -> int {
 			replaced += replace_in_node(o, n.else_stmt)
 		}
 
-	case ^ast.For_Stmt:
-		if n.init != nil {
-			for ident in n.init {
-				replaced += replace_in_node(o, cast(^ast.Node)ident)
-			}
-		}
-		if n.cond != nil {
-			replaced += replace_in_node(o, n.cond)
-		}
-		if n.second_cond != nil {
-			replaced += replace_in_node(o, n.second_cond)
-		}
-		if n.post != nil {
-			replaced += replace_in_node(o, n.post)
-		}
-		if n.body != nil {
-			replaced += replace_in_node(o, n.body)
-		}
+	// case ^ast.For_Stmt:
+	// 	if n.init != nil {
+	// 		for ident in n.init {
+	// 			replaced += replace_in_node(o, cast(^ast.Node)ident)
+	// 		}
+	// 	}
+	// 	if n.cond != nil {
+	// 		replaced += replace_in_node(o, n.cond)
+	// 	}
+	// 	if n.second_cond != nil {
+	// 		replaced += replace_in_node(o, n.second_cond)
+	// 	}
+	// 	if n.post != nil {
+	// 		replaced += replace_in_node(o, n.post)
+	// 	}
+	// 	if n.body != nil {
+	// 		replaced += replace_in_node(o, n.body)
+	// 	}
 
 	case ^ast.Return_Stmt:
 		if n.result != nil {
@@ -11827,17 +11827,17 @@ variable_is_modified_in_node :: proc(o: ^Optimizer, sym: ^checker.Symbol, node: 
 			return true
 		}
 
-	case ^ast.For_Stmt:
-		if n.init != nil {
-			for ident in n.init {
-				if ident.name == sym.name {
-					return true
-				}
-			}
-		}
-		if n.body != nil && variable_is_modified_in_node(o, sym, n.body) {
-			return true
-		}
+	// case ^ast.For_Stmt:
+	// 	if n.init != nil {
+	// 		for ident in n.init {
+	// 			if ident.name == sym.name {
+	// 				return true
+	// 			}
+	// 		}
+	// 	}
+	// 	if n.body != nil && variable_is_modified_in_node(o, sym, n.body) {
+	// 		return true
+	// 	}
 
 	case ^ast.Func_Stmt:
 		if n.params != nil {
@@ -12102,24 +12102,24 @@ collect_usages_for_declaration :: proc(o: ^Optimizer, info: ^Declaration_Info) {
 				collect_usages_in_node(o, n.else_stmt, sym, usages)
 			}
 
-		case ^ast.For_Stmt:
-			if n.init != nil {
-				for ident in n.init {
-					collect_usages_in_node(o, ident, sym, usages)
-				}
-			}
-			if n.cond != nil {
-				collect_usages_in_node(o, n.cond, sym, usages)
-			}
-			if n.second_cond != nil {
-				collect_usages_in_node(o, n.second_cond, sym, usages)
-			}
-			if n.post != nil {
-				collect_usages_in_node(o, n.post, sym, usages)
-			}
-			if n.body != nil {
-				collect_usages_in_node(o, n.body, sym, usages)
-			}
+		// case ^ast.For_Stmt:
+		// 	if n.init != nil {
+		// 		for ident in n.init {
+		// 			collect_usages_in_node(o, ident, sym, usages)
+		// 		}
+		// 	}
+		// 	if n.cond != nil {
+		// 		collect_usages_in_node(o, n.cond, sym, usages)
+		// 	}
+		// 	if n.second_cond != nil {
+		// 		collect_usages_in_node(o, n.second_cond, sym, usages)
+		// 	}
+		// 	if n.post != nil {
+		// 		collect_usages_in_node(o, n.post, sym, usages)
+		// 	}
+		// 	if n.body != nil {
+		// 		collect_usages_in_node(o, n.body, sym, usages)
+		// 	}
 
 		case ^ast.Block_Stmt:
 			for stmt in n.stmts {
@@ -12388,27 +12388,27 @@ is_modified_in_node_outside_scope :: proc(
 			result = true
 		}
 
-	case ^ast.For_Stmt:
-		if n.init != nil {
-			for ident in n.init {
-				if is_modified_in_node_outside_scope(o, sym, ident, target_scope) {
-					result = true
-					break
-				}
-			}
-		}
-		if !result && n.cond != nil && is_modified_in_node_outside_scope(o, sym, n.cond, target_scope) {
-			result = true
-		}
-		if !result && n.second_cond != nil && is_modified_in_node_outside_scope(o, sym, n.second_cond, target_scope) {
-			result = true
-		}
-		if !result && n.post != nil && is_modified_in_node_outside_scope(o, sym, n.post, target_scope) {
-			result = true
-		}
-		if !result && n.body != nil && is_modified_in_node_outside_scope(o, sym, n.body, target_scope) {
-			result = true
-		}
+	// case ^ast.For_Stmt:
+	// 	if n.init != nil {
+	// 		for ident in n.init {
+	// 			if is_modified_in_node_outside_scope(o, sym, ident, target_scope) {
+	// 				result = true
+	// 				break
+	// 			}
+	// 		}
+	// 	}
+	// 	if !result && n.cond != nil && is_modified_in_node_outside_scope(o, sym, n.cond, target_scope) {
+	// 		result = true
+	// 	}
+	// 	if !result && n.second_cond != nil && is_modified_in_node_outside_scope(o, sym, n.second_cond, target_scope) {
+	// 		result = true
+	// 	}
+	// 	if !result && n.post != nil && is_modified_in_node_outside_scope(o, sym, n.post, target_scope) {
+	// 		result = true
+	// 	}
+	// 	if !result && n.body != nil && is_modified_in_node_outside_scope(o, sym, n.body, target_scope) {
+	// 		result = true
+	// 	}
 
 	case ^ast.Func_Stmt:
 		if n.body != nil {

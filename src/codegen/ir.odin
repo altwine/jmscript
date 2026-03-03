@@ -372,3 +372,7 @@ Value :: union {
 	^BlockValue,
 	^LocalizedTextValue,
 }
+
+make_values :: proc(allocator := context.allocator) -> [dynamic]Value {
+	return make([dynamic]Value, 0, allocator)
+}

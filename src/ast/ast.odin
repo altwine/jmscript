@@ -150,15 +150,34 @@ Defer_Stmt :: struct {
 	stmt: ^Stmt,
 }
 
+Range_Kind :: enum {
+	Exclusive,
+	Inclusive,
+}
+
+Range_Expr :: struct {
+	using node: Expr,
+	start_expr: ^Expr,
+	end_expr:   ^Expr,
+	kind:       Range_Kind,
+}
+
+Loop_Type :: enum {
+	Basic,
+	Range,
+	Conditional,
+	Unconditional,
+}
+
 For_Stmt :: struct {
 	using node: Stmt,
-	for_pos:	 lexer.Pos,
-	init:		[]^Ident,
-	cond:		^Expr,
-	post:		^Stmt,
-	body:		^Block_Stmt,
-	range_tok:   lexer.Token,
-	second_cond: ^Expr,
+	type:       Loop_Type,
+	body:	  	^Block_Stmt,
+	range_vars:	[]^Ident,
+	range_expr:  ^Range_Expr,
+	init:	    ^Stmt,
+	cond:	    ^Expr,
+	post:       ^Stmt,
 }
 
 Value_Decl :: struct {
@@ -214,6 +233,7 @@ Any_Node :: union {
 	^If_Stmt,
 	^Return_Stmt,
 	^Defer_Stmt,
+	^Range_Expr,
 	^For_Stmt,
 
 	^Value_Decl,
@@ -331,6 +351,14 @@ create_argument :: proc(name: string, value: ^Expr, pos, end: lexer.Pos, allocat
 	arg.name = name
 	arg.value = value
 	return arg
+}
+
+create_range_expr :: proc(start: ^Expr, end: ^Expr, kind: Range_Kind, pos, end_pos: lexer.Pos, allocator := context.allocator) -> ^Range_Expr {
+	range := new(Range_Expr, pos, end_pos, allocator)
+	range.start_expr = start
+	range.end_expr = end
+	range.kind = kind
+	return range
 }
 
 print_tree :: proc(node: ^Node, indent := 0) {
@@ -504,17 +532,23 @@ print_tree :: proc(node: ^Node, indent := 0) {
 		print_tree(n.stmt, 1)
 		fmt.println(")")
 
+	case ^Range_Expr:
+		fmt.println("Range_Expr(")
+		print_tree(n.start_expr, 1)
+		print_tree(n.end_expr, 1)
+		fmt.println(")")
+
 	case ^For_Stmt:
 		fmt.println("For_Stmt")
 		if len(n.annotations) > 0 {
 			fmt.println("Annotations:")
 			print_annotations(n, indent + 1)
 		}
-		if n.init != nil {
+		if n.range_vars != nil {
 			print_indent(indent)
 			fmt.println("inits:")
-			for init in n.init {
-				print_tree(init, indent + 2)
+			for range_var in n.range_vars {
+				print_tree(range_var, indent + 2)
 			}
 		}
 		if n.cond != nil {
@@ -523,14 +557,13 @@ print_tree :: proc(node: ^Node, indent := 0) {
 			print_inline_expr(n.cond)
 			fmt.println("")
 		}
-		if n.range_tok.kind != .Invalid {
+		if n.range_expr != nil {
 			print_indent(indent)
-			fmt.printfln("range_type: %s", n.range_tok.content)
+			print_tree(n.range_expr, indent + 2)
 		}
-		if n.second_cond != nil {
+		if n.post != nil {
 			print_indent(indent)
-			fmt.print("2cond: ")
-			print_inline_expr(n.second_cond)
+			print_tree(n.post, indent + 2)
 			fmt.println("")
 		}
 		if n.body != nil {
