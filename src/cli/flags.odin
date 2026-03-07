@@ -33,9 +33,9 @@ extract_flags :: proc "contextless" () {
 		case "-r", "--raw", "/r", "/raw":
 			flags += {.Print_To_Stdout}
 		case "-w", "--warnings-as-errors", "/w", "/warnings-as-errors":
-			flags += {.Upload_To_Server}
-		case "-u", "--upload", "/u", "/upload":
 			flags += {.Warnings_As_Errors}
+		case "-u", "--upload", "/u", "/upload":
+			flags += {.Upload_To_Server}
 		case:
 			if len(arg) > 0 && (arg[0] == '-' || arg[0] == '/') {
 				fmt.printfln("Unknown flag '%s' ignored", arg)
