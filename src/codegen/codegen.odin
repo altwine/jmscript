@@ -1,5 +1,6 @@
 package codegen
 
+import "core:unicode/utf8"
 import "core:fmt"
 import "core:strconv"
 import "core:mem"
@@ -311,6 +312,7 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 		loop_container := create_container_operation("repeat_forever", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
 		append(c.current_operations, loop_container)
 		push_operations(c, &loop_container.operations)
+
 		if node.cond != nil {
 			cond_value, cond_type := codegen_gen_expression(c, node.cond)
 
@@ -372,14 +374,24 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 		if node.body != nil {
 			codegen_gen_statement(c, node.body)
 		}
+
 		if len(node.range_vars) > 0 {
 			append(&loop_container.values, create_named_value("value_variable", create_variable_value(node.range_vars[0].name, guess_variable_type_by_scope(c, node.range_vars[0].name), c.alloc), c.alloc))
 		}
 		if len(node.range_vars) > 1 {
 			append(&loop_container.values, create_named_value("index_variable", create_variable_value(node.range_vars[1].name, guess_variable_type_by_scope(c, node.range_vars[1].name), c.alloc), c.alloc))
 		}
-		result_value, _ := codegen_gen_expression(c, node.range_expr, false)
-		append(&loop_container.values, create_named_value("list", result_value, c.alloc))
+		if node.cond != nil {
+			#partial switch v in node.cond.derived {
+			case ^ast.Basic_Lit:
+				result_value := decompose_basic_lit_into_array_lit(c, v)
+				append(&loop_container.values, create_named_value("list", result_value, c.alloc))
+			}
+		}
+		if node.range_expr != nil {
+			result_value, _ := codegen_gen_expression(c, node.range_expr, false)
+			append(&loop_container.values, create_named_value("list", result_value, c.alloc))
+		}
 		pop_operations(c)
 	}
 }
@@ -697,7 +709,26 @@ codegen_gen_unary_expr :: proc(c: ^Codegen, node: ^ast.Unary_Expr, waits_enum: b
 	unimplemented("unary expression support")
 }
 
+decompose_basic_lit_into_array_lit :: proc(c: ^Codegen, basic_lit: ^ast.Basic_Lit) -> ^ArrayValue {
+	array_value := create_array_value(make_values(c.alloc), c.alloc)
+
+	#partial switch basic_lit.tok.kind {
+	case .Text:
+		text_content := basic_lit.tok.content[1:len(basic_lit.tok.content)-1]
+		for r in text_content {
+			append(&array_value.values, create_text_value(utf8.runes_to_string({r}, c.alloc), PARSING_PLAIN, c.alloc))
+		}
+	case: unimplemented(fmt.tprintf("decomposition of %s literal", lexer.to_string(basic_lit.tok.kind)))
+	}
+
+	return array_value
+}
+
 guess_variable_type_by_scope :: proc(c: ^Codegen, variable_name: string) -> string {
+	if variable_name == "_" {
+		return SCOPE_LINE
+	}
+
 	sym, exist := checker.lookup_symbol(c.current_scope, variable_name)
 	ensure(exist)
 	if sym.type.is_param || sym.type.from_for_head {

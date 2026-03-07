@@ -13,8 +13,8 @@ event player_join() {
 	// for a != 10 { // works
 	// for a in 0..=10 { // works
 
-	for a, b in 0..<10 {
-		print_hellope("test!")
+	for a, b in "test" {
+		print_hellope(a)
 		control_wait(1, "TICKS")
 	}
 

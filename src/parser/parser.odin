@@ -328,6 +328,8 @@ parse_for_stmt :: proc(p: ^Parser) -> ^ast.For_Stmt {
 			case ^ast.Range_Expr:
 				range_expr = v
 				cond_expr = v
+			case ^ast.Basic_Lit:
+				cond_expr = v
 			case:
 				error.add_error(p.ec, p.file, "expected range expression", current(p).pos)
 			}

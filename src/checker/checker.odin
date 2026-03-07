@@ -365,16 +365,27 @@ _collect_visit_event_stmt :: proc(v: ^ast.Visitor, node: ^ast.Event_Stmt) {
 @(private="file")
 _collect_visit_for_stmt :: proc(v: ^ast.Visitor, node: ^ast.For_Stmt) {
 	c := cast(^Checker)v.user_data
-	for range_var in node.range_vars {
+	for range_var, range_var_index in node.range_vars {
 		if range_var.name == "_" {
-			return
+			continue
 		}
 		if _, already_defined := lookup_local_symbol(c.symbol_table.current_scope, range_var.name);
 			already_defined {
 			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' is already defined", range_var.name), range_var)
 			return
 		}
-		type_info := get_type_info_from_expression(c, range_var)
+		type_info: ^Type_Info
+		if node.range_expr != nil {
+			type_info = get_type_info_from_expression(c, node.range_expr)
+		}
+		if node.cond != nil {
+			switch range_var_index {
+			case 0: type_info = get_type_info_from_expression(c, node.cond)
+			case 1: type_info = create_type_info(.Number, c.alloc)
+			case: type_info = create_type_info(.Invalid, c.alloc)
+			}
+		}
+		fmt.printfln("%s: %v", range_var.name, type_info.kind)
 		type_info.from_for_head = true
 		symbol := create_symbol(range_var.name, type_info, range_var, c.alloc)
 		add_symbol(c, symbol)
@@ -531,6 +542,10 @@ _type_check_visit_assign_stmt :: proc(v: ^ast.Visitor, node: ^ast.Assign_Stmt) {
 _type_check_visit_ident :: proc(v: ^ast.Visitor, node: ^ast.Ident) {
 	c := cast(^Checker)v.user_data
 
+	if node.name == "_" {
+		return
+	}
+
 	sym, exists := lookup_symbol(c.symbol_table.current_scope, node.name)
 	if !exists {
 		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("variable '%s' is not declared", node.name), node)
@@ -635,6 +650,15 @@ get_type_info_from_expression :: proc(c: ^Checker, expr: ^ast.Expr) -> ^Type_Inf
 			return type_info
 		}
 		return sym.type
+
+	case ^ast.Range_Expr:
+		start, is_lit := v.start_expr.derived.(^ast.Basic_Lit)
+		end, _is_lit := v.end_expr.derived.(^ast.Basic_Lit)
+		if !(is_lit && _is_lit) {
+			unimplemented("checker of range expressions other than literal...literal")
+		}
+		type_info.kind = .Number
+		return type_info
 
 	case ^ast.Basic_Lit:
 		#partial switch v.tok.kind {
