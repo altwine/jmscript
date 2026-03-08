@@ -629,6 +629,74 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Boolean
 
+	case left_type == .Number && right_type == .Number && operator == .Lt:
+		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, value_decl_op)
+
+		value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		op := create_container_operation("if_variable_less", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&op.values, create_named_value("value", left_val, c.alloc))
+		append(&op.values, create_named_value("compare", right_val, c.alloc))
+		append(&op.operations, value_decl_op_inner)
+		append(c.current_operations, op)
+		return result_var, .Boolean
+
+	case left_type == .Number && right_type == .Number && operator == .Lt_Eq:
+		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, value_decl_op)
+
+		value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		op := create_container_operation("if_variable_less_or_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&op.values, create_named_value("value", left_val, c.alloc))
+		append(&op.values, create_named_value("compare", right_val, c.alloc))
+		append(&op.operations, value_decl_op_inner)
+		append(c.current_operations, op)
+		return result_var, .Boolean
+
+	case left_type == .Number && right_type == .Number && operator == .Gt:
+		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, value_decl_op)
+
+		value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		op := create_container_operation("if_variable_greater", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&op.values, create_named_value("value", left_val, c.alloc))
+		append(&op.values, create_named_value("compare", right_val, c.alloc))
+		append(&op.operations, value_decl_op_inner)
+		append(c.current_operations, op)
+		return result_var, .Boolean
+
+	case left_type == .Number && right_type == .Number && operator == .Gt_Eq:
+		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
+		append(c.current_operations, value_decl_op)
+
+		value_decl_op_inner := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op_inner.values, create_named_value("variable", result_var, c.alloc))
+		append(&value_decl_op_inner.values, create_named_value("value", create_number_value(1, c.alloc), c.alloc))
+
+		op := create_container_operation("if_variable_greater_or_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
+		append(&op.values, create_named_value("value", left_val, c.alloc))
+		append(&op.values, create_named_value("compare", right_val, c.alloc))
+		append(&op.operations, value_decl_op_inner)
+		append(c.current_operations, op)
+		return result_var, .Boolean
+
 	case left_type == .Number && right_type == .Number && operator == .Not_Eq,
 		left_type == .Text && right_type == .Text && operator == .Not_Eq,
 		left_type == .Boolean && right_type == .Boolean && operator == .Not_Eq:
