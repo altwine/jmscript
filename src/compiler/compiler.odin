@@ -7,7 +7,7 @@ import "core:time"
 import "../error"
 import "../parser"
 import "../checker"
-import "../optimizer"
+// import "../optimizer"
 import "../codegen"
 
 Compiler :: struct {
@@ -45,17 +45,17 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 	}
 	error.collector_clear(&c.ec)
 
-	opt_start := time.now()
-	op: optimizer.Optimizer
-	optimizer.optimizer_init(&op, &c.ec, c.alloc)
-	optimizer.optimizer_optimize(&op, files, symbol_table)
-	opt_time := time.duration_milliseconds(time.since(opt_start))
+	// opt_start := time.now()
+	// op: optimizer.Optimizer
+	// optimizer.optimizer_init(&op, &c.ec, c.alloc)
+	// optimizer.optimizer_optimize(&op, files, symbol_table)
+	// opt_time := time.duration_milliseconds(time.since(opt_start))
 
-	error.print_all(&c.ec)
-	if error.has_errors(&c.ec) {
-		return "", false
-	}
-	error.collector_clear(&c.ec)
+	// error.print_all(&c.ec)
+	// if error.has_errors(&c.ec) {
+	// 	return "", false
+	// }
+	// error.collector_clear(&c.ec)
 
 	codegen_start := time.now()
 	cg: codegen.Codegen
@@ -73,7 +73,7 @@ compile :: proc(c: ^Compiler, dir_path: string, minify: bool, unique_id: string)
 	log.info("=== Compilation Times ===")
 	log.infof("Parse time:    %.4f ms", parse_time)
 	log.infof("Check time:    %.4f ms", check_time)
-	log.infof("Optimize time: %.4f ms", opt_time)
+	// log.infof("Optimize time: %.4f ms", opt_time)
 	log.infof("Codegen time:  %.4f ms", codegen_time)
 	log.infof("Total time:    %.4f ms", total_time)
 	log.info("========================")
