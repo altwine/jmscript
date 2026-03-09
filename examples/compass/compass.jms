@@ -1,0 +1,48 @@
+package compass
+
+@(name="Update compass for player")
+@(desc="My awesome compass function!")
+func update_compass(yaw: number) {
+	bar_content := ""
+	bar_size :: 35
+	step :: 5
+
+	for i := 0; i < bar_size; i += 1 {
+		curr_angle := yaw + (i - bar_size / 2) * step
+		norm_angle := (curr_angle % 360 + 360) % 360
+
+		symbol := "&8o"
+
+		distance_n := set_variable_absolute(norm_angle - 180)
+		if distance_n < 2.5 {
+			symbol := "&fN"
+		}
+
+		distance_s := set_variable_absolute(norm_angle - 360)
+		distance_s2 := set_variable_absolute(norm_angle - 0)
+		if distance_s < 2.5 || distance_s2 < 2.5 {
+			symbol := "&fS"
+		}
+
+		distance_e := set_variable_absolute(norm_angle - 270)
+		if distance_e < 2.5 {
+			symbol := "&fE"
+		}
+
+		distance_w := set_variable_absolute(norm_angle - 90)
+		if distance_w < 2.5 {
+			symbol := "&fW"
+		}
+
+		bar_content += symbol
+	}
+
+	player_set_boss_bar("compass", bar_content, 0, "WHITE", "PROGRESS", "FOG_AND_DARK_SKY")
+}
+
+event player_join() {
+	for {
+		update_compass(10) // value::yaw
+		control_wait(1, "TICKS")
+	}
+}
