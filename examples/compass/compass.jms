@@ -13,23 +13,23 @@ func update_compass(yaw: number) {
 
 		symbol := "&8o"
 
-		distance_n := set_variable_absolute(norm_angle - 180)
+		distance_n := abs(norm_angle - 180)
 		if distance_n < 2.5 {
 			symbol := "&fN"
 		}
 
-		distance_s := set_variable_absolute(norm_angle - 360)
-		distance_s2 := set_variable_absolute(norm_angle - 0)
+		distance_s := abs(norm_angle - 360)
+		distance_s2 := abs(norm_angle - 0)
 		if distance_s < 2.5 || distance_s2 < 2.5 {
 			symbol := "&fS"
 		}
 
-		distance_e := set_variable_absolute(norm_angle - 270)
+		distance_e := abs(norm_angle - 270)
 		if distance_e < 2.5 {
 			symbol := "&fE"
 		}
 
-		distance_w := set_variable_absolute(norm_angle - 90)
+		distance_w := abs(norm_angle - 90)
 		if distance_w < 2.5 {
 			symbol := "&fW"
 		}

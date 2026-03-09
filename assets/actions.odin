@@ -5953,14 +5953,14 @@ init_actions :: proc(allocator := context.allocator) {
 		.BASIC,
 		nil,
 	}
-	actions["set_variable_absolute"] = Action{
+	actions["abs"] = Action{
 		"set_variable_absolute",
 		nil,
 		nil,
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "number", nil},
 			Slot{"number", "number", nil},
 		},
 	}
@@ -6098,14 +6098,14 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"values", "any", nil},
 		},
 	}
-	actions["set_variable_average"] = Action{
+	actions["avg"] = Action{
 		"set_variable_average",
 		nil,
 		nil,
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "number", nil},
 			Slot{"value", "number", nil},
 		},
 	}
@@ -6145,42 +6145,42 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"parsing", "enum", {"PLAIN", "LEGACY", "MINIMESSAGE", "JSON"}},
 		},
 	}
-	actions["set_variable_char_to_number"] = Action{
+	actions["char_to_number"] = Action{
 		"set_variable_char_to_number",
 		nil,
 		nil,
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "number", nil},
 			Slot{"char", "text", nil},
 		},
 	}
-	actions["set_variable_clamp"] = Action{
+	actions["clamp"] = Action{
 		"set_variable_clamp",
 		nil,
 		nil,
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "number", nil},
 			Slot{"number", "number", nil},
 			Slot{"min", "number", nil},
 			Slot{"max", "number", nil},
 		},
 	}
-	actions["set_variable_clear_color_codes"] = Action{
+	actions["clear_color_codes"] = Action{
 		"set_variable_clear_color_codes",
 		nil,
 		nil,
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "text", nil},
 			Slot{"text", "text", nil},
 		},
 	}
-	actions["set_variable_clear_map"] = Action{
+	actions["clear_map"] = Action{
 		"set_variable_clear_map",
 		nil,
 		nil,
@@ -6391,14 +6391,14 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"target", "location", nil},
 		},
 	}
-	actions["set_variable_flatten_list"] = Action{
+	actions["flatten_list"] = Action{
 		"set_variable_flatten_list",
 		nil,
 		nil,
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "array", nil},
 			Slot{"list", "array", nil},
 		},
 	}
@@ -6563,14 +6563,14 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"bundle", "item", nil},
 		},
 	}
-	actions["set_variable_get_char_at"] = Action{
+	actions["get_char_at"] = Action{
 		"set_variable_get_char_at",
 		nil,
 		nil,
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "text", nil},
 			Slot{"text", "text", nil},
 			Slot{"index", "number", nil},
 		},
@@ -7507,7 +7507,7 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"truncated", "text", nil},
 		},
 	}
-	actions["set_variable_lerp_number"] = Action{
+	actions["lerp"] = Action{
 		"set_variable_lerp_number",
 		nil,
 		nil,
@@ -9044,7 +9044,7 @@ init_actions :: proc(allocator := context.allocator) {
 			Slot{"enable_distance", "enum", {"TRUE", "FALSE"}},
 		},
 	}
-	actions["set_variable_warp"] = Action{
+	actions["warp"] = Action{
 		"set_variable_warp",
 		nil,
 		nil,

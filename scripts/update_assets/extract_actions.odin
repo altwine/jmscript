@@ -85,6 +85,19 @@ ACTION_INS_OUTS := map[string]Action_In_Out {
 	},
 }
 
+ACTION_NAMES_MAPPED := map[string]string {
+	"set_variable_absolute"="abs",
+	"set_variable_clamp"="clamp",
+	"set_variable_warp"="warp",
+	"set_variable_average"="avg",
+	"set_variable_char_to_number"="char_to_number",
+	"set_variable_clear_color_codes"="clear_color_codes",
+	"set_variable_clear_map"="clear_map",
+	"set_variable_flatten_list"="flatten_list",
+	"set_variable_get_char_at"="get_char_at",
+	"set_variable_lerp_number"="lerp",
+}
+
 URL_ACTIONS_1 :: URL_BASE_JMS+"actions.json"
 
 extract_actions :: proc() -> ([dynamic]Action) {
@@ -137,7 +150,11 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 			continue
 		}
 		action_in_out, has_in_outs := ACTION_INS_OUTS[action.name]
-		fmt.fprintfln(fd, "\tactions[\"%s\"] = Action{{", action.name)
+		new_action_name, has_replacement := ACTION_NAMES_MAPPED[action.name]
+		if !has_replacement {
+			new_action_name = action.name
+		}
+		fmt.fprintfln(fd, "\tactions[\"%s\"] = Action{{", new_action_name)
 		fmt.fprintfln(fd, "\t\t\"%s\",", action.name)
 		if has_in_outs {
 			fmt.fprint(fd, "\t\t[dynamic]string{")
