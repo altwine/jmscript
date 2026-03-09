@@ -283,16 +283,10 @@ codegen_gen_if_stmt :: proc(c: ^Codegen, node: ^ast.If_Stmt) {
 		codegen_gen_statement(c, node.body)
 	}
 
-	if node.else_stmt != nil {
-		unimplemented("else body in if statement")
-	}
-
 	pop_operations(c)
 
 	if node.else_stmt != nil {
-		else_op := create_container_operation("if_variable_equals", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
-		append(&else_op.values, create_named_value("value", if_stmt_result, c.alloc))
-		append(&else_op.values, create_named_value("compare", create_number_value(0, c.alloc), c.alloc))
+		else_op := create_container_operation("else", make_named_values(c.alloc), make_operations(c.alloc), allocator=c.alloc)
 		append(c.current_operations, else_op)
 
 		push_operations(c, &else_op.operations)
