@@ -433,7 +433,7 @@ codegen_gen_call_expr :: proc(c: ^Codegen, node: ^ast.Call_Expr, waits_enum: boo
 		if action.type != .BASIC {
 			unimplemented()
 		}
-		op := create_basic_operation(func_name, make_named_values(c.alloc), "", c.alloc)
+		op := create_basic_operation(action.name, make_named_values(c.alloc), "", c.alloc)
 
 		decrement := 0
 		for i in 0..<len(action.slots) {
