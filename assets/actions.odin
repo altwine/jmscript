@@ -8031,7 +8031,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "number", nil},
 			Slot{"number", "number", nil},
 			Slot{"precision", "number", nil},
 			Slot{"round_type", "enum", {"ROUND", "FLOOR", "CEIL"}},
@@ -8899,7 +8899,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "text", nil},
 			Slot{"text", "text", nil},
 			Slot{"merging", "enum", {"SPACES", "CONCATENATION", "SEPARATE_LINES"}},
 		},
@@ -9051,7 +9051,7 @@ init_actions :: proc(allocator := context.allocator) {
 		false,
 		.BASIC,
 		[dynamic]Slot{
-			Slot{"variable", "any", nil},
+			Slot{"variable", "number", nil},
 			Slot{"number", "number", nil},
 			Slot{"min", "number", nil},
 			Slot{"max", "number", nil},

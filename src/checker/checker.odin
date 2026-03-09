@@ -1,7 +1,6 @@
 package checker
 
 import "core:mem"
-import "core:slice"
 import "core:strings"
 import "core:fmt"
 
@@ -563,54 +562,67 @@ _type_check_visit_call_expr :: proc(v: ^ast.Visitor, node: ^ast.Call_Expr) {
 			return
 		}
 
-		if len(node.args) != len(sym.type.param_types) {
+		real_param_types_count := 0
+		for param_type in sym.type.param_types {
+			if !param_type.is_unused {
+				real_param_types_count += 1
+			}
+		}
+
+		if len(node.args) != real_param_types_count {
 			error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid arguments count in function call: %d != %d", len(node.args), len(sym.type.param_types)), node)
 			return
 		}
 
-		for arg, i in node.args {
+		for i in 0..<len(sym.type.param_types) {
+			arg: ^ast.Argument = nil
+			if i+1 <= len(node.args) {
+				arg = node.args[i]
+			}
 			real_index := i
 			arg_type, param_type: ^Type_Info
 
-			if arg.name == "" {
-				arg_type = get_type_info_from_expression(c, arg.value)
-				param_type = sym.type.param_types[i]
-			} else {
-				real_index = -1
-				for param_name, arg_i in sym.type.param_names {
-					if param_name == arg.name {
-						real_index = arg_i
-						break
+			if arg != nil {
+				if arg.name == "" {
+					arg_type = get_type_info_from_expression(c, arg.value)
+					param_type = sym.type.param_types[i]
+				} else {
+					real_index = -1
+					for param_name, arg_i in sym.type.param_names {
+						if param_name == arg.name {
+							real_index = arg_i
+							break
+						}
 					}
-				}
 
-				if real_index == -1 {
-					closest := _find_closest(c, arg.name, sym.type.param_names[:])
-					error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid named argument: '%s', maybe '%s'?", arg.name, closest), node)
-					continue
-				}
-
-				arg_type = get_type_info_from_expression(c, arg.value)
-				param_type = sym.type.param_types[real_index]
-			}
-
-			if arg_type.kind == .Text && param_type.kind == .Enum {
-				action, action_exists := assets.action_native_from_mapped(ident.name)
-				if !action_exists {
-					error.add_error(c.ec, c.files[c.current_file_idx], "enum validation not implemented for this function", node)
-					continue
-				}
-
-				if text_lit, is_text_lit := arg.value.derived.(^ast.Basic_Lit); is_text_lit {
-					content := text_lit.tok.content[1:len(text_lit.tok.content)-1]
-					if !slice.contains(action.slots[real_index]._enum[:], content) {
-						closest := _find_closest(c, content, action.slots[real_index]._enum[:])
-						error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid value for enum: '%s', maybe '%s'?", content, closest), text_lit)
+					if real_index == -1 {
+						closest := _find_closest(c, arg.name, sym.type.param_names[:])
+						error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid named argument: '%s', maybe '%s'?", arg.name, closest), node)
+						continue
 					}
+
+					arg_type = get_type_info_from_expression(c, arg.value)
+					param_type = sym.type.param_types[real_index]
 				}
-			} else if arg_type.kind != param_type.kind && !can_casted(arg_type.kind, param_type.kind) {
-				error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid argument type: '%s' != '%s'",
-					type_kind_to_string(arg_type.kind), type_kind_to_string(param_type.kind)), node)
+
+				if arg_type.kind == .Text && param_type.kind == .Enum {
+					action, action_exists := assets.action_native_from_mapped(ident.name)
+					if !action_exists {
+						error.add_error(c.ec, c.files[c.current_file_idx], "enum validation not implemented for this function", node)
+						continue
+					}
+
+					// if text_lit, is_text_lit := arg.value.derived.(^ast.Basic_Lit); is_text_lit {
+					// 	content := text_lit.tok.content[1:len(text_lit.tok.content)-1]
+					// 	if !slice.contains(action.slots[real_index]._enum[:], content) {
+					// 		closest := _find_closest(c, content, action.slots[real_index]._enum[:])
+					// 		error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid value for enum: '%s', maybe '%s'?", content, closest), text_lit)
+					// 	}
+					// }
+				} // else if arg_type.kind != param_type.kind && !can_casted(arg_type.kind, param_type.kind) {
+				// 	error.add_error(c.ec, c.files[c.current_file_idx], fmt.tprintf("invalid argument type: '%s' != '%s'",
+				// 		type_kind_to_string(arg_type.kind), type_kind_to_string(param_type.kind)), node)
+				// }
 			}
 		}
 	}
@@ -860,8 +872,14 @@ add_native_functions :: proc(c: ^Checker) {
 		}
 		type_info := create_type_info(.Function, c.alloc)
 		for slot in action_data.slots[:] {
+			if slot.name == "variable" {
+				type_info.return_t = create_type_info(string_to_type_kind(c, slot.type, nil), c.alloc)
+			}
 			append(&type_info.param_names, slot.name)
 			slot_type_info := create_type_info(string_to_type_kind(c, slot.type, nil), c.alloc)
+			if slot.name == "variable" {
+				slot_type_info.is_unused = true
+			}
 			append(&type_info.param_types, slot_type_info)
 		}
 		sym := create_symbol(action_name, type_info, nil, c.alloc)

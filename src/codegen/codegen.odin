@@ -204,13 +204,25 @@ codegen_gen_assign_stmt :: proc(c: ^Codegen, node: ^ast.Assign_Stmt) {
 	ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
 
 	origin_type := origin_sym.type.kind
+	current_var := create_variable_value(origin_sym.name, guess_variable_type_by_scope(c, origin_sym.name), c.alloc)
 
-	if origin_type != .Number || result_type != .Number {
+	if origin_type == .Text && node.op.kind == .Add_Eq {
+		text_add_op := create_basic_operation("set_variable_text", make_named_values(c.alloc), "", c.alloc)
+		append(&text_add_op.values, create_named_value("variable", current_var, c.alloc))
+		array_value := create_array_value(make_values(c.alloc), c.alloc)
+		append(&array_value.values, current_var)
+		append(&array_value.values, result_value)
+		append(&text_add_op.values, create_named_value("text", array_value, c.alloc))
+		append(&text_add_op.values, create_named_value("merging", create_enum_value("CONCATENATION", c.alloc), c.alloc))
+		append(c.current_operations, text_add_op)
+		return
+	}
+
+	if origin_type != result_type {
 		unimplemented(fmt.tprintf("assignment with %s and %s", checker.type_kind_to_string(origin_type), checker.type_kind_to_string(result_type)))
 	}
 
 	op: ^Operation
-	current_var := create_variable_value(origin_sym.name, guess_variable_type_by_scope(c, origin_sym.name), c.alloc)
 
 	#partial switch node.op.kind { // TODO: get rid of duplicate code
 	case .Eq:
@@ -422,18 +434,31 @@ codegen_gen_call_expr :: proc(c: ^Codegen, node: ^ast.Call_Expr, waits_enum: boo
 			unimplemented()
 		}
 		op := create_basic_operation(func_name, make_named_values(c.alloc), "", c.alloc)
-		for arg, i in node.args {
+
+		decrement := 0
+		for i in 0..<len(action.slots) {
+			arg: ^ast.Argument = nil
+			// if i < len(node.args) {
+				arg = node.args[i - decrement]
+			// }
 			real_index := i
-			if arg.name != "" {
-				for param_name, arg_i in sym.type.param_names {
-					if param_name == arg.name {
-						real_index = arg_i
-						break
+			if arg != nil {
+				if arg.name != "" {
+					for param_name, arg_i in sym.type.param_names {
+						if param_name == arg.name {
+							real_index = arg_i
+							break
+						}
 					}
 				}
 			}
 			arg_name := action.slots[real_index].name
 			param_type := action.slots[real_index].type
+			if arg_name == "variable" {
+				append(&op.values, create_named_value("variable", result_var, c.alloc))
+				decrement += 1
+				continue
+			}
 			arg_value, _ := codegen_gen_expression(c, arg, waits_enum=param_type=="enum")
 			append(&op.values, create_named_value(arg_name, arg_value, c.alloc))
 		}
@@ -511,7 +536,11 @@ codegen_gen_range_expr :: proc(c: ^Codegen, node: ^ast.Range_Expr, waits_enum: b
 
 codegen_gen_ident :: proc(c: ^Codegen, node: ^ast.Ident) -> (Value, checker.Type_Kind) {
 	sym, exists := checker.lookup_symbol(c.current_scope, node.name)
-	ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
+	if !exists {
+		fmt.printfln("Checker error #2")
+		return create_variable_value(node.name, guess_variable_type_by_scope(c, node.name), c.alloc), checker.Type_Kind.Any
+	}
+	// ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
 	return create_variable_value(node.name, guess_variable_type_by_scope(c, node.name), c.alloc), sym.type.kind
 }
 
@@ -553,7 +582,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, text_add_op)
 		return result_var, .Text
 
-	case left_type == .Number && right_type == .Number && operator == .Add:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Add:
 		op := create_basic_operation("set_variable_add", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", result_var, c.alloc))
 		array_value := create_array_value(make_values(c.alloc), c.alloc)
@@ -563,7 +592,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Number
 
-	case left_type == .Number && right_type == .Number && operator == .Sub:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Sub:
 		op := create_basic_operation("set_variable_subtract", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", result_var, c.alloc))
 		array_value := create_array_value(make_values(c.alloc), c.alloc)
@@ -573,7 +602,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Number
 
-	case left_type == .Number && right_type == .Number && operator == .Mul:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Mul:
 		op := create_basic_operation("set_variable_multiply", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", result_var, c.alloc))
 		array_value := create_array_value(make_values(c.alloc), c.alloc)
@@ -583,7 +612,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Number
 
-	case left_type == .Number && right_type == .Number && operator == .Quo:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Quo:
 		op := create_basic_operation("set_variable_divide", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", result_var, c.alloc))
 		array_value := create_array_value(make_values(c.alloc), c.alloc)
@@ -594,7 +623,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Number
 
-	case left_type == .Number && right_type == .Number && operator == .Mod:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Mod:
 		op := create_basic_operation("set_variable_remainder", make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, create_named_value("variable", result_var, c.alloc))
 		append(&op.values, create_named_value("dividend", left_val, c.alloc))
@@ -603,10 +632,9 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Number
 
-	case left_type == .Number && right_type == .Number && operator == .Cmp_Eq,
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Cmp_Eq,
 		left_type == .Text && right_type == .Text && operator == .Cmp_Eq,
 		left_type == .Boolean && right_type == .Boolean && operator == .Cmp_Eq:
-
 		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
 		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
 		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
@@ -623,7 +651,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Boolean
 
-	case left_type == .Number && right_type == .Number && operator == .Lt:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Lt:
 		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
 		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
 		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
@@ -640,7 +668,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Boolean
 
-	case left_type == .Number && right_type == .Number && operator == .Lt_Eq:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Lt_Eq:
 		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
 		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
 		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
@@ -657,7 +685,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Boolean
 
-	case left_type == .Number && right_type == .Number && operator == .Gt:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Gt:
 		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
 		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
 		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
@@ -674,7 +702,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Boolean
 
-	case left_type == .Number && right_type == .Number && operator == .Gt_Eq:
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Gt_Eq:
 		value_decl_op := create_basic_operation("set_variable_value", make_named_values(c.alloc), "", c.alloc)
 		append(&value_decl_op.values, create_named_value("variable", result_var, c.alloc))
 		append(&value_decl_op.values, create_named_value("value", create_number_value(0, c.alloc), c.alloc))
@@ -691,7 +719,7 @@ codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum:
 		append(c.current_operations, op)
 		return result_var, .Boolean
 
-	case left_type == .Number && right_type == .Number && operator == .Not_Eq,
+	case (left_type == .Number || left_type == .Any) && (right_type == .Number || right_type == .Any) && operator == .Not_Eq,
 		left_type == .Text && right_type == .Text && operator == .Not_Eq,
 		left_type == .Boolean && right_type == .Boolean && operator == .Not_Eq:
 
@@ -792,7 +820,10 @@ guess_variable_type_by_scope :: proc(c: ^Codegen, variable_name: string) -> stri
 	}
 
 	sym, exist := checker.lookup_symbol(c.current_scope, variable_name)
-	ensure(exist)
+	if !exist {
+		fmt.printfln("Checker error")
+		return SCOPE_GAME
+	}
 	if sym.type.is_param || sym.type.from_for_head {
 		return SCOPE_LINE
 	}

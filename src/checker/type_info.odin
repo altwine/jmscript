@@ -34,6 +34,7 @@ Type_Info :: struct {
 	param_names:   [dynamic]string,
 	param_types:   [dynamic]^Type_Info,
 	is_param:      bool,
+	is_unused:     bool,
 	from_for_head: bool,
 	metadata:      Metadata,
 }
