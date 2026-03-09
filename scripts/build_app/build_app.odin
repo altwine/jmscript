@@ -73,7 +73,7 @@ main :: proc() {
 			append(&build_app_cmd, fmt.tprintf(`-resource:%s`, resources_file_path))
 			append(&build_app_cmd, `-extra-linker-flags:/LTCG`)
 		} else {
-			append(&build_app_cmd, fmt.tprintf(`-extra-linker-flags: /LTCG %s`, compiled_resources_file_path))
+			append(&build_app_cmd, fmt.tprintf(`-extra-linker-flags:/LTCG %s`, compiled_resources_file_path))
 		}
 	}
 
