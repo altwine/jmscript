@@ -1,10 +1,8 @@
 package run_tests
 
 import "core:sys/windows"
-import "core:strings"
 import "core:path/filepath"
 import "core:os"
-import "core:os/os2"
 import "core:fmt"
 
 main :: proc() {
@@ -13,15 +11,15 @@ main :: proc() {
 		windows.SetConsoleCP(windows.CODEPAGE.UTF8)
 	}
 
-	exe_path, _ := filepath.abs(os.args[0])
+	exe_path, _ := filepath.abs(os.args[0], context.allocator)
     exe_dir := filepath.dir(exe_path)
-    pdb_path := filepath.join([]string{exe_dir, "tests.pdb"})
+    pdb_path, _ := filepath.join([]string{exe_dir, "tests.pdb"}, context.allocator)
 
-    bin_dir := filepath.join([]string{exe_dir, "bin"})
-    src_dir := filepath.join([]string{exe_dir, "src"})
-    tests_dir := filepath.join([]string{exe_dir, "tests"})
-    assets_dir := filepath.join([]string{exe_dir, "assets"})
-    examples_dir := filepath.join([]string{exe_dir, "examples"})
+    bin_dir, _ := filepath.join([]string{exe_dir, "bin"}, context.allocator)
+    src_dir, _ := filepath.join([]string{exe_dir, "src"}, context.allocator)
+    tests_dir, _ := filepath.join([]string{exe_dir, "tests"}, context.allocator)
+    assets_dir, _ := filepath.join([]string{exe_dir, "assets"}, context.allocator)
+    examples_dir, _ := filepath.join([]string{exe_dir, "examples"}, context.allocator)
 
     run_tests_cmd := [dynamic]string{}
     append(&run_tests_cmd, "odin")
@@ -41,8 +39,8 @@ main :: proc() {
 		}
 	}
 
-	proc_state, stdout, stderr, err := os2.process_exec(
-		os2.Process_Desc{command=run_tests_cmd[:]},
+	proc_state, stdout, stderr, err := os.process_exec(
+		os.Process_Desc{command=run_tests_cmd[:]},
 		context.allocator,
 	)
 

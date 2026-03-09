@@ -7,31 +7,31 @@ URL_BASE_MC :: "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/re
 URL_BASE_JMS :: "https://raw.githubusercontent.com/donzgold/JustMC_compilator/refs/heads/master/new_data/"
 
 main :: proc() {
-	exe_path, _ := filepath.abs(os.args[0])
+	exe_path, _ := filepath.abs(os.args[0], context.allocator)
     exe_dir := filepath.dir(exe_path)
-    assets_dir := filepath.join([]string{exe_dir, "assets"})
+    assets_dir, _ := filepath.join([]string{exe_dir, "assets"}, context.allocator)
 
-    events_filepath := filepath.join([]string{assets_dir, "events.odin"})
+    events_filepath, _ := filepath.join([]string{assets_dir, "events.odin"}, context.allocator)
 	events := extract_events()
 	write_events(events_filepath, events)
 
-	actions_filepath := filepath.join([]string{assets_dir, "actions.odin"})
+	actions_filepath, _ := filepath.join([]string{assets_dir, "actions.odin"}, context.allocator)
 	actions := extract_actions()
 	write_actions(actions_filepath, actions)
 
-	items_filepath := filepath.join([]string{assets_dir, "items.odin"})
+	items_filepath, _ := filepath.join([]string{assets_dir, "items.odin"}, context.allocator)
 	items := extract_items()
 	write_items(items_filepath, items)
 
-	entities_filepath := filepath.join([]string{assets_dir, "entities.odin"})
+	entities_filepath, _ := filepath.join([]string{assets_dir, "entities.odin"}, context.allocator)
 	entities := extract_entities()
 	write_entities(entities_filepath, entities)
 
-	particles_filepath := filepath.join([]string{assets_dir, "particles.odin"})
+	particles_filepath, _ := filepath.join([]string{assets_dir, "particles.odin"}, context.allocator)
 	particles := extract_particles()
 	write_particles(particles_filepath, particles)
 
-	instruments_filepath := filepath.join([]string{assets_dir, "instruments.odin"})
+	instruments_filepath, _ := filepath.join([]string{assets_dir, "instruments.odin"}, context.allocator)
 	instruments := extract_instruments()
 	write_instruments(instruments_filepath, instruments)
 }

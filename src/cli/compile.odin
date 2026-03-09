@@ -21,7 +21,7 @@ import "../../assets"
 
 command_compile :: #force_inline proc() {
 	when thread.IS_SUPPORTED {
-		thread_count := max(1, os.processor_core_count())
+		thread_count := max(1, os.get_processor_core_count())
 		log.debugf("Threading is supported. Available threads: %d", thread_count)
 	} else {
 		log.debugf("Threading not supported.")

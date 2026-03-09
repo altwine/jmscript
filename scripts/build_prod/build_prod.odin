@@ -2,7 +2,6 @@ package build_prod
 
 import "core:path/filepath"
 import "core:os"
-import "core:os/os2"
 import "core:fmt"
 import "core:strings"
 import "core:slice"
@@ -10,15 +9,15 @@ import "core:slice"
 main :: proc() {
 	is_legacy := slice.contains(os.args, "-l") || slice.contains(os.args, "--legacy")
 
-	exe_path, _ := filepath.abs(os.args[0])
+	exe_path, _ := filepath.abs(os.args[0], context.allocator)
     exe_dir := filepath.dir(exe_path)
 
-    bin_dir := filepath.join({exe_dir, "bin"})
-    src_dir := filepath.join({exe_dir, "src"})
-    resources_dir := filepath.join({exe_dir, "resources"})
+    bin_dir, _ := filepath.join({exe_dir, "bin"}, context.allocator)
+    src_dir, _ := filepath.join({exe_dir, "src"}, context.allocator)
+    resources_dir, _ := filepath.join({exe_dir, "resources"}, context.allocator)
 
-    resources_file_path := filepath.join({resources_dir, "resources.rc"})
-    compiled_resources_file_path := filepath.join({resources_dir, "resources.res"})
+    resources_file_path, _ := filepath.join({resources_dir, "resources.rc"}, context.allocator)
+    compiled_resources_file_path, _ := filepath.join({resources_dir, "resources.res"}, context.allocator)
 
     if !is_legacy {
 	    bases := []string{
@@ -32,7 +31,7 @@ main :: proc() {
 	        if !os.exists(base) {
 	        	continue
 	        }
-	        entries, _ := os2.read_all_directory_by_path(base, context.allocator)
+	        entries, _ := os.read_all_directory_by_path(base, context.allocator)
 	        versions := make([dynamic]string)
 	        for entry in entries {
 	            if entry.type == .Directory && strings.has_prefix(entry.name, "10.") {
@@ -43,7 +42,7 @@ main :: proc() {
 	            return a > b
 	        })
 	        for ver in versions {
-	            candidate := filepath.join({base, ver, "x64", "rc.exe"})
+	            candidate, _ := filepath.join({base, ver, "x64", "rc.exe"}, context.allocator)
 	            if os.exists(candidate) {
 	                rc_exe = candidate
 	                break
@@ -59,11 +58,11 @@ main :: proc() {
 	        os.exit(1)
 	    }
 
-	    _, _, _, err1 := os2.process_exec(
-	    	os2.Process_Desc{command={rc_exe, "/fo", compiled_resources_file_path, resources_file_path}},
+	    _, _, _, err1 := os.process_exec(
+	    	os.Process_Desc{command={rc_exe, "/fo", compiled_resources_file_path, resources_file_path}},
 			context.allocator,
 	    )
-	    if err1 != os2.General_Error.None {
+	    if err1 != os.General_Error.None {
 	    	fmt.eprintln("Err: %v", err1)
 	        os.exit(1)
 	    }
@@ -73,7 +72,7 @@ main :: proc() {
     	os.make_directory(bin_dir)
     }
 
-    output_file_path := filepath.join({bin_dir, "jmscript-win.exe" if !is_legacy else "jmscript-win-compat.exe"})
+    output_file_path, _ := filepath.join({bin_dir, "jmscript-win.exe" if !is_legacy else "jmscript-win-compat.exe"}, context.allocator)
 
     build_prod_cmd := make([dynamic]string, context.allocator)
     defer delete(build_prod_cmd)
@@ -107,8 +106,8 @@ main :: proc() {
 		append(&build_prod_cmd, "-microarch:x86-64-v3")
 	}
 
-	_, stdout, stderr, err := os2.process_exec(
-		os2.Process_Desc{command=build_prod_cmd[:]},
+	_, stdout, stderr, err := os.process_exec(
+		os.Process_Desc{command=build_prod_cmd[:]},
 		context.allocator,
 	)
 	if err != nil {

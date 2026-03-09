@@ -8,10 +8,10 @@ import "core:fmt"
 import "../update_assets"
 
 main :: proc() {
-	exe_path, _ := filepath.abs(os.args[0])
+	exe_path, _ := filepath.abs(os.args[0], context.allocator)
 	exe_dir := filepath.dir(exe_path)
 
-	docs_dir := filepath.join({exe_dir, "docs"})
+	docs_dir, _ := filepath.join({exe_dir, "docs"}, context.allocator)
 
 	if !os.exists(docs_dir) {
 		os.make_directory(docs_dir)
@@ -37,7 +37,7 @@ main :: proc() {
 		translations_raw := update_assets.fetch_url(fmt.tprintf(LOCALE_DATA_URL_BASE+"%s.properties", locale))
 		t := parse_properties(translations_raw)
 
-		events_file_path := filepath.join({docs_dir, fmt.tprintf("events_%s.md", locale)})
+		events_file_path, _ := filepath.join({docs_dir, fmt.tprintf("events_%s.md", locale)}, context.allocator)
 
 		events_fd, err := os.open(events_file_path, FILE_FLAGS)
 		if err != nil {

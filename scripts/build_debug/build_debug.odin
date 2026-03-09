@@ -3,23 +3,22 @@ package build_debug
 import "core:slice"
 import "core:path/filepath"
 import "core:os"
-import "core:os/os2"
 import "core:fmt"
 
 main :: proc() {
 	is_legacy := slice.contains(os.args, "-l") || slice.contains(os.args, "--legacy")
 
-	exe_path, _ := filepath.abs(os.args[0])
+	exe_path, _ := filepath.abs(os.args[0], context.temp_allocator)
     exe_dir := filepath.dir(exe_path)
 
-    bin_dir := filepath.join({exe_dir, "bin"})
-    src_dir := filepath.join({exe_dir, "src"})
+    bin_dir, _ := filepath.join({exe_dir, "bin"}, context.temp_allocator)
+    src_dir, _ := filepath.join({exe_dir, "src"}, context.temp_allocator)
 
     if !os.exists(bin_dir) {
     	os.make_directory(bin_dir)
     }
 
-    output_file_path := filepath.join({bin_dir, "jmscript-win.exe" if !is_legacy else "jmscript-win-compat.exe"})
+    output_file_path, _ := filepath.join({bin_dir, "jmscript-win.exe" if !is_legacy else "jmscript-win-compat.exe"}, context.temp_allocator)
 
     build_debug_cmd := make([dynamic]string, context.allocator)
     defer delete(build_debug_cmd)
@@ -50,8 +49,8 @@ main :: proc() {
 		append(&build_debug_cmd, "-microarch:x86-64-v3")
 	}
 
-	proc_state, stdout, stderr, err := os2.process_exec(
-		os2.Process_Desc{command=build_debug_cmd[:]},
+	proc_state, stdout, stderr, err := os.process_exec(
+		os.Process_Desc{command=build_debug_cmd[:]},
 		context.allocator,
 	)
 	if err != nil {

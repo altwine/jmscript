@@ -1,7 +1,7 @@
 package lexer
 
 import "core:mem"
-import "core:os/os2"
+import "core:os"
 import "core:unicode/utf8"
 
 Lexer :: struct {
@@ -16,7 +16,7 @@ Lexer :: struct {
 }
 
 lexer_init :: proc(l: ^Lexer, path: string, allocator := context.allocator) {
-	src, _ := os2.read_entire_file_from_path(path, allocator)
+	src, _ := os.read_entire_file_from_path(path, allocator)
 	l.src = string(src)
 	l.path = path
 	l.offset = 0
