@@ -338,54 +338,54 @@ test_parse_for_statement :: proc(t: ^testing.T) {
 
 @(test)
 test_parse_annotations :: proc(t: ^testing.T) {
-    source := `@deprecated
+	source := `@deprecated
 @(test = "unit test")
 func old_func() {
 }`
 
-    allocator := context.temp_allocator
-    ec: error.Collector
+	allocator := context.temp_allocator
+	ec: error.Collector
 	error.collector_init(&ec, false, allocator)
 
 	p: parser.Parser
-    parser.parser_init(&p, &ec, allocator)
+	parser.parser_init(&p, &ec, allocator)
 
-    l: lexer.Lexer
-    lexer.lexer_init(&l, "test.jms", allocator)
-    l.src = source
-    p.tokens = lexer.lex(&l)
-    p.alloc = allocator
+	l: lexer.Lexer
+	lexer.lexer_init(&l, "test.jms", allocator)
+	l.src = source
+	p.tokens = lexer.lex(&l)
+	p.alloc = allocator
 
-    p.file = ast.new(ast.File, {file="test.jms", line=0, column=0},
-                    {file="test.jms", line=3, column=1}, allocator)
-    p.file.alloc = allocator
+	p.file = ast.new(ast.File, {file="test.jms", line=0, column=0},
+					{file="test.jms", line=3, column=1}, allocator)
+	p.file.alloc = allocator
 
-    stmt := parser.parse_stmt(&p)
-    testing.expect(t, stmt != nil, "Should parse function statement with annotations")
+	stmt := parser.parse_stmt(&p)
+	testing.expect(t, stmt != nil, "Should parse function statement with annotations")
 
-    if stmt != nil {
-        testing.expect(t, len(stmt.annotations) == 2,
-               fmt.tprintf("Function statement should have 2 annotations, got %d", len(stmt.annotations)))
+	if stmt != nil {
+		testing.expect(t, len(stmt.annotations) == 2,
+			   fmt.tprintf("Function statement should have 2 annotations, got %d", len(stmt.annotations)))
 
-        if len(stmt.annotations) >= 2 {
-            testing.expect(t, stmt.annotations[0].name == "deprecated",
-                   "First annotation should be 'deprecated'")
-            testing.expect(t, stmt.annotations[0].value == nil,
-                   "First annotation should not have value")
+		if len(stmt.annotations) >= 2 {
+			testing.expect(t, stmt.annotations[0].name == "deprecated",
+				   "First annotation should be 'deprecated'")
+			testing.expect(t, stmt.annotations[0].value == nil,
+				   "First annotation should not have value")
 
-            testing.expect(t, stmt.annotations[1].name == "test",
-                   "Second annotation should be 'test'")
-            testing.expect(t, stmt.annotations[1].value != nil,
-                   "Second annotation should have value")
+			testing.expect(t, stmt.annotations[1].name == "test",
+				   "Second annotation should be 'test'")
+			testing.expect(t, stmt.annotations[1].value != nil,
+				   "Second annotation should have value")
 
-            func_stmt, ok := stmt.derived.(^ast.Func_Stmt)
-            testing.expect(t, ok, "Should be a function statement")
-            if ok {
-                testing.expect(t, func_stmt.name == "old_func",
-                       fmt.tprintf("Function name should be 'old_func', got '%s'", func_stmt.name))
-            }
-        }
-    }
+			func_stmt, ok := stmt.derived.(^ast.Func_Stmt)
+			testing.expect(t, ok, "Should be a function statement")
+			if ok {
+				testing.expect(t, func_stmt.name == "old_func",
+					   fmt.tprintf("Function name should be 'old_func', got '%s'", func_stmt.name))
+			}
+		}
+	}
 }
 
 @(test)
@@ -554,7 +554,7 @@ func calculate() {
 		os.remove("test.jms")
 	}, nil)
 
-	os.write_entire_file(temp_file, transmute([]u8)source)
+	_ = os.write_entire_file(temp_file, source)
 
 	ec: error.Collector
 	error.collector_init(&ec, false, context.allocator)
@@ -568,8 +568,8 @@ func calculate() {
 	testing.expect(t, error.is_empty(&ec), "Should parse without errors")
 	if !error.is_empty(&ec) {
 		for e in ec.errs {
-	 		log.info(e)
-	 	}
+			log.info(e)
+		}
 	}
 
 	if file_node != nil {

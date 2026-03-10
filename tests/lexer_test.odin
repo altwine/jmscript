@@ -1,7 +1,5 @@
 package tests
 
-import "core:strings"
-import "core:log"
 import "core:testing"
 import "core:unicode/utf8"
 
@@ -60,7 +58,7 @@ test_lexer :: proc(t: ^testing.T) {
 			name = "keywords",
 			input = "func if else for in return defer continue event",
 			expected = {
-				.Func, .If, .Else, .For, .In, .Return, .Defer, .Continue, .Event, .EOF
+				.Func, .If, .Else, .For, .In, .Return, .Defer, .Continue, .Event, .EOF,
 			},
 		},
 		{
@@ -70,7 +68,7 @@ test_lexer :: proc(t: ^testing.T) {
 				.Open_Paren, .Close_Paren,
 				.Open_Brace, .Close_Brace,
 				.Open_Bracket, .Close_Bracket,
-				.Semicolon, .Colon, .Comma, .Period, .At, .EOF
+				.Semicolon, .Colon, .Comma, .Period, .At, .EOF,
 			},
 		},
 		{
@@ -85,8 +83,8 @@ test_lexer :: proc(t: ^testing.T) {
 		},
 		{
 			name = "multiline comment",
-		 	input = "/" + "* multi\nline *" + "/",
-		 	expected = {.EOF},
+			input = "/" + "* multi\nline *" + "/",
+			expected = {.EOF},
 		},
 		{
 			name = "file tag",
