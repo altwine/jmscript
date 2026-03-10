@@ -28,7 +28,7 @@ jobs:
               run: odin version
 
             - name: Build app
-              run: odin run ./scripts/build_app -- -r
+              run: odin run ./scripts/build_app -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors -- -r
 
             - name: Run tests
-              run: odin run ./scripts/run_tests
+              run: odin run ./scripts/run_tests -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors
