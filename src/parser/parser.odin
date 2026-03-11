@@ -30,8 +30,7 @@ parse_file :: proc(p: ^Parser, fullpath: string) -> ^ast.File {
 	p.file = ast.new(ast.File, first_token.pos, last_token.pos, p.alloc)
 	p.file.alloc = p.alloc
 	p.file.fullpath = fullpath
-	src, _ := os.read_entire_file(fullpath, p.alloc)
-	p.file.src = cast(string)src // TODO: pass file src from lexer
+	p.file.src = l.src
 	p.file.tags = parse_file_tags(p)
 	p.file.pkg = parse_package(p)
 	p.file.decls = parse_top_level_stmt_list(p)
