@@ -1,4 +1,4 @@
-package codegen
+package ir
 
 import "core:strings"
 import "core:fmt"

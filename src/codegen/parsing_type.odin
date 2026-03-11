@@ -3,12 +3,14 @@ package codegen
 import "core:strings"
 import "core:encoding/json"
 
+import "../ir"
+
 get_parsing_type :: proc(text: string) -> string {
 	switch {
-	case is_valid_json(text):  return PARSING_JSON
-	case is_minimessage(text): return PARSING_STYLIZED
-	case is_legacy(text):      return PARSING_COLORED
-	case:                      return PARSING_PLAIN
+	case is_valid_json(text):  return ir.PARSING_JSON
+	case is_minimessage(text): return ir.PARSING_STYLIZED
+	case is_legacy(text):      return ir.PARSING_COLORED
+	case:                      return ir.PARSING_PLAIN
 	}
 }
 
@@ -17,7 +19,7 @@ is_valid_json :: proc(text: string) -> bool {
 	return json.unmarshal_string(text, &DUMMY) == nil
 }
 
-LEGACY_RUNES := "#0123456789abcdefABCDEFklmnorKLMNOR"
+LEGACY_RUNES :: "#0123456789abcdefABCDEFklmnorKLMNOR"
 is_legacy :: proc(text: string) -> bool {
 	last_r: rune
 	for r in text {

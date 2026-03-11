@@ -1,4 +1,4 @@
-package codegen
+package ir
 
 Handler :: struct {
 	type:        string,
