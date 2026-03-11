@@ -30,5 +30,24 @@ jobs:
             - name: Build app
               run: odin run ./scripts/build_app -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors -- -r
 
+            - name: Upload app executable
+              uses: actions/upload-artifact@v4
+              with:
+                  name: jmscript-windows-standard
+                  path: ./bin/jmscript-win.exe
+                  compression-level: 9
+                  retention-days: 2
+
+            - name: Build compat app
+              run: odin run ./scripts/build_app -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors -- -r -l
+
+            - name: Upload compat app executable
+              uses: actions/upload-artifact@v4
+              with:
+                  name: jmscript-windows-compatible
+                  path: ./bin/jmscript-win-compat.exe
+                  compression-level: 9
+                  retention-days: 2
+
             - name: Run tests
               run: odin run ./scripts/run_tests -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors
