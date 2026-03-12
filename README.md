@@ -30,9 +30,9 @@ $ jmscript-win.exe compile new_project
 ```bash
 $ git clone --recurse-submodules -j8 https://github.com/altwine/jmscript
 $ cd jmscript
-$ odin run ./scripts/update_assets # Update assets
-$ odin run ./scripts/build_app     # Build executable
-$ odin run ./scripts/generate_docs # Generate docs
+$ odin run ./scripts/update_assets   # Update assets
+$ odin run ./scripts/build_app -- -r # Build executable
+$ odin run ./scripts/generate_docs   # Generate docs
 ```
 
 ## Goals
