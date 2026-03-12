@@ -1,6 +1,5 @@
 package parser
 
-import "core:os"
 import "core:mem"
 
 import "../lexer"

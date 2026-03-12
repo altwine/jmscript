@@ -1,5 +1,6 @@
 package run_tests
 
+import "core:strings"
 import "core:sys/windows"
 import "core:path/filepath"
 import "core:os"
@@ -59,6 +60,9 @@ main :: proc() {
 	}
 	if len(stderr) > 0 {
 		fmt.printfln("%s", stderr)
+		if strings.contains(string(stderr), "Error:") {
+			os.exit(1)
+		}
 	}
 	if len(stdout) > 0 {
 		fmt.printfln("%s", stdout)
