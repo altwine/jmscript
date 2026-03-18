@@ -32,7 +32,7 @@ Codegen :: struct {
 	current_operations_stack: [dynamic]^[dynamic]^ir.Operation,
 	handlers: [dynamic]^ir.Handler,
 
-	unique_id: int,
+	temp_counter: int,
 }
 
 push_operations :: proc(c: ^Codegen, new_ops: ^[dynamic]^ir.Operation) {
@@ -46,9 +46,9 @@ pop_operations :: proc(c: ^Codegen) {
 	}
 }
 
-next_unique_id :: proc(c: ^Codegen) -> string {
-	defer c.unique_id += 1
-	return fmt.tprintf("jms.%d", c.unique_id)
+next_temp_id :: proc(c: ^Codegen) -> string {
+	defer c.temp_counter += 1
+	return fmt.tprintf("jms.%d", c.temp_counter)
 }
 
 codegen_init :: proc(c: ^Codegen, ec: ^error.Collector, allocator := context.allocator) {
@@ -59,7 +59,6 @@ codegen_init :: proc(c: ^Codegen, ec: ^error.Collector, allocator := context.all
 	c.exit_handler = ir.create_event_handler("world_stop", ir.make_operations(allocator), allocator)
 
 	c.current_operations_stack = make([dynamic]^[dynamic]^ir.Operation, allocator)
-	c.unique_id = 0
 	c.alloc = allocator
 }
 
@@ -117,6 +116,10 @@ codegen_gen_expression :: proc(c: ^Codegen, expr: ^ast.Expr, waits_enum := false
 }
 
 codegen_gen_func_stmt :: proc(c: ^Codegen, node: ^ast.Func_Stmt) {
+	old_counter := c.temp_counter
+	c.temp_counter = 0
+	defer c.temp_counter = old_counter
+
 	func_handler := ir.create_func_handler(node.name, ir.make_operations(c.alloc), c.alloc)
 
 	translations_template :: `{{\"translations\":{{\"en-US\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ru-RU\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}},\"ua-UA\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}},\"fallback\":{{\"rawText\":\"%s\",\"parsingType\":\"LEGACY\"}}}}`
@@ -186,6 +189,10 @@ codegen_gen_func_stmt :: proc(c: ^Codegen, node: ^ast.Func_Stmt) {
 }
 
 codegen_gen_event_stmt :: proc(c: ^Codegen, node: ^ast.Event_Stmt) {
+	old_counter := c.temp_counter
+	c.temp_counter = 0
+	defer c.temp_counter = old_counter
+
 	event_handler := ir.create_event_handler(node.name, ir.make_operations(c.alloc), c.alloc)
 	append(&c.handlers, event_handler)
 	push_operations(c, &event_handler.operations)
@@ -196,10 +203,13 @@ codegen_gen_event_stmt :: proc(c: ^Codegen, node: ^ast.Event_Stmt) {
 }
 
 codegen_gen_expr_stmt :: proc(c: ^Codegen, node: ^ast.Expr_Stmt) {
+	c.temp_counter = 0
 	codegen_gen_expression(c, node.expr)
 }
 
 codegen_gen_assign_stmt :: proc(c: ^Codegen, node: ^ast.Assign_Stmt) {
+	c.temp_counter = 0
+
 	result_value, result_type := codegen_gen_expression(c, node.expr)
 	origin_sym, exists := checker.lookup_symbol(c.current_scope, node.name)
 	ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
@@ -279,11 +289,14 @@ codegen_gen_assign_stmt :: proc(c: ^Codegen, node: ^ast.Assign_Stmt) {
 }
 
 codegen_gen_if_stmt :: proc(c: ^Codegen, node: ^ast.If_Stmt) {
+	c.temp_counter = 0
 	if node.init != nil {
 		codegen_gen_statement(c, node.init)
+		c.temp_counter = 0
 	}
 
 	if_stmt_result, res_type := codegen_gen_expression(c, node.cond)
+	c.temp_counter = 0
 
 	op := ir.create_container_operation("if_variable_equals", ir.make_named_values(c.alloc), ir.make_operations(c.alloc), allocator=c.alloc)
 	append(&op.values, ir.create_named_value("value", if_stmt_result, c.alloc))
@@ -299,6 +312,8 @@ codegen_gen_if_stmt :: proc(c: ^Codegen, node: ^ast.If_Stmt) {
 	pop_operations(c)
 
 	if node.else_stmt != nil {
+		c.temp_counter = 0
+
 		else_op := ir.create_container_operation("else", ir.make_named_values(c.alloc), ir.make_operations(c.alloc), allocator=c.alloc)
 		append(c.current_operations, else_op)
 
@@ -311,10 +326,13 @@ codegen_gen_if_stmt :: proc(c: ^Codegen, node: ^ast.If_Stmt) {
 }
 
 codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
+	c.temp_counter = 0
+
 	switch node.type {
 	case .Basic:
 		if node.init != nil {
 			codegen_gen_statement(c, node.init)
+			c.temp_counter = 0
 		}
 		loop_container := ir.create_container_operation("repeat_forever", ir.make_named_values(c.alloc), ir.make_operations(c.alloc), allocator=c.alloc)
 		append(c.current_operations, loop_container)
@@ -322,6 +340,7 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 
 		if node.cond != nil {
 			cond_value, cond_type := codegen_gen_expression(c, node.cond)
+			c.temp_counter = 0
 
 			break_cond := ir.create_container_operation("if_variable_equals", ir.make_named_values(c.alloc), ir.make_operations(c.alloc), allocator=c.alloc)
 			append(&break_cond.values, ir.create_named_value("value", cond_value, c.alloc))
@@ -333,10 +352,12 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 		}
 
 		if node.body != nil {
+			c.temp_counter = 0
 			codegen_gen_statement(c, node.body)
 		}
 
 		if node.post != nil {
+			c.temp_counter = 0
 			codegen_gen_statement(c, node.post)
 		}
 
@@ -347,12 +368,14 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 		append(c.current_operations, op)
 		push_operations(c, &op.operations)
 		if node.body != nil {
+			c.temp_counter = 0
 			codegen_gen_statement(c, node.body)
 		}
 		pop_operations(c)
 
 	case .Conditional:
 		if node.init != nil {
+			c.temp_counter = 0
 			codegen_gen_statement(c, node.init)
 		}
 		loop_container := ir.create_container_operation("repeat_forever", ir.make_named_values(c.alloc), ir.make_operations(c.alloc), allocator=c.alloc)
@@ -360,6 +383,7 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 		push_operations(c, &loop_container.operations)
 		if node.cond != nil {
 			cond_value, cond_type := codegen_gen_expression(c, node.cond)
+			c.temp_counter = 0
 
 			break_cond := ir.create_container_operation("if_variable_equals",ir. make_named_values(c.alloc), ir.make_operations(c.alloc), true, "", c.alloc)
 			append(&break_cond.values, ir.create_named_value("value", cond_value, c.alloc))
@@ -370,6 +394,7 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 			append(&loop_container.operations, break_cond)
 		}
 		if node.body != nil {
+			c.temp_counter = 0
 			codegen_gen_statement(c, node.body)
 		}
 		pop_operations(c)
@@ -379,6 +404,7 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 		append(c.current_operations, loop_container)
 		push_operations(c, &loop_container.operations)
 		if node.body != nil {
+			c.temp_counter = 0
 			codegen_gen_statement(c, node.body)
 		}
 
@@ -397,6 +423,8 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 		}
 		if node.range_expr != nil {
 			result_value, _ := codegen_gen_expression(c, node.range_expr, false)
+			c.temp_counter = 0
+
 			append(&loop_container.values, ir.create_named_value("list", result_value, c.alloc))
 		}
 		pop_operations(c)
@@ -404,6 +432,8 @@ codegen_gen_for_stmt :: proc(c: ^Codegen, node: ^ast.For_Stmt) {
 }
 
 codegen_gen_value_decl :: proc(c: ^Codegen, node: ^ast.Value_Decl) {
+	c.temp_counter = 0
+
 	value_decl_op := ir.create_basic_operation("set_variable_value", ir.make_named_values(c.alloc), "", c.alloc)
 	append(&value_decl_op.values, ir.create_named_value("variable", ir.create_variable_value(node.name, guess_variable_type_by_scope(c, node.name), c.alloc), c.alloc))
 	result_value, _ := codegen_gen_expression(c, node.value)
@@ -412,15 +442,18 @@ codegen_gen_value_decl :: proc(c: ^Codegen, node: ^ast.Value_Decl) {
 }
 
 codegen_gen_return_stmt :: proc(c: ^Codegen, node: ^ast.Return_Stmt) {
+	c.temp_counter = 0
+
 	unimplemented("return statement support")
 }
 
 codegen_gen_defer_stmt :: proc(c: ^Codegen, node: ^ast.Defer_Stmt) {
+	c.temp_counter = 0
 	unimplemented("defer statement support")
 }
 
 codegen_gen_call_expr :: proc(c: ^Codegen, node: ^ast.Call_Expr, waits_enum: bool) -> (ir.Value, checker.Type_Kind) {
-	result_var := ir.create_variable_value(next_unique_id(c), ir.SCOPE_GAME, c.alloc)
+	result_var := ir.create_variable_value(next_temp_id(c), ir.SCOPE_GAME, c.alloc)
 	ident, is_ident := node.expr.derived.(^ast.Ident)
 	ensure(is_ident)
 	func_name := ident.name
@@ -566,7 +599,7 @@ codegen_gen_basic_lit :: proc(c: ^Codegen, node: ^ast.Basic_Lit, waits_enum: boo
 }
 
 codegen_gen_binary_expr :: proc(c: ^Codegen, node: ^ast.Binary_Expr, waits_enum: bool) -> (ir.Value, checker.Type_Kind) {
-	result_var := ir.create_variable_value(next_unique_id(c), ir.SCOPE_GAME, c.alloc)
+	result_var := ir.create_variable_value(next_temp_id(c), ir.SCOPE_GAME, c.alloc)
 	operator := node.op.kind
 	left_val, left_type := codegen_gen_expression(c, node.left, waits_enum)
 	right_val, right_type := codegen_gen_expression(c, node.right, waits_enum)
