@@ -80,7 +80,7 @@ main :: proc() {
 	if build_mode == .Debug {
 		append(&build_app_cmd, "-debug")
 		append(&build_app_cmd, "-o:none")
-		append(&build_app_cmd, "-sanitize:address")
+		// append(&build_app_cmd, "-sanitize:address")
 		append(&build_app_cmd, `-extra-linker-flags:/LTCG /IGNORE:4099`)
 	}
 
