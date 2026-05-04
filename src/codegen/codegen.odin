@@ -1,5 +1,6 @@
 package codegen
 
+import "core:strings"
 import "core:unicode/utf8"
 import "core:fmt"
 import "core:strconv"
@@ -33,6 +34,7 @@ Codegen :: struct {
 	handlers: [dynamic]^ir.Handler,
 
 	temp_counter: int,
+	return_counter: int,
 }
 
 push_operations :: proc(c: ^Codegen, new_ops: ^[dynamic]^ir.Operation) {
@@ -44,6 +46,16 @@ pop_operations :: proc(c: ^Codegen) {
 	if len(c.current_operations_stack) > 0 {
 		c.current_operations = pop(&c.current_operations_stack)
 	}
+}
+
+push_return_counter :: proc(c: ^Codegen) -> string {
+	defer c.return_counter += 1
+	return fmt.tprintf("jms.ret.%d", c.return_counter)
+}
+
+pop_return_counter :: proc(c: ^Codegen) -> string {
+	defer c.return_counter -= 1
+	return fmt.tprintf("jms.ret.%d", c.return_counter)
 }
 
 next_temp_id :: proc(c: ^Codegen) -> string {
@@ -443,8 +455,13 @@ codegen_gen_value_decl :: proc(c: ^Codegen, node: ^ast.Value_Decl) {
 
 codegen_gen_return_stmt :: proc(c: ^Codegen, node: ^ast.Return_Stmt) {
 	c.temp_counter = 0
-
-	unimplemented("return statement support")
+	result_var := ir.create_variable_value(pop_return_counter(c), ir.SCOPE_LOCAL, c.alloc)
+	value_decl_op := ir.create_basic_operation("set_variable_value", ir.make_named_values(c.alloc), "", c.alloc)
+	append(&value_decl_op.values, ir.create_named_value("variable", result_var, c.alloc))
+	append(&value_decl_op.values, ir.create_named_value("value", ir.create_number_value(666, c.alloc), c.alloc))
+	append(c.current_operations, value_decl_op)
+	value_decl_op2 := ir.create_basic_operation("control_return_function", ir.make_named_values(c.alloc), "", c.alloc)
+	append(c.current_operations, value_decl_op2)
 }
 
 codegen_gen_defer_stmt :: proc(c: ^Codegen, node: ^ast.Defer_Stmt) {
@@ -460,6 +477,12 @@ codegen_gen_call_expr :: proc(c: ^Codegen, node: ^ast.Call_Expr, waits_enum: boo
 	sym, exists := checker.lookup_symbol(c.symbols.global_scope, func_name)
 	ensure(exists, "symbol should exist, if not, something in the middle of pipeline removing it from symbol table, but not from AST!")
 	func_flags := sym.metadata["flags"].(checker.Flags)
+
+	has_return_t := sym.type.return_t.kind != .Void
+	return_holder := ""
+	if has_return_t {
+		return_holder = push_return_counter(c)
+	}
 
 	switch {
 	case .NATIVE in func_flags:
@@ -503,6 +526,14 @@ codegen_gen_call_expr :: proc(c: ^Codegen, node: ^ast.Call_Expr, waits_enum: boo
 		op := ir.create_basic_operation("call_function", ir.make_named_values(c.alloc), "", c.alloc)
 		append(&op.values, ir.create_named_value("function_name", ir.create_text_value(func_name, ir.PARSING_PLAIN, c.alloc), c.alloc))
 
+		if has_return_t {
+			result_var2 := ir.create_variable_value(return_holder, ir.SCOPE_LOCAL, c.alloc)
+			value_decl_op := ir.create_basic_operation("set_variable_value", ir.make_named_values(c.alloc), "", c.alloc)
+			append(&value_decl_op.values, ir.create_named_value("variable", result_var2, c.alloc))
+			append(&value_decl_op.values, ir.create_named_value("value", ir.create_number_value(0, c.alloc), c.alloc))
+			append(c.current_operations, value_decl_op)
+		}
+
 		args_count := len(node.args)
 		if args_count > 0 {
 			keys := make([dynamic]string, 0, c.alloc)
@@ -540,6 +571,15 @@ codegen_gen_call_expr :: proc(c: ^Codegen, node: ^ast.Call_Expr, waits_enum: boo
 		}
 		append(c.current_operations, op)
 	}
+
+	if has_return_t {
+		value_decl_op := ir.create_basic_operation("set_variable_value", ir.make_named_values(c.alloc), "", c.alloc)
+		append(&value_decl_op.values, ir.create_named_value("variable", result_var, c.alloc))
+		result_var2 := ir.create_variable_value(return_holder, ir.SCOPE_LOCAL, c.alloc)
+		append(&value_decl_op.values, ir.create_named_value("value", result_var2, c.alloc))
+		append(c.current_operations, value_decl_op)
+	}
+
 	return result_var, .Number
 }
 
