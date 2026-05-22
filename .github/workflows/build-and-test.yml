@@ -1,4 +1,4 @@
-name: Build app & run tests
+name: Build app & run tests & gen docs
 
 on:
     push:
@@ -7,18 +7,21 @@ on:
         branches: ["main"]
     workflow_dispatch:
 
+env:
+    ODIN_CQ_FLAGS: -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors
+
 jobs:
     build-and-test:
         runs-on: windows-latest
 
         steps:
             - name: Checkout repo and submodules
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   submodules: recursive
 
             - name: Setup Odin
-              uses: laytan/setup-odin@v2.12.1
+              uses: laytan/setup-odin@v2.12.2
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   llvm-version: 18
@@ -28,26 +31,37 @@ jobs:
               run: odin version
 
             - name: Build app
-              run: odin run ./scripts/build_app -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors -- -r
+              run: odin run ./scripts/build_app ${{ env.ODIN_CQ_FLAGS }} -- -r
 
             - name: Upload app executable
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: jmscript-windows-standard
                   path: ./bin/jmscript-win.exe
-                  compression-level: 9
+                  archive: false
                   retention-days: 2
 
             - name: Build compat app
-              run: odin run ./scripts/build_app -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors -- -r -l
+              run: odin run ./scripts/build_app ${{ env.ODIN_CQ_FLAGS }} -- -r -l
 
             - name: Upload compat app executable
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: jmscript-windows-compatible
                   path: ./bin/jmscript-win-compat.exe
+                  archive: false
+                  retention-days: 2
+
+            - name: Generate documentation
+              run: odin run ./scripts/generate_docs ${{ env.ODIN_CQ_FLAGS }}
+
+            - name: Upload documentation
+              uses: actions/upload-artifact@v7
+              with:
+                  name: Documentation
+                  path: ./docs/*.md
                   compression-level: 9
                   retention-days: 2
 
             - name: Run tests
-              run: odin run ./scripts/run_tests -vet-shadowing -vet-tabs -vet-cast -vet-unused-imports -vet-using-stmt -vet-semicolon -strict-style -disallow-do -warnings-as-errors
+              run: odin run ./scripts/run_tests ${{ env.ODIN_CQ_FLAGS }}
