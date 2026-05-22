@@ -18,7 +18,7 @@ Event_Stripped :: struct {
 }
 
 EVENTS_BLACKLIST := []string{
-	"player_dummy", "entity_dummy", "world_dummy"
+	"player_dummy", "entity_dummy", "world_dummy",
 }
 
 URL_EVENTS_1 :: URL_BASE_JMS+"events.json"
