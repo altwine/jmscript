@@ -19,6 +19,10 @@ main :: proc() {
 	actions := extract_actions()
 	write_actions(actions_filepath, actions)
 
+	game_values_filepath, _ := filepath.join([]string{assets_dir, "game_values.odin"}, context.allocator)
+	game_values := extract_game_values()
+	write_game_values(game_values_filepath, game_values)
+
 	items_filepath, _ := filepath.join([]string{assets_dir, "items.odin"}, context.allocator)
 	items := extract_items()
 	write_items(items_filepath, items)
