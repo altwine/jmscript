@@ -1,5 +1,6 @@
 package update_assets
 
+import "core:fmt"
 import "core:os"
 import "core:path/filepath"
 
@@ -8,10 +9,10 @@ URL_BASE_JMS :: "https://raw.githubusercontent.com/donzgold/JustMC_compilator/re
 
 main :: proc() {
 	exe_path, _ := filepath.abs(os.args[0], context.allocator)
-    exe_dir := filepath.dir(exe_path)
-    assets_dir, _ := filepath.join([]string{exe_dir, "assets"}, context.allocator)
+	exe_dir := filepath.dir(exe_path)
+	assets_dir, _ := filepath.join([]string{exe_dir, "assets"}, context.allocator)
 
-    events_filepath, _ := filepath.join([]string{assets_dir, "events.odin"}, context.allocator)
+	events_filepath, _ := filepath.join([]string{assets_dir, "events.odin"}, context.allocator)
 	events := extract_events()
 	write_events(events_filepath, events)
 

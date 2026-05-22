@@ -161,7 +161,7 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 			for _in, idx in action_in_out.ins {
 				fmt.fprintf(fd, "\"%s\"", _in)
 				if idx != len(action_in_out.ins)-1 {
-				  fmt.fprint(fd, ", ")
+					fmt.fprint(fd, ", ")
 				}
 			}
 			fmt.fprintln(fd, "},")
@@ -173,7 +173,7 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 			for out, idx in action_in_out.outs {
 				fmt.fprintf(fd, "\"%s\"", out)
 				if idx != len(action_in_out.outs)-1 {
-				  fmt.fprint(fd, ", ")
+					fmt.fprint(fd, ", ")
 				}
 			}
 			fmt.fprintln(fd, "},")
@@ -213,7 +213,7 @@ write_actions :: proc(output_file: string, actions: [dynamic]Action) {
 					for value, value_idx in slot.values {
 						fmt.fprintf(fd, "\"%s\"", value)
 						if value_idx != values_count-1 {
-						  fmt.fprint(fd, ", ")
+							fmt.fprint(fd, ", ")
 						}
 					}
 					fmt.fprintln(fd, "}},")

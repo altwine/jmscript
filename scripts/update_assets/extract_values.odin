@@ -6,7 +6,7 @@ import "core:os"
 
 Game_Value :: struct {
 	id:   string `json:"id"`,
-    type: string `json:"type"`,
+	type: string `json:"type"`,
 }
 
 URL_GAME_VALUES :: URL_BASE_JMS+"game_values.json"

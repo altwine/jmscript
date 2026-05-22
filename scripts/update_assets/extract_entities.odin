@@ -6,14 +6,14 @@ import "core:os"
 
 Entity :: struct {
 	id:            int      `json:"id"`,
-    internal_id:   int      `json:"internalId"`,
-    name:          string   `json:"name"`,
-    display_name:  string   `json:"displayName"`,
-    width:         f64      `json:"width"`,
-    height:        f64      `json:"height"`,
-    type:          string   `json:"type"`,
-    category:      string   `json:"category"`,
-    metadata_keys: []string `json:"metadataKeys"`,
+	internal_id:   int      `json:"internalId"`,
+	name:          string   `json:"name"`,
+	display_name:  string   `json:"displayName"`,
+	width:         f64      `json:"width"`,
+	height:        f64      `json:"height"`,
+	type:          string   `json:"type"`,
+	category:      string   `json:"category"`,
+	metadata_keys: []string `json:"metadataKeys"`,
 }
 
 URL_ENTITIES :: URL_BASE_MC+"entities.json"

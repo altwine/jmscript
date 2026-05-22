@@ -42,12 +42,12 @@ extract_events :: proc() -> [dynamic]Event {
 		append(&events, Event{name=name, cancellable=cancellable_state.cancellable})
 	}
 	slice.sort_by_cmp(events[:], proc(i, j: Event) -> slice.Ordering {
-	    if i.name < j.name {
-	        return .Less
-	    } else if i.name > j.name {
-	        return .Greater
-	    }
-	    return .Equal
+		if i.name < j.name {
+			return .Less
+		} else if i.name > j.name {
+			return .Greater
+		}
+		return .Equal
 	})
 
 	return events

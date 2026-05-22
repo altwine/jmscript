@@ -6,7 +6,7 @@ import "core:os"
 
 Particle :: struct {
 	id:   int    `json:"id"`,
-    name: string `json:"name"`,
+	name: string `json:"name"`,
 }
 
 URL_PARTICLES :: URL_BASE_MC+"particles.json"
