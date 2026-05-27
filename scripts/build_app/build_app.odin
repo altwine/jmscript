@@ -15,7 +15,8 @@ main :: proc() {
 
 	is_legacy := slice.contains(os.args, "-l") || slice.contains(os.args, "--legacy")
 	microarch := "-microarch:x86-64-v2" if is_legacy else "-microarch:x86-64-v3"
-	exe_name := "jmscript-win-compat.exe" if is_legacy else "jmscript-win.exe"
+
+	exe_name := get_exe_name(is_legacy)
 
 	exe_path, _ := filepath.abs(os.args[0], context.allocator)
 	exe_dir := filepath.dir(exe_path)
@@ -25,9 +26,12 @@ main :: proc() {
 
 	output_file_path, _ := filepath.join({bin_dir, exe_name}, context.temp_allocator)
 
-	resources_dir, _ := filepath.join({exe_dir, "resources"}, context.temp_allocator)
-	resources_file_path, _ := filepath.join({resources_dir, "resources.rc"}, context.temp_allocator)
-	compiled_resources_file_path, _ := filepath.join({resources_dir, "resources.res"}, context.temp_allocator)
+	resources_file_path, compiled_resources_file_path: string
+	when ODIN_OS == .Windows {
+		resources_dir, _ := filepath.join({exe_dir, "resources"}, context.temp_allocator)
+		resources_file_path, _ = filepath.join({resources_dir, "resources.rc"}, context.temp_allocator)
+		compiled_resources_file_path, _ = filepath.join({resources_dir, "resources.res"}, context.temp_allocator)
+	}
 
 	if !os.exists(bin_dir) {
 		os.make_directory(bin_dir)
@@ -40,8 +44,7 @@ main :: proc() {
 	append(&build_app_cmd, "build")
 	append(&build_app_cmd, src_dir)
 	append(&build_app_cmd, "-build-mode:exe")
-	append(&build_app_cmd, "-target:windows_amd64")
-	append(&build_app_cmd, "-subsystem:console")
+	append(&build_app_cmd, TARGET_FLAG)
 	append(&build_app_cmd, "-vet-shadowing")
 	append(&build_app_cmd, "-vet-tabs")
 	append(&build_app_cmd, "-vet-cast")
@@ -54,39 +57,24 @@ main :: proc() {
 	append(&build_app_cmd, microarch)
 
 	if build_mode == .Release {
-		if !is_legacy {
-			rc_exe := find_rc_exe()
-			if rc_exe == "" {
-				fmt.eprintln("Err: can't find rc.exe")
-				os.exit(1)
-			}
-			exec_command({rc_exe, "/fo", compiled_resources_file_path, resources_file_path})
+		extra_flags := get_extra_release_flags(is_legacy, resources_file_path, compiled_resources_file_path)
+		for flag in extra_flags {
+			append(&build_app_cmd, flag)
 		}
-
 		append(&build_app_cmd, "-o:speed")
 		append(&build_app_cmd, "-no-bounds-check")
 		append(&build_app_cmd, "-no-threaded-checker")
 		append(&build_app_cmd, "-disable-assert")
 		append(&build_app_cmd, "-source-code-locations:none")
-
-		if is_legacy {
-			append(&build_app_cmd, fmt.tprintf(`-resource:%s`, resources_file_path))
-			append(&build_app_cmd, `-extra-linker-flags:/LTCG`)
-		} else {
-			append(&build_app_cmd, fmt.tprintf(`-extra-linker-flags:/LTCG %s`, compiled_resources_file_path))
-		}
 	}
 
 	if build_mode == .Debug {
 		append(&build_app_cmd, "-debug")
 		append(&build_app_cmd, "-o:none")
-		// append(&build_app_cmd, "-sanitize:address")
-		append(&build_app_cmd, `-extra-linker-flags:/LTCG /IGNORE:4099`)
+		append(&build_app_cmd, EXTRA_DEBUG_FLAGS)
 	}
 
 	exec_command(build_app_cmd[:])
 
-	if os.exists(compiled_resources_file_path) {
-		os.remove(compiled_resources_file_path)
-	}
+	cleanup_platform(compiled_resources_file_path)
 }
